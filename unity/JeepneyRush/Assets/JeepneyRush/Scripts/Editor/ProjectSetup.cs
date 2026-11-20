@@ -79,7 +79,6 @@ namespace JeepneyRush.EditorTools
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.Android, ManagedStrippingLevel.Low);
 #endif
-            PlayerSettings.Android.startInFullscreen = true;
             PlayerSettings.Android.renderOutsideSafeArea = true;
             PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.runInBackground = false;
