@@ -40,6 +40,18 @@ namespace JeepneyRush
             GraphicsQuality.Apply(Services.Save.Data.graphicsQuality);
         }
 
+        /// <summary>
+        /// If Play is pressed in a scene that is not part of the game (e.g. the template's
+        /// SampleScene), run the normal splash → main menu flow anyway.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void StartFromAnyScene()
+        {
+            if (FindFirstObjectByType<Bootstrap>() != null || FindFirstObjectByType<GameplaySession>() != null || FindFirstObjectByType<MainMenuController>() != null) return;
+            Debug.Log("[Jeepney Rush] No game scene open – starting the normal flow. (Tip: open Assets/JeepneyRush/Scenes/Bootstrap.unity.)");
+            _systems.AddComponent<Bootstrap>();
+        }
+
         private IEnumerator Start()
         {
             var ui = Services.UI;
