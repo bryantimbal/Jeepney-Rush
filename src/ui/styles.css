@@ -87,7 +87,7 @@ body { overscroll-behavior: none; touch-action: none; user-select: none; -webkit
 .fuel.low .fuel-bar { animation: blink 0.5s steps(2) infinite; border-color: #ff2a2a; }
 @keyframes blink { 50% { opacity: 0.4; } }
 
-.stop-panel { margin-top: 8px; display: flex; align-items: stretch; gap: 8px; background: rgba(27,16,51,0.82); border: 2px solid rgba(255,255,255,0.2); border-radius: 14px; padding: 6px 10px; color: #fff; min-width: 230px; }
+.stop-panel { align-self: flex-start; margin-top: 8px; display: flex; align-items: stretch; gap: 8px; background: rgba(27,16,51,0.82); border: 2px solid rgba(255,255,255,0.2); border-radius: 14px; padding: 5px 10px; color: #fff; min-width: 190px; max-width: 70%; }
 .stop-panel.dropping { border-color: #2bff88; box-shadow: 0 0 14px rgba(43,255,136,0.6); }
 .pax { display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--display); font-size: 20px; padding-right: 8px; border-right: 2px solid rgba(255,255,255,0.2); }
 .pax.full { color: #ff6b6b; }

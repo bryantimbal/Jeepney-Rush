@@ -49,7 +49,7 @@ describe('SaveManager', () => {
     const d = sanitize({ coins: -5, bestScore: Infinity, settings: { quality: 'ultra', music: 'yes' }, topRuns: [null, { score: 10 }] });
     expect(d.coins).toBe(0);
     expect(d.bestScore).toBe(0);
-    expect(d.settings.quality).toBe('high');
+    expect(d.settings.quality).toBe('medium');
     expect(d.settings.music).toBe(true);
     expect(d.topRuns).toHaveLength(1);
   });

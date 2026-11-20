@@ -52,7 +52,7 @@ export function defaultSave(now = Date.now()): SaveData {
     bestDistance: 0,
     stats: { runs: 0, totalDistance: 0, totalCoins: 0, totalDelivered: 0, totalPickedUp: 0, crashes: 0, playTimeSec: 0 },
     topRuns: [],
-    settings: { music: true, sfx: true, vibration: true, quality: 'high', showFps: false, tutorialSeen: false },
+    settings: { music: true, sfx: true, vibration: true, quality: 'medium', showFps: false, tutorialSeen: false },
     createdAt: now,
     updatedAt: now,
   };
@@ -87,7 +87,7 @@ export function sanitize(raw: unknown): SaveData {
   d.settings.vibration = bool(s.vibration, true);
   d.settings.showFps = bool(s.showFps, false);
   d.settings.tutorialSeen = bool(s.tutorialSeen, false);
-  d.settings.quality = s.quality === 'low' || s.quality === 'medium' || s.quality === 'high' ? s.quality : 'high';
+  d.settings.quality = s.quality === 'low' || s.quality === 'medium' || s.quality === 'high' ? s.quality : 'medium';
   if (Array.isArray(r.topRuns)) {
     d.topRuns = r.topRuns
       .filter((x): x is RunRecord => !!x && typeof x === 'object')

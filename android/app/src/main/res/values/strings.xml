@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Jeepney Rush</string>
+    <string name="title_activity_main">Jeepney Rush</string>
+    <string name="package_name">ph.jeepneyrush.game</string>
+    <string name="custom_url_scheme">ph.jeepneyrush.game</string>
+</resources>

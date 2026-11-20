@@ -49,14 +49,13 @@ async function boot(): Promise<void> {
 
   await step(0.2, 'Painting the jeepney…');
   materials.init(renderer.renderer, ROAD_HALF_WIDTH * 2, LANES);
-  const shadows = save.data.settings.quality !== 'low';
+  // shadow casting is always configured; the renderer enables/disables shadow maps per quality level
   const jeep = buildJeepney(CLASSIC_SKIN, { shadows: true });
   renderer.scene.add(jeep.root);
 
   await step(0.4, 'Calling the traffic…');
   const lib = new VehicleLibrary();
   lib.build(true);
-  void shadows;
 
   await step(0.6, 'Building Manila streets…');
   const world = new World(renderer.scene, lib, 1234);
