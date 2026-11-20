@@ -14,3 +14,17 @@ android/app/release/
 keystore.properties
 .env
 .env.*
+
+# Unity
+unity/JeepneyRush/[Ll]ibrary/
+unity/JeepneyRush/[Tt]emp/
+unity/JeepneyRush/[Oo]bj/
+unity/JeepneyRush/[Bb]uild/
+unity/JeepneyRush/[Bb]uilds/
+unity/JeepneyRush/[Ll]ogs/
+unity/JeepneyRush/[Uu]ser[Ss]ettings/
+unity/JeepneyRush/*.csproj
+unity/JeepneyRush/*.sln
+unity/**/bin/
+unity/**/obj/
+preview/

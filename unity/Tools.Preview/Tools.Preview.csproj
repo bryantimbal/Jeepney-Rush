@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Dev tool: exports procedural meshes to JSON so they can be previewed in a browser (tools/preview.html). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../JeepneyRush/Assets/JeepneyRush/Scripts/Logic/**/*.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>

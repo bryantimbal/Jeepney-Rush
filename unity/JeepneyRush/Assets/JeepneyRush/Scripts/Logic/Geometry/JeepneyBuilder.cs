@@ -1,0 +1,276 @@
+using System;
+using System.Collections.Generic;
+
+namespace JeepneyRush.Logic.Geometry
+{
+    /// <summary>
+    /// Builds the hero jeepney (Unity coordinates: +Z forward, +Y up, origin on the
+    /// ground at the vehicle centre). Modelled on classic Sarao/Francisco-style
+    /// jeepneys: long hood with stacked chrome grille and horse mascots, swept chrome
+    /// fenders, open-sided passenger body with painted art panels, roof route sign,
+    /// side spare tyre, rear ladder and lots of lights.
+    /// Wheels are built separately (<see cref="BuildWheel"/>) so they can spin.
+    /// </summary>
+    public static class JeepneyBuilder
+    {
+        public const string Chrome = "#E6EBF2";
+        public const string ChromeDark = "#9AA3B2";
+        public const string Tire = "#18181C";
+        public const string Glass = "#1A2533";
+        public const string Interior = "#2A1E2C";
+        public const string Seat = "#8B1E2D";
+
+        public const float WheelRadius = 0.44f;
+        public const float FrontAxleZ = 1.95f;
+        public const float RearAxleZ = -1.75f;
+        public const float TrackHalf = 0.93f;
+
+        public const float BodyRearZ = -3.0f;
+        public const float BodyFrontZ = 0.65f;
+        public const float BeltY = 1.45f;   // top of the painted lower body
+        public const float SillY = 0.58f;   // bottom of the body
+        public const float RoofY = 2.18f;
+
+        /// <summary>Seat positions (local) for visible passengers, in boarding order.</summary>
+        public static readonly V3[] Seats =
+        {
+            new V3(-0.62f, 1.05f, 0.1f), new V3(0.62f, 1.05f, -0.6f), new V3(-0.62f, 1.05f, -1.3f),
+            new V3(0.62f, 1.05f, -2.0f), new V3(-0.62f, 1.05f, -2.4f),
+        };
+
+        public static V3[] WheelPositions => new[]
+        {
+            new V3(-TrackHalf, WheelRadius, FrontAxleZ), new V3(TrackHalf, WheelRadius, FrontAxleZ),
+            new V3(-TrackHalf, WheelRadius, RearAxleZ), new V3(TrackHalf, WheelRadius, RearAxleZ),
+        };
+
+        public static MeshData Build(JeepneyLivery L, Palette palette = null)
+        {
+            var b = new MeshBuilder(palette);
+            string paint = L.Body, hood = L.Hood, trim = L.Trim, roof = L.Roof;
+            string lowerFender = L.ChromeLowerBody ? Chrome : L.Body;
+            string fenderKey = L.ChromeLowerBody ? "chrome" : "paint";
+
+            // ---------------------------------------------------------------- chassis
+            b.Box("paint", "#202126", 1.6f, 0.24f, 5.9f, 0, 0.5f, 0f);
+            b.CylinderX("chrome", ChromeDark, 0.06f, 1.9f, 6, 0, WheelRadius, FrontAxleZ);
+            b.CylinderX("chrome", ChromeDark, 0.06f, 1.9f, 6, 0, WheelRadius, RearAxleZ);
+            // exhaust pipe
+            b.CylinderZ("chrome", ChromeDark, 0.05f, 0.6f, 6, 0.55f, 0.42f, -3.05f);
+
+            // ---------------------------------------------------------------- hood
+            var hoodProfile = new List<V2>
+            {
+                new V2(1.2f, 0.62f), new V2(3.05f, 0.62f), new V2(3.05f, 1.12f), new V2(2.95f, 1.2f), new V2(1.2f, 1.34f),
+            };
+            b.ExtrudeX("paint", hood, hoodProfile, -0.74f, 0.74f);
+            // hood chrome centre strip and side louvres
+            b.Box("chrome", Chrome, 0.08f, 0.04f, 1.8f, 0, 1.3f, 2.12f, new Rot(-0.075f, 0, 0));
+            for (int i = 0; i < 4; i++)
+                foreach (float sx in new[] { -1f, 1f })
+                    b.Box("chrome", Chrome, 0.02f, 0.05f, 0.28f, sx * 0.75f, 0.98f, 1.6f + i * 0.3f);
+            // ---------------------------------------------------------------- grille (stacked chrome)
+            b.Box("chrome", Chrome, 1.12f, 0.62f, 0.1f, 0, 0.9f, 3.06f);
+            for (int i = 0; i < 9; i++) b.Box("paint", "#1D1E24", 0.05f, 0.5f, 0.04f, -0.48f + i * 0.12f, 0.9f, 3.12f);
+            b.Box("chrome", Chrome, 1.2f, 0.07f, 0.12f, 0, 1.24f, 3.07f);
+            // ---------------------------------------------------------------- bumper & bull bar
+            b.Box("chrome", Chrome, 2.2f, 0.2f, 0.26f, 0, 0.52f, 3.28f);
+            b.Box("chrome", Chrome, 2.0f, 0.06f, 0.06f, 0, 0.7f, 3.38f);
+            for (int i = 0; i < 4; i++) b.CylinderX("chrome", Chrome, 0.035f, 1.7f - i * 0.15f, 8, 0, 0.75f + i * 0.12f, 3.4f);
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                b.Cylinder("chrome", Chrome, 0.035f, 0.035f, 0.6f, 8, sx * 0.85f, 0.85f, 3.4f);
+                b.Cylinder("chrome", Chrome, 0.035f, 0.035f, 0.5f, 8, sx * 0.3f, 0.82f, 3.4f);
+            }
+            // ---------------------------------------------------------------- front fenders (swept)
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                var outline = new List<V2>();
+                // arch over the wheel with a flange to the bumper and a sweep down to the running board
+                outline.Add(new V2(3.0f, 0.86f));
+                outline.AddRange(MeshBuilder.Arc(FrontAxleZ, WheelRadius, 0.62f, 18, 162, 12));
+                outline.Add(new V2(0.95f, 0.68f));
+                outline.Add(new V2(0.75f, 0.6f));
+                outline.Add(new V2(0.75f, 0.52f));
+                outline.Add(new V2(1.25f, 0.56f));
+                outline.AddRange(MeshBuilder.Arc(FrontAxleZ, WheelRadius, 0.52f, 160, 20, 12));
+                outline.Add(new V2(3.0f, 0.66f));
+                float x0 = sx < 0 ? -1.08f : 0.72f, x1 = sx < 0 ? -0.72f : 1.08f;
+                b.ExtrudeX(fenderKey, lowerFender, outline, x0, x1);
+                // ornamental headlights on the fender tops: chrome bucket + lens
+                b.Lathe("chrome", Chrome, new[] { new V2(0.0f, -0.12f), new V2(0.14f, -0.1f), new V2(0.19f, 0f), new V2(0.2f, 0.06f) }, 14, sx * 0.86f, 1.22f, 2.75f, new Rot((float)(Math.PI / 2), 0, 0));
+                b.Cylinder("glow", "#FFF6D0", 0.17f, 0.17f, 0.04f, 14, sx * 0.86f, 1.22f, 2.82f, new Rot((float)(Math.PI / 2), 0, 0));
+                // small amber + white lamps along the fender
+                for (int i = 0; i < 2; i++)
+                {
+                    b.Cylinder("chrome", Chrome, 0.08f, 0.08f, 0.06f, 10, sx * 0.9f, 1.06f + i * 0.0f, 2.3f - i * 0.3f, new Rot((float)(Math.PI / 2), 0, 0));
+                    b.Cylinder("glow", i == 0 ? "#FFB020" : "#FFFFFF", 0.06f, 0.06f, 0.05f, 10, sx * 0.9f, 1.06f, 2.34f - i * 0.3f, new Rot((float)(Math.PI / 2), 0, 0));
+                }
+                // fog lamps on the bumper
+                b.Cylinder("glow", "#FFE08A", 0.07f, 0.07f, 0.05f, 10, sx * 0.62f, 0.52f, 3.42f, new Rot((float)(Math.PI / 2), 0, 0));
+                // side mirror on a stalk
+                b.Cylinder("chrome", Chrome, 0.015f, 0.015f, 0.5f, 6, sx * 1.12f, 1.72f, 1.18f, new Rot(0, 0, -sx * 0.9f));
+                b.Box("chrome", Chrome, 0.06f, 0.26f, 0.18f, sx * 1.3f, 1.86f, 1.18f);
+                b.Box("glass", "#6E8FB5", 0.02f, 0.22f, 0.14f, sx * 1.3f, 1.86f, 1.12f);
+                // whip antenna with streamer / beaded antenna (San Juan style)
+                b.Cylinder("chrome", Chrome, 0.012f, 0.015f, 1.5f, 5, sx * 1.02f, 1.2f, 3.3f);
+                if (!L.ChromeLowerBody)
+                    for (int k = 0; k < 9; k++) b.Sphere("paint", "#7A0F1A", 0.045f, sx * 1.02f, 0.75f + k * 0.12f, 3.3f, 6);
+                else
+                    for (int k = 0; k < 3; k++) b.Box("paint", k == 0 ? L.Accent1 : k == 1 ? L.Body : L.Hood, 0.03f, 0.22f, 0.04f, sx * 1.02f + (k - 1) * 0.03f, 1.95f, 3.3f, new Rot(0, 0, (k - 1) * 0.3f));
+            }
+            // signature horse mascots on the hood
+            Horse(b, -0.4f, 1.2f, 2.86f, 1.2f);
+            Horse(b, 0.4f, 1.2f, 2.86f, 1.2f);
+            Horse(b, 0f, 1.28f, 2.25f, 0.9f);
+
+            // ---------------------------------------------------------------- cab
+            b.Box("paint", paint, 2.0f, BeltY - SillY, 0.55f, 0, (BeltY + SillY) / 2, (BodyFrontZ + 1.2f) / 2);
+            // dashboard + steering wheel visible through the windshield
+            b.Box("paint", "#2B2B30", 1.8f, 0.2f, 0.3f, 0, BeltY + 0.05f, 1.05f);
+            b.Lathe("paint", "#111111", new[] { new V2(0.17f, -0.02f), new V2(0.2f, 0f), new V2(0.17f, 0.02f) }, 12, -0.45f, 1.62f, 0.85f, new Rot(1.1f, 0, 0), false);
+            // windshield (split) with chrome frame
+            float wsBottom = BeltY, wsTop = RoofY - 0.04f;
+            b.Box("glass", Glass, 1.84f, wsTop - wsBottom, 0.04f, 0, (wsTop + wsBottom) / 2, 1.18f, new Rot(-0.08f, 0, 0));
+            b.Box("chrome", Chrome, 0.06f, wsTop - wsBottom, 0.08f, 0, (wsTop + wsBottom) / 2, 1.2f, new Rot(-0.08f, 0, 0));
+            foreach (float sx in new[] { -1f, 1f })
+                b.Box("chrome", Chrome, 0.08f, wsTop - wsBottom + 0.05f, 0.1f, sx * 0.96f, (wsTop + wsBottom) / 2, 1.2f, new Rot(-0.08f, 0, 0));
+
+            // ---------------------------------------------------------------- passenger body
+            float bodyLen = BodyFrontZ - BodyRearZ, bodyMidZ = (BodyFrontZ + BodyRearZ) / 2;
+            // inner core (interior colour) so the open windows look into a dark cabin
+            b.Box("paint", Interior, 1.9f, RoofY - SillY - 0.05f, bodyLen - 0.05f, 0, (RoofY + SillY) / 2, bodyMidZ);
+            // painted art panels (textured) on both sides of the lower body
+            float pz0 = BodyRearZ, pz1 = BodyFrontZ;
+            var side = "tex:" + L.SideTexture;
+            // left side, seen from -X: front is on the viewer's left
+            b.Quad(side, new V3(-1.0f, SillY, pz1), new V3(-1.0f, SillY, pz0), new V3(-1.0f, BeltY, pz0), new V3(-1.0f, BeltY, pz1), new V3(-1, 0, 0),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            // right side, seen from +X: front is on the viewer's right
+            b.Quad(side, new V3(1.0f, SillY, pz0), new V3(1.0f, SillY, pz1), new V3(1.0f, BeltY, pz1), new V3(1.0f, BeltY, pz0), new V3(1, 0, 0),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            // rear panel art (includes plate, slogan and the doorway look)
+            var rear = "tex:" + L.RearTexture;
+            b.Quad(rear, new V3(1.0f, SillY, BodyRearZ), new V3(-1.0f, SillY, BodyRearZ), new V3(-1.0f, RoofY, BodyRearZ), new V3(1.0f, RoofY, BodyRearZ), new V3(0, 0, -1),
+                new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1)); // seen from behind, +X is on the viewer's right
+            // belt-line chrome trims
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                b.Box("chrome", Chrome, 0.05f, 0.06f, bodyLen + 0.55f, sx * 1.02f, BeltY + 0.02f, bodyMidZ + 0.27f);
+                b.Box("chrome", Chrome, 0.05f, 0.08f, bodyLen + 0.55f, sx * 1.02f, SillY + 0.03f, bodyMidZ + 0.27f);
+                if (L.ChromeLowerBody) b.Box("chrome", Chrome, 0.04f, 0.22f, bodyLen - 0.2f, sx * 1.015f, SillY + 0.16f, bodyMidZ);
+                // window pillars and grab rail
+                for (int i = 0; i <= 6; i++)
+                    b.Box("paint", trim, 0.08f, RoofY - BeltY, 0.08f, sx * 0.98f, (RoofY + BeltY) / 2, BodyFrontZ - 0.05f - i * (bodyLen - 0.15f) / 6);
+                b.CylinderZ("chrome", Chrome, 0.022f, bodyLen - 0.2f, 6, sx * 1.0f, BeltY + 0.32f, bodyMidZ);
+                // running board between the wheels
+                b.Box("chrome", Chrome, 0.32f, 0.05f, FrontAxleZ - RearAxleZ - 1.15f, sx * 1.02f, 0.5f, (FrontAxleZ + RearAxleZ) / 2 - 0.05f);
+                // sweeping chrome rear fender skirt
+                var rf = new List<V2>();
+                rf.Add(new V2(RearAxleZ + 0.9f, 0.58f));
+                rf.AddRange(MeshBuilder.Arc(RearAxleZ, WheelRadius, 0.64f, 25, 155, 12));
+                rf.Add(new V2(BodyRearZ + 0.02f, 0.8f));
+                rf.Add(new V2(BodyRearZ + 0.02f, 0.52f));
+                rf.Add(new V2(RearAxleZ - 0.62f, 0.52f));
+                rf.AddRange(MeshBuilder.Arc(RearAxleZ, WheelRadius, 0.52f, 160, 20, 12));
+                float rx0 = sx < 0 ? -1.12f : 0.98f, rx1 = sx < 0 ? -0.98f : 1.12f;
+                b.ExtrudeX(fenderKey, lowerFender, rf, rx0, rx1);
+                // mud flaps
+                b.Box("paint", L.ChromeLowerBody ? "#141414" : "#D62828", 0.34f, 0.34f, 0.04f, sx * 0.93f, 0.36f, RearAxleZ - 0.62f);
+                b.Box("paint", L.ChromeLowerBody ? "#141414" : "#D62828", 0.34f, 0.3f, 0.04f, sx * 0.93f, 0.36f, FrontAxleZ - 0.66f);
+                // tail lights
+                b.Box("glow", "#FF2020", 0.1f, 0.45f, 0.05f, sx * 0.92f, 1.2f, BodyRearZ - 0.02f);
+                b.Box("glow", "#FFB000", 0.1f, 0.14f, 0.05f, sx * 0.92f, 0.86f, BodyRearZ - 0.02f);
+            }
+            // benches inside
+            foreach (float sx in new[] { -1f, 1f })
+                b.Box("paint", Seat, 0.42f, 0.12f, bodyLen - 0.4f, sx * 0.7f, 0.98f, bodyMidZ);
+            // rear step, bumper & grab bars
+            b.Box("chrome", Chrome, 1.0f, 0.06f, 0.4f, 0, 0.55f, BodyRearZ - 0.18f);
+            b.Box("chrome", Chrome, 2.05f, 0.14f, 0.12f, 0, 0.58f, BodyRearZ - 0.08f);
+            foreach (float sx in new[] { -1f, 1f }) b.Cylinder("chrome", Chrome, 0.025f, 0.025f, 1.2f, 6, sx * 0.48f, 1.3f, BodyRearZ - 0.05f);
+            // chrome ladder on the rear right corner up to the roof rack
+            for (int r = 0; r < 2; r++) b.Cylinder("chrome", Chrome, 0.022f, 0.022f, RoofY - 0.6f, 6, 0.7f + r * 0.26f, (RoofY + 0.6f) / 2 + 0.05f, BodyRearZ - 0.08f);
+            for (int k = 0; k < 6; k++) b.CylinderX("chrome", Chrome, 0.018f, 0.28f, 6, 0.83f, 0.8f + k * 0.25f, BodyRearZ - 0.08f);
+
+            // ---------------------------------------------------------------- roof
+            b.Box("paint", roof, 2.16f, 0.12f, bodyLen + 0.75f, 0, RoofY + 0.06f, bodyMidZ + 0.3f);
+            b.Box("paint", L.Accent2, 2.18f, 0.04f, bodyLen + 0.77f, 0, RoofY + 0.005f, bodyMidZ + 0.3f);
+            // front visor sweeping up over the windshield
+            var visor = new List<V2> { new V2(1.0f, RoofY), new V2(1.62f, RoofY + 0.04f), new V2(1.7f, RoofY + 0.16f), new V2(1.0f, RoofY + 0.12f) };
+            b.ExtrudeX("paint", trim, visor, -1.06f, 1.06f);
+            // roof sign: angled board with the route / name, chrome frame + supports
+            var sign = "tex:" + L.SignTexture;
+            float sy0 = RoofY + 0.16f, sy1 = RoofY + 0.6f, sz0 = 1.44f, sz1 = 1.36f;
+            b.Quad(sign, new V3(-0.95f, sy0, sz0 + 0.01f), new V3(0.95f, sy0, sz0 + 0.01f), new V3(0.95f, sy1, sz1 + 0.01f), new V3(-0.95f, sy1, sz1 + 0.01f), new V3(0, 0.2f, 1),
+                new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1)); // seen from the front, -X is on the viewer's right
+            b.Box("chrome", Chrome, 2.0f, 0.5f, 0.05f, 0, (sy0 + sy1) / 2, (sz0 + sz1) / 2 - 0.03f, new Rot(-(float)Math.Atan2(sz0 - sz1, sy1 - sy0), 0, 0));
+            foreach (float sx in new[] { -0.8f, 0.8f }) b.Box("chrome", Chrome, 0.05f, 0.2f, 0.05f, sx, RoofY + 0.12f, 1.38f);
+            // roof horns and a row of coloured marker lights
+            foreach (float sx in new[] { -0.5f, 0.5f })
+                b.Lathe("chrome", Chrome, new[] { new V2(0.03f, 0), new V2(0.04f, 0.3f), new V2(0.11f, 0.5f) }, 10, sx, RoofY + 0.22f, 0.95f, new Rot((float)(Math.PI / 2), 0, 0));
+            string[] markers = { "#FF3B3B", "#FFD23F", "#3BCEAC", "#4D9DE0", "#FF8C42", "#FFFFFF", "#E15FED" };
+            for (int i = 0; i < markers.Length; i++) b.Sphere("glow", markers[i], 0.05f, -0.75f + i * 0.25f, RoofY + 0.15f, 1.66f, 6);
+            // luggage rack
+            string rack = L.ChromeLowerBody ? L.Accent1 : Chrome;
+            foreach (float sx in new[] { -0.95f, 0.95f }) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 0.06f, 0.06f, 1.8f, sx, RoofY + 0.32f, -1.9f);
+            for (int i = 0; i < 4; i++) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 1.96f, 0.05f, 0.05f, 0, RoofY + 0.32f, -1.05f - i * 0.57f);
+            foreach (float sx in new[] { -0.95f, 0.95f }) foreach (float z in new[] { -1.05f, -2.75f }) b.Box("chrome", Chrome, 0.04f, 0.22f, 0.04f, sx, RoofY + 0.2f, z);
+
+            // ---------------------------------------------------------------- spare tyre on the side (classic)
+            if (L.ChromeLowerBody)
+            {
+                b.Push(new V3(-1.2f, 1.05f, 0.42f), new Rot(0, 0, (float)(Math.PI / 2)));
+                TireShape(b, 0.4f, 0.26f);
+                b.Pop();
+            }
+            return b.Data;
+        }
+
+        private static void Horse(MeshBuilder b, float x, float y, float z, float s)
+        {
+            b.Push(new V3(x, y, z), Rot.None, s);
+            b.Box("chrome", Chrome, 0.16f, 0.03f, 0.3f, 0, 0.015f, 0);        // plinth
+            b.Box("chrome", Chrome, 0.09f, 0.11f, 0.24f, 0, 0.2f, 0);           // body
+            b.Box("chrome", Chrome, 0.07f, 0.2f, 0.08f, 0, 0.32f, 0.11f, new Rot(-0.5f, 0, 0)); // neck
+            b.Box("chrome", Chrome, 0.07f, 0.08f, 0.15f, 0, 0.42f, 0.2f, new Rot(-0.2f, 0, 0));  // head
+            b.Box("chrome", Chrome, 0.03f, 0.07f, 0.03f, 0, 0.48f, 0.15f);       // ear
+            foreach (float lx in new[] { -0.03f, 0.03f })
+            {
+                b.Box("chrome", Chrome, 0.03f, 0.15f, 0.03f, lx, 0.24f, 0.17f, new Rot(0.9f, 0, 0)); // rearing front legs
+                b.Box("chrome", Chrome, 0.03f, 0.16f, 0.03f, lx, 0.09f, -0.09f);                     // hind legs
+            }
+            b.Box("chrome", Chrome, 0.03f, 0.14f, 0.03f, 0, 0.18f, -0.15f, new Rot(-0.6f, 0, 0)); // tail
+            b.Pop();
+        }
+
+        /// <summary>Tyre with rounded shoulders + chrome hubcap, axis along local Y.</summary>
+        private static void TireShape(MeshBuilder b, float r, float w)
+        {
+            float h = w / 2;
+            var tire = new[]
+            {
+                new V2(r * 0.62f, -h), new V2(r * 0.9f, -h), new V2(r * 0.98f, -h * 0.8f), new V2(r, -h * 0.4f),
+                new V2(r, h * 0.4f), new V2(r * 0.98f, h * 0.8f), new V2(r * 0.9f, h), new V2(r * 0.62f, h),
+            };
+            b.Lathe("paint", Tire, tire, 16, 0, 0, 0);
+            var hub = new[] { new V2(r * 0.64f, h - 0.005f), new V2(r * 0.55f, h + 0.02f), new V2(r * 0.3f, h + 0.05f), new V2(0.0f, h + 0.07f) };
+            b.Lathe("chrome", Chrome, hub, 16, 0, 0, 0);
+            var hub2 = new[] { new V2(0.0f, -h - 0.07f), new V2(r * 0.3f, -h - 0.05f), new V2(r * 0.55f, -h - 0.02f), new V2(r * 0.64f, -h + 0.005f) };
+            b.Lathe("chrome", Chrome, hub2, 16, 0, 0, 0);
+            b.Cylinder("paint", "#2A2A30", r * 0.63f, r * 0.63f, w * 0.96f, 14, 0, 0, 0);
+        }
+
+        /// <summary>One wheel centred at the origin, axis along X (rotate around X to spin).</summary>
+        public static MeshData BuildWheel(Palette palette = null)
+        {
+            var b = new MeshBuilder(palette);
+            b.Push(V3.Zero, new Rot(0, 0, (float)(Math.PI / 2)));
+            TireShape(b, WheelRadius, 0.32f);
+            b.Pop();
+            // a couple of lug bars so the spin is visible
+            b.Box("chrome", Chrome, 0.36f, 0.05f, 0.05f, 0, 0, 0);
+            return b.Data;
+        }
+    }
+}
