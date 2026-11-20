@@ -6,7 +6,7 @@ namespace JeepneyRush.Logic
     /// Lane-space AABB overlap used by the fairness simulation (the Unity build uses
     /// trigger colliders sized from the same numbers, see HazardColliderSizing).
     /// </summary>
-    public static class Collision
+    public static class CollisionMath
     {
         public const float Forgive = 0.15f;
 

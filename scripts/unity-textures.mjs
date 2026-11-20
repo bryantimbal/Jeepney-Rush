@@ -241,6 +241,37 @@ const textures = await page.evaluate(() => {
     x.fillStyle = '#ffffff'; x.fillText('RUSH', 0, 0); x.restore();
     save('logo', c);
   }
+  // -------------------------------------------------- UI icons & backgrounds
+  {
+    const icon = (name, w, h, draw) => { const [c, x] = cv(w, h); draw(x, w, h); save(name, c); };
+    const heart = (x, w, fill) => { x.save(); x.translate(w / 2, w / 2 + 6); x.scale(w / 128, w / 128); x.beginPath(); x.moveTo(0, 38); x.bezierCurveTo(-70, -10, -40, -70, 0, -32); x.bezierCurveTo(40, -70, 70, -10, 0, 38); x.closePath(); x.lineWidth = 12; x.strokeStyle = '#1b1033'; x.lineJoin = 'round'; x.stroke(); x.fillStyle = fill; x.fill(); x.fillStyle = 'rgba(255,255,255,0.45)'; x.beginPath(); x.ellipse(-22, -24, 12, 8, -0.6, 0, Math.PI * 2); x.fill(); x.restore(); };
+    icon('ui_heart', 128, 128, (x, w) => heart(x, w, '#ff3b4f'));
+    icon('ui_heart_empty', 128, 128, (x, w) => heart(x, w, '#5b5470'));
+    icon('ui_coin', 128, 128, (x) => { const g = x.createRadialGradient(48, 44, 6, 64, 64, 60); g.addColorStop(0, '#fff6b0'); g.addColorStop(0.45, '#ffc928'); g.addColorStop(1, '#c98a00'); x.fillStyle = g; x.beginPath(); x.arc(64, 64, 56, 0, Math.PI * 2); x.fill(); x.lineWidth = 8; x.strokeStyle = '#8a5a00'; x.stroke(); x.fillStyle = '#8a5a00'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `64px ${D}`; x.fillText('1', 64, 70); });
+    icon('ui_person', 128, 128, (x) => { x.fillStyle = '#ffd23f'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.beginPath(); x.arc(64, 36, 22, 0, Math.PI * 2); x.fill(); x.stroke(); x.beginPath(); x.roundRect(30, 64, 68, 56, 22); x.fill(); x.stroke(); });
+    icon('ui_pause', 128, 128, (x) => { x.fillStyle = '#1b1033'; x.beginPath(); x.roundRect(34, 26, 22, 76, 6); x.roundRect(72, 26, 22, 76, 6); x.fill(); });
+    icon('ui_horn', 128, 128, (x) => { x.fillStyle = '#ffd23f'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.lineJoin = 'round'; x.beginPath(); x.moveTo(18, 52); x.lineTo(46, 52); x.lineTo(100, 22); x.lineTo(100, 106); x.lineTo(46, 76); x.lineTo(18, 76); x.closePath(); x.fill(); x.stroke(); x.strokeStyle = '#1b1033'; x.lineWidth = 7; x.beginPath(); x.arc(100, 64, 18, -0.9, 0.9); x.stroke(); });
+    const arrow = (x, dir) => { x.save(); x.translate(64, 64); x.scale(dir, 1); x.fillStyle = '#ffd23f'; x.strokeStyle = '#1b1033'; x.lineWidth = 10; x.lineJoin = 'round'; x.beginPath(); x.moveTo(-40, 0); x.lineTo(10, -42); x.lineTo(10, -16); x.lineTo(42, -16); x.lineTo(42, 16); x.lineTo(10, 16); x.lineTo(10, 42); x.closePath(); x.stroke(); x.fill(); x.restore(); };
+    icon('ui_arrow_left', 128, 128, (x) => arrow(x, 1));
+    icon('ui_arrow_right', 128, 128, (x) => arrow(x, -1));
+    icon('ui_splash_bg', 512, 1024, (x, w, h) => {
+      const g = x.createRadialGradient(w / 2, h * 0.35, 20, w / 2, h * 0.4, h * 0.8); g.addColorStop(0, '#ffb347'); g.addColorStop(0.35, '#ff6a3d'); g.addColorStop(0.75, '#b5179e'); g.addColorStop(1, '#3a0ca3'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.save(); x.translate(w / 2, h * 0.35); for (let i = 0; i < 18; i++) { x.rotate(Math.PI / 9); x.fillStyle = 'rgba(255,255,255,0.09)'; x.beginPath(); x.moveTo(0, 0); x.lineTo(-90, -1200); x.lineTo(90, -1200); x.fill(); } x.restore();
+    });
+    icon('ui_jeepney', 440, 220, (x) => {
+      x.scale(2, 2);
+      x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(8, 88, 200, 6);
+      x.fillStyle = '#d7dbe2'; x.fillRect(60, 28, 120, 54);
+      x.fillStyle = '#ce1126'; x.fillRect(60, 62, 120, 6); x.fillStyle = '#fcd116'; x.fillRect(60, 69, 120, 4); x.fillStyle = '#0038a8'; x.fillRect(60, 74, 120, 4);
+      x.fillStyle = '#0038a8'; x.fillRect(56, 20, 132, 9); x.fillStyle = '#1d2a3a'; x.fillRect(66, 33, 108, 18);
+      x.fillStyle = '#fcd116'; for (const px of [80, 100, 120, 140, 160]) x.fillRect(px, 33, 4, 18);
+      x.fillStyle = '#ce1126'; x.fillRect(22, 50, 40, 22); x.fillStyle = '#e9edf2'; x.fillRect(14, 56, 10, 20); x.fillRect(8, 74, 20, 6);
+      x.fillStyle = '#fff7d6'; x.beginPath(); x.arc(20, 60, 4, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#1b1033'; x.font = `9px ${D}`; x.textAlign = 'center'; x.fillText('PILIPINAS', 120, 61);
+      x.fillStyle = '#ff2a2a'; x.fillRect(176, 40, 5, 16);
+      for (const cx of [45, 160]) { x.fillStyle = '#17171a'; x.beginPath(); x.arc(cx, 84, 11, 0, Math.PI * 2); x.fill(); x.fillStyle = '#e9edf2'; x.beginPath(); x.arc(cx, 84, 5, 0, Math.PI * 2); x.fill(); }
+    });
+  }
   return out;
 });
 

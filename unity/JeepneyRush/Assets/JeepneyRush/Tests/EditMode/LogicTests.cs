@@ -99,7 +99,7 @@ namespace JeepneyRush.Tests
                 for (float t = 0; t < 1.5f; t += 0.002f)
                 {
                     float z = -start + speed * t;
-                    if (Collision.Overlaps(c, 0, c.JumpHeightAt(t), 0, z, def)) { hit = true; break; }
+                    if (CollisionMath.Overlaps(c, 0, c.JumpHeightAt(t), 0, z, def)) { hit = true; break; }
                 }
                 if (!hit) cleared = true;
             }

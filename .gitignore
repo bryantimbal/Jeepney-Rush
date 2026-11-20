@@ -28,3 +28,4 @@ unity/JeepneyRush/*.sln
 unity/**/bin/
 unity/**/obj/
 preview/
+unity/.unity-refs/

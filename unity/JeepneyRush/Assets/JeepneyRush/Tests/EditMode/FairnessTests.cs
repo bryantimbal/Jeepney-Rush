@@ -136,7 +136,7 @@ namespace JeepneyRush.Tests
                 foreach (var o in world.Objs)
                 {
                     if (o.Hit) continue;
-                    if (Collision.Overlaps(cfg, x, y, cfg.LaneX(o.Lane), o.Z, HazardCatalog.Get(o.Kind)))
+                    if (CollisionMath.Overlaps(cfg, x, y, cfg.LaneX(o.Lane), o.Z, HazardCatalog.Get(o.Kind)))
                     {
                         o.Hit = true;
                         hits.Add($"{o.Kind}@{distance:0}m");

@@ -1,0 +1,14 @@
+{
+    "name": "JeepneyRush",
+    "rootNamespace": "JeepneyRush",
+    "references": ["JeepneyRush.Logic", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

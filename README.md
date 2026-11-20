@@ -1,6 +1,13 @@
 # JEEPNEY RUSH 🚌💨
 **The Ultimate Pinoy Driving Challenge!**
 
+This repository contains two implementations:
+
+| | Folder | Status |
+|---|---|---|
+| **Unity 6 (URP, C#) – main project** | [`unity/`](unity/README.md) | Phase 1 code complete and compile-checked, logic tests pass. **Not yet opened or built in Unity**, see [`docs/UNITY_PHASE1_REPORT.md`](docs/UNITY_PHASE1_REPORT.md) |
+| Web prototype (Three.js + Capacitor) | repository root (`src/`, `android/`) | Playable in a browser, tested end-to-end; documented below |
+
 An endless 3D arcade driving game about the Filipino jeepney: weave through Manila
 traffic, jump potholes and road works, and pull into **PARA** zones to drop off and
 pick up passengers, all while watching your fuel.

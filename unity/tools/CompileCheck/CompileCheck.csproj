@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compile-checks the Unity C# (runtime + editor) against Unity reference assemblies,
+    without Unity installed. Run ../fetch-unity-refs.sh first. Not used by Unity itself.
+    ENABLE_INPUT_SYSTEM is deliberately not defined here (the package is not on NuGet),
+    so the legacy-input branch of InputCompat is the one checked.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_2021_3_OR_NEWER;UNITY_EDITOR;UNITY_ANDROID</DefineConstants>
+    <NoWarn>CS1701;CS1702;CS0618</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../JeepneyRush/Assets/JeepneyRush/Scripts/**/*.cs" />
+    <Reference Include="../../.unity-refs/engine/lib/netstandard2.0/*.dll" />
+    <Reference Include="../../.unity-refs/editor/lib/UnityEditor.dll" />
+  </ItemGroup>
+</Project>
