@@ -20,6 +20,20 @@ namespace JeepneyRush
         public static event Action Honked;
         public static event Action<RunResult> RunEnded;
 
+        /// <summary>
+        /// Clears every subscriber at the start of each Play session. Required when the
+        /// Editor's "Enter Play Mode Options" skip domain reload (Unity 6 default in many
+        /// templates): otherwise handlers from destroyed managers of the previous session
+        /// stay subscribed and throw MissingReferenceException.
+        /// </summary>
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetAll()
+        {
+            StateChanged = null; CoinCollected = null; PassengersServed = null; Hit = null; Jumped = null;
+            Landed = null; LaneChanged = null; Braked = null; Honked = null; RunEnded = null;
+            Services.Reset();
+        }
+
         public static void RaiseStateChanged(GameState from, GameState to) => StateChanged?.Invoke(from, to);
         public static void RaiseCoin(int value) => CoinCollected?.Invoke(value);
         public static void RaisePassengers(PickupResult r) => PassengersServed?.Invoke(r);

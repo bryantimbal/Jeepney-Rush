@@ -14,6 +14,9 @@ namespace JeepneyRush
     {
         private static GameObject _systems;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => _systems = null; // fast enter-play-mode support
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void CreateSystems()
         {
