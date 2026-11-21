@@ -19,6 +19,18 @@ namespace JeepneyRush
         private readonly List<GameObject> _seated = new List<GameObject>();
         private Transform _player;
         private float _time;
+        // ---- fare passing ("Bayad po!"): money travels hand to hand along the bench to the driver
+        private sealed class Fare { public Transform T; public readonly List<Vector3> Path = new List<Vector3>(); public readonly List<int> Passers = new List<int>(); public float Time; public float Delay; }
+        private readonly List<Fare> _fares = new List<Fare>();
+        private float[] _bob = new float[0];
+        private GameObject _driver;
+        private float _driverBob;
+        private const float HopTime = 0.3f;
+        /// <summary>Driver sits on the left, behind the steering wheel.</summary>
+        public static readonly Vector3 DriverSeat = new Vector3(-0.45f, 1.05f, 0.62f);
+        private static readonly Vector3 DriverHand = new Vector3(-0.2f, 1.55f, 0.5f);
+        /// <summary>Raised when a fare reaches the driver (world position of the money).</summary>
+        public System.Action<Vector3> FarePaid;
         /// <summary>Raised when riders miss their stop (count, stop).</summary>
         public System.Action<int, PassengerStop> Missed;
 
@@ -53,6 +65,95 @@ namespace JeepneyRush
                 go.SetActive(false);
                 _seated.Add(go);
             }
+            _bob = new float[_seated.Count];
+            if (_driver != null) Destroy(_driver);
+            _driver = ModelLibrary.Instantiate(ModelLibrary.SeatedPerson(3 % PropBuilder.PersonVariants), "Driver", _player, castShadows: false);
+            _driver.transform.localPosition = DriverSeat;
+            _driver.transform.localRotation = Quaternion.identity; // facing the road
+            if (!Services.Pools.Has("fare")) Services.Pools.Register("fare", () => ModelLibrary.Instantiate(ModelLibrary.Get("fare", () =>
+            {
+                var b = new MeshBuilder();
+                b.Box("paint", "#6DBE6D", 0.2f, 0.012f, 0.1f, 0, 0, 0);          // folded peso bill
+                b.Box("paint", "#3E8E4A", 0.08f, 0.014f, 0.05f, 0.03f, 0.001f, 0);
+                b.Cylinder("gold", "#F2C230", 0.045f, 0.045f, 0.016f, 12, -0.06f, 0.012f, 0.02f); // coins
+                b.Cylinder("gold", "#E0B020", 0.04f, 0.04f, 0.016f, 12, -0.05f, 0.03f, 0.0f);
+                return b.Data;
+            }), "Fare", null, castShadows: false), 4);
+        }
+
+        private Vector3 HandOf(int seat)
+        {
+            var s = JeepneyBuilder.Seats[seat];
+            return new Vector3(s.X * 0.55f, 1.5f, s.Z + 0.05f); // hand held out over the aisle
+        }
+
+        /// <summary>A new rider hands their fare forward ("Bayad po!"); others pass it on ("Pakiabot").</summary>
+        private void StartFare(int seat, float delay)
+        {
+            if (seat < 0 || seat >= JeepneyBuilder.Seats.Length) return;
+            var f = new Fare { Delay = delay };
+            f.Path.Add(HandOf(seat));
+            float z = JeepneyBuilder.Seats[seat].Z;
+            int n = _route != null ? Mathf.Min(_route.Count, _seated.Count) : 0;
+            var ahead = new List<int>();
+            for (int j = 0; j < n; j++) if (j != seat && JeepneyBuilder.Seats[j].Z > z + 0.2f) ahead.Add(j);
+            ahead.Sort((a, b) => JeepneyBuilder.Seats[a].Z.CompareTo(JeepneyBuilder.Seats[b].Z));
+            for (int k = 0; k < ahead.Count && k < 3; k++) { f.Path.Add(HandOf(ahead[k])); f.Passers.Add(ahead[k]); }
+            f.Path.Add(DriverHand);
+            f.T = Services.Pools.Get("fare", _player).transform;
+            f.T.localPosition = f.Path[0];
+            f.T.localRotation = Quaternion.identity;
+            f.T.gameObject.SetActive(delay <= 0);
+            _fares.Add(f);
+        }
+
+        private void TickFares(float dt)
+        {
+            for (int i = _fares.Count - 1; i >= 0; i--)
+            {
+                var f = _fares[i];
+                if (f.Delay > 0)
+                {
+                    f.Delay -= dt;
+                    if (f.Delay <= 0) f.T.gameObject.SetActive(true);
+                    continue;
+                }
+                float before = f.Time;
+                f.Time += dt;
+                int seg = Mathf.Min(f.Path.Count - 2, Mathf.FloorToInt(f.Time / HopTime));
+                float k = Mathf.Clamp01(f.Time / HopTime - seg);
+                // each hand-over is a little arc
+                var pos = Vector3.Lerp(f.Path[seg], f.Path[seg + 1], k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 0.22f;
+                f.T.localPosition = pos;
+                f.T.localRotation = Quaternion.Euler(0, f.Time * 400f, Mathf.Sin(f.Time * 20f) * 15f);
+                // the person receiving it reaches up
+                int prevSeg = Mathf.FloorToInt(before / HopTime);
+                if (seg != prevSeg && seg - 1 < f.Passers.Count && seg >= 1) _bob[f.Passers[seg - 1]] = 0.3f;
+                if (f.Time >= HopTime * (f.Path.Count - 1))
+                {
+                    _driverBob = 0.35f;
+                    FarePaid?.Invoke(f.T.position);
+                    Services.Audio?.Play(Logic.Audio.Sfx.Fare, 0.8f, Random.Range(0.95f, 1.1f));
+                    Services.Pools.Release(f.T.gameObject);
+                    _fares.RemoveAt(i);
+                }
+            }
+            for (int j = 0; j < _bob.Length; j++)
+            {
+                if (_seated[j] == null) continue;
+                var s = JeepneyBuilder.Seats[j];
+                float b = _bob[j] > 0 ? Mathf.Sin((0.3f - _bob[j]) / 0.3f * Mathf.PI) : 0f;
+                if (_bob[j] > 0) _bob[j] -= dt;
+                _seated[j].transform.localPosition = new Vector3(s.X * (1f - 0.12f * b), s.Y + 0.06f * b, s.Z);
+            }
+            if (_driver != null)
+            {
+                float d = _driverBob > 0 ? Mathf.Sin((0.35f - _driverBob) / 0.35f * Mathf.PI) : 0f;
+                if (_driverBob > 0) _driverBob -= dt;
+                // driver turns to take the money without taking their eyes off the road for long
+                _driver.transform.localRotation = Quaternion.Euler(0, 25f * d, 0); // turns right, toward the aisle
+                _driver.transform.localPosition = DriverSeat + new Vector3(0.05f * d, 0.03f * d, 0);
+            }
         }
 
         public void AttachTo(Transform playerBody)
@@ -74,6 +175,8 @@ namespace JeepneyRush
             _stops.Clear();
             foreach (var f in _flying) Services.Pools.Release(f.t.gameObject);
             _flying.Clear();
+            foreach (var f in _fares) if (f.T != null) Services.Pools.Release(f.T.gameObject);
+            _fares.Clear();
         }
 
         private void ReleaseStop(PassengerStopView s)
@@ -126,6 +229,7 @@ namespace JeepneyRush
         public void Tick(float dt, float speed)
         {
             _time += dt;
+            TickFares(dt);
             float half = _cfg.stopZoneLength / 2f;
             for (int i = _stops.Count - 1; i >= 0; i--)
             {
@@ -220,6 +324,9 @@ namespace JeepneyRush
                 _flying.Add((t, variant, from, 0f, false, s.Stop.Side * (SceneryBuilder.RoadHalfWidth + 0.8f + a * 0.4f)));
             }
             UpdateSeats();
+            // every new rider pays: the fare is passed forward to the driver once they sit down
+            int firstNew = Mathf.Min(_route.Count, _seated.Count) - r.Boarded;
+            for (int b = 0; b < r.Boarded; b++) StartFare(firstNew + b, 0.6f + b * 0.45f);
             return r;
         }
 

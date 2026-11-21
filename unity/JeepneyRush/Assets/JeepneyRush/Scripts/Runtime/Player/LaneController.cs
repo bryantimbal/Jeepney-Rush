@@ -16,6 +16,8 @@ namespace JeepneyRush
         public float VelocityX { get; private set; }
         public bool Changing => _t < 1f;
         public int FromLane => _from;
+        /// <summary>-1 turning left, +1 turning right, 0 straight (for the turn signals).</summary>
+        public int TurnDirection => Changing ? (Lane > _from ? 1 : Lane < _from ? -1 : 0) : 0;
         /// <summary>Lane-change time multiplier (wet / flooded road = slippery = slower steering).</summary>
         public float DurationScale = 1f;
 
@@ -72,7 +74,7 @@ namespace JeepneyRush
                     if (q != Lane) Start(q);
                 }
             }
-            float e = 1f - Mathf.Pow(1f - _t, 3f); // ease-out cubic
+            float e = _t * _t * (3f - 2f * _t); // smooth in and out, like a real driver easing the wheel
             X = Mathf.Lerp(_cfg.LaneX(_from), _cfg.LaneX(Lane), e);
             VelocityX = dt > 0 ? (X - prev) / dt : 0;
         }

@@ -108,6 +108,12 @@ namespace JeepneyRush
             _passengers = GetOrAdd<PassengerManager>(Child("PassengerManager"));
             _passengers.Init(_cfg, _player.Body);
             _passengers.Missed = OnMissed;
+            _passengers.FarePaid = pos =>
+            {
+                if (_dying) return;
+                Services.UI.CoinFly(pos);
+                if (_rng.Chance(0.4)) Services.UI.Say(_rng.Chance(0.5) ? "SALAMAT!" : "BAYAD NATANGGAP!", () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)));
+            };
             _powerUps = GetOrAdd<PowerUpManager>(Child("PowerUpManager"));
             _powerUps.Init(_cfg, _player.transform);
             _enforcer = GetOrAdd<EnforcerManager>(Child("EnforcerManager"));

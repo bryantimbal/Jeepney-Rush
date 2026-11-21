@@ -52,7 +52,7 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(12f, c.startSpeed);
             Assert.AreEqual(24f, c.maxSpeed);
             Assert.AreEqual(3.2f, c.laneSpacing);
-            Assert.AreEqual(0.22f, c.laneChangeDuration);
+            Assert.AreEqual(0.42f, c.laneChangeDuration);
             Assert.AreEqual(3, c.startHealth);
             Assert.AreEqual(5, c.passengerCapacity);
             Assert.AreEqual(-3.2f, c.LaneX(0), 1e-4);

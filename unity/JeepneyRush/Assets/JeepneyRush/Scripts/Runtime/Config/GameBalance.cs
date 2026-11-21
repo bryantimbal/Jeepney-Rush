@@ -13,6 +13,9 @@ namespace JeepneyRush
     public sealed class GameBalance : ScriptableObject
     {
         public BalanceConfig config = new BalanceConfig();
+        [Tooltip("Balance-asset format version (older assets are upgraded on load).")]
+        public int balanceVersion;
+        private const int CurrentVersion = 3;
 
         private static GameBalance _active;
 
@@ -29,9 +32,22 @@ namespace JeepneyRush
                         _active = CreateInstance<GameBalance>();
                         _active.name = "GameBalance (defaults)";
                     }
+                    _active.Migrate();
                 }
                 return _active.config;
             }
+        }
+
+        /// <summary>Upgrades values saved by older versions of the game in your project's balance asset.</summary>
+        private void Migrate()
+        {
+            if (balanceVersion >= CurrentVersion) return;
+            // v3: lane changes became smooth and slow (with turn signals) – 0.22 s was the old snappy value
+            if (config.laneChangeDuration < 0.3f) config.laneChangeDuration = new BalanceConfig().laneChangeDuration;
+            balanceVersion = CurrentVersion;
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(this);
+#endif
         }
 
         private void OnValidate()

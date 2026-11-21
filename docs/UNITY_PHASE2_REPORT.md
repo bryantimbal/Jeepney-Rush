@@ -100,3 +100,13 @@ Tests: **68/68 pass**. New tests: braking-at-hump rules, board only when stopped
 | Board even if not exactly inside the lines | The jeepney only has to **touch** the zone. It can stand on the painted lines, straddle the lane line (even mid lane change), or stop up to 1.5 m short of or past the box. |
 
 Tests: **68/68 pass**, and the zone test now covers straddling, bumper-on-the-line, rolling past and the reversing reach. The compile check has 0 errors.
+
+## Update 6 – fare passing inside the jeepney, smooth lane changes with turn signals
+| Request | Change |
+|---|---|
+| Fare collection animation inside the jeep | The jeepney now has a **driver** behind the steering wheel (front left). When a passenger boards, they sit down and then hand their fare (a folded peso bill with coins) forward. It is **passed hand to hand** up the bench ("Pakiabot po!"): each rider on the way leans into the aisle to take it, up to 3 hand-overs, each a small arc. The driver turns to take it, you hear coins clinking, a coin flies to the HUD counter, and sometimes the driver says "SALAMAT!". Several riders boarding together pay one after another. |
+| Smooth, slow turns with turn signals | Lane changes now take **0.42 s** (was 0.22 s) with a smooth ease-in/ease-out like a driver turning the wheel. The nose points into the turn and the body leans gently. The **amber turn signals** on the matching side (front and rear corners) **blink about 2.5× per second** with a relay "tik-tak" sound for the whole turn and briefly after. Swipe left → left signals, swipe right → right signals. Wet roads make the turn even slower (up to 0.55 s). The obstacle generator and the fairness bot use the new timing, so every situation is still escapable. |
+
+Your existing `Resources/GameBalance.asset` still holds the old 0.22 s lane change, so the game **upgrades it automatically** on load (`balanceVersion` 3). You don't have to edit it by hand.
+
+Tests: **68/68 pass** (the fairness bot uses the slower, smoothed lane change). The compile check has 0 errors.

@@ -21,6 +21,13 @@ namespace JeepneyRush
         private GameObject _bodyModel;
         private float _lean, _pitch, _wheelSpin, _time, _brakeT, _brakeCooldown, _crashSlow = 1f;
         private float _bumpY, _bumpV, _floodSlowT, _slip;
+        // turn signals: [0,1] = left front/rear, [2,3] = right front/rear
+        private readonly GameObject[] _blinkers = new GameObject[4];
+        private int _signalDir;
+        private float _signalT, _signalHold;
+        private bool _signalOn;
+        /// <summary>Plays the relay "tik" (only the gameplay jeepney, not menu previews).</summary>
+        public bool SignalSound = true;
         /// <summary>Road slope under the jeepney (radians, + = uphill), set by the session.</summary>
         public float SlopePitch;
         private string _livery;
@@ -80,6 +87,7 @@ namespace JeepneyRush
             if (_bodyModel != null) Destroy(_bodyModel);
             foreach (var w in _wheels) if (w != null) Destroy(w.gameObject);
             _bodyModel = ModelLibrary.Instantiate(ModelLibrary.Jeepney(liveryId), "Jeepney_" + liveryId, Body);
+            BuildBlinkers();
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
@@ -90,8 +98,74 @@ namespace JeepneyRush
             }
         }
 
+        /// <summary>Amber turn-signal lamps at the four corners of the current body model.</summary>
+        private void BuildBlinkers()
+        {
+            foreach (var bl in _blinkers) if (bl != null) Destroy(bl);
+            var bounds = new Bounds();
+            bool any = false;
+            foreach (var mf in _bodyModel.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                var bb = mf.sharedMesh.bounds;
+                if (!any) { bounds = bb; any = true; } else bounds.Encapsulate(bb);
+            }
+            if (!any) bounds = new Bounds(new Vector3(0, 1, 0.2f), new Vector3(2.1f, 2.2f, 6.8f));
+            var model = ModelLibrary.Get("blinker", () =>
+            {
+                var b = new MeshBuilder();
+                b.Box("glow", "#FFA000", 0.2f, 0.14f, 0.12f, 0, 0, 0);
+                b.Sphere("bubble", "#FFC040", 0.22f, 0, 0, 0, 8); // soft glow halo
+                return b.Data;
+            });
+            float hx = Mathf.Min(bounds.extents.x, 1.15f) - 0.05f;
+            var spots = new[]
+            {
+                new Vector3(-hx, 0.95f, bounds.max.z - 0.35f), new Vector3(-hx, 0.9f, bounds.min.z + 0.25f),
+                new Vector3(hx, 0.95f, bounds.max.z - 0.35f), new Vector3(hx, 0.9f, bounds.min.z + 0.25f),
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                _blinkers[i] = ModelLibrary.Instantiate(model, "TurnSignal" + i, Body, castShadows: false);
+                _blinkers[i].transform.localPosition = spots[i];
+                _blinkers[i].SetActive(false);
+            }
+        }
+
+        /// <summary>Left/right turn signal while changing lanes (and briefly after), ~2.5 blinks per second.</summary>
+        private void UpdateSignals(float dt)
+        {
+            int dir = Lanes.TurnDirection;
+            if (dir != 0)
+            {
+                if (dir != _signalDir) { _signalDir = dir; _signalT = 0; }
+                _signalHold = 0.45f;
+            }
+            else if (_signalHold > 0) _signalHold -= dt;
+            else _signalDir = 0;
+            bool on = false;
+            if (_signalDir != 0)
+            {
+                _signalT += dt;
+                on = (_signalT % 0.4f) < 0.22f;
+            }
+            if (on != _signalOn)
+            {
+                _signalOn = on;
+                if (SignalSound && Services.Audio != null) Services.Audio.Play(Logic.Audio.Sfx.Blinker, on ? 0.35f : 0.25f, on ? 1f : 0.85f);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                if (_blinkers[i] == null) continue;
+                bool side = _signalDir < 0 ? i < 2 : _signalDir > 0 && i >= 2;
+                bool show = on && side;
+                if (_blinkers[i].activeSelf != show) _blinkers[i].SetActive(show);
+            }
+        }
+
         public void ResetRun()
         {
+            _signalDir = 0; _signalHold = 0;
             Lanes.Reset();
             _bumpY = _bumpV = _floodSlowT = _slip = SlopePitch = 0;
             Collisions.ResetRun();
@@ -154,7 +228,7 @@ namespace JeepneyRush
             // suspension spring for humps / potholes
             _bumpV -= (_bumpY * 140f + _bumpV * 9f) * dt;
             _bumpY += _bumpV * dt;
-            float targetLean = Mathf.Clamp(-Lanes.VelocityX * 0.7f, -12f, 12f);
+            float targetLean = Mathf.Clamp(-Lanes.VelocityX * 0.35f, -6f, 6f);
             _lean = Mathf.Lerp(_lean, targetLean, 1f - Mathf.Exp(-dt * 14f));
             float targetPitch = Braking && speed > 0.5f ? 2.5f : GasHeld ? -1.5f : 0f; // nose dips while braking, settles when stopped
             _pitch = Mathf.Lerp(_pitch, targetPitch, 1f - Mathf.Exp(-dt * 8f));
@@ -162,7 +236,9 @@ namespace JeepneyRush
             // wet road: the rear steps out a little during lane changes (fishtail)
             float fishtail = _slip * Mathf.Clamp(Lanes.VelocityX, -12f, 12f) * 0.55f;
             Body.localPosition = new Vector3(0, shake + Mathf.Max(-0.05f, _bumpY), 0);
-            Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.25f + fishtail, _lean);
+            // the nose points into the turn (steering), the body leans gently outward
+            Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.7f + fishtail, _lean);
+            UpdateSignals(dt);
             _wheelSpin += speed * dt / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg;
             foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_wheelSpin, 0, 0);
             // invulnerability blink

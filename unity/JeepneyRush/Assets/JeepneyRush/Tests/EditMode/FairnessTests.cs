@@ -136,7 +136,7 @@ namespace JeepneyRush.Tests
                     if (best >= 0 && best != lane) { from = lane; lane = best; laneT = 0; }
                 }
                 if (laneT < 1) laneT = Math.Min(1, laneT + dt / laneDur);
-                float e = 1 - (float)Math.Pow(1 - laneT, 3);
+                float e = laneT * laneT * (3 - 2 * laneT); // same smooth ease as the game
                 x = cfg.LaneX(from) + (cfg.LaneX(lane) - cfg.LaneX(from)) * e;
 
                 const float y = 0; // jeepneys don't jump: humps/potholes/floods are driven over
