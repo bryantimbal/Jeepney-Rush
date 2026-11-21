@@ -1,9 +1,12 @@
 {
-    "ok": true,
+    "daily": false,
+    "clamped": false,
+    "accepted": true,
+    "rank_all": 2,
     "snapshot": {
         "xp": 1430,
         "runs": 4,
-        "coins": 5819,
+        "coins": 5969,
         "level": 4,
         "owned": [
             "pilipinas",
@@ -55,7 +58,7 @@
             }
         ],
         "upgrades": [
-            1,
+            0,
             0,
             0,
             0,
@@ -65,9 +68,9 @@
         "week_key": 151,
         "best_clean": 2500,
         "best_score": 20419,
-        "friend_code": "EZYJUVNA",
+        "friend_code": "RJE85ZXU",
         "total_coins": 4632,
-        "display_name": "Driver-EZYJ",
+        "display_name": "Driver-RJE8",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [
@@ -108,5 +111,11 @@
             "rain_or_shine",
             "traffic_survivor"
         ]
-    }
+    },
+    "rank_week": 2,
+    "xp_gained": 270,
+    "coin_bonus": 20,
+    "rank_daily": 0,
+    "level_reward": 0,
+    "credited_coins": 200
 }

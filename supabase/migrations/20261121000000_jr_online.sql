@@ -8,7 +8,7 @@
 -- No table accepts direct INSERT/UPDATE/DELETE from clients. The anon key is safe to
 -- ship in the app; the service-role key never is.
 --
--- Game rules mirrored from the C# client are cross-checked by supabase/tests (same
+-- Game rules mirrored from the C# client are cross-checked by supabase/dev-tests (same
 -- PRNG, mission generation, daily challenge, level curve and run bounds).
 -- =====================================================================================
 

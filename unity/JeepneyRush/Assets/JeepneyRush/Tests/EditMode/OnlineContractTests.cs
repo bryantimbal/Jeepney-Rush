@@ -1,6 +1,6 @@
 #if !UNITY_5_3_OR_NEWER
 // .NET-only test (System.Text.Json is not part of Unity): the JSON produced by the real
-// Supabase SQL functions (saved by supabase/tests/run.sh) must contain every field the C#
+// Supabase SQL functions (saved by supabase/dev-tests/run.sh) must contain every field the C#
 // client reads, with exactly the same names – JsonUtility silently ignores mismatches.
 using System;
 using System.IO;
@@ -18,7 +18,7 @@ namespace JeepneyRush.Tests
         private static string Dir()
         {
             var d = new DirectoryInfo(Directory.GetCurrentDirectory());
-            while (d != null && !Directory.Exists(Path.Combine(d.FullName, "supabase", "tests", "contract"))) d = d.Parent;
+            while (d != null && !Directory.Exists(Path.Combine(d.FullName, "supabase", "dev-tests", "contract"))) d = d.Parent;
             return d == null ? null : Path.Combine(d.FullName, "supabase");
         }
 
@@ -38,8 +38,8 @@ namespace JeepneyRush.Tests
         private static JsonElement Load(string name)
         {
             string dir = Dir();
-            if (dir == null) Assert.Ignore("supabase/tests/contract not found");
-            return JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "tests", "contract", name))).RootElement;
+            if (dir == null) Assert.Ignore("supabase/dev-tests/contract not found");
+            return JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "dev-tests", "contract", name))).RootElement;
         }
 
         [Test] public void SnapshotMatches() => AssertHasFields(Load("get_state.json"), typeof(ServerSnapshot), "get_state");

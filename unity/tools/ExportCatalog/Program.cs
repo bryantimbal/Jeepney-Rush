@@ -5,11 +5,22 @@ using System.Text;
 using JeepneyRush.Logic;
 
 // Usage: dotnet run --project unity/tools/ExportCatalog [repoRoot]
-// Writes supabase/migrations/<catalog>.sql and supabase/tests/vectors/*.csv
+// Writes a catalog migration (only if the catalog changed) and supabase/dev-tests/vectors/*.csv
 string root = args.Length > 0 ? args[0] : FindRoot();
 var inv = CultureInfo.InvariantCulture;
-File.WriteAllText(Path.Combine(root, "supabase/migrations", CatalogExport.FileName), CatalogExport.Sql());
-string vec = Path.Combine(root, "supabase/tests/vectors");
+string migrations = Path.Combine(root, "supabase/migrations");
+string latest = CatalogExport.LatestFile(migrations);
+string sql = CatalogExport.Sql();
+if (latest == null) File.WriteAllText(Path.Combine(migrations, CatalogExport.FileName), sql);
+else if (File.ReadAllText(latest).Replace("\r\n", "\n") == sql) Console.WriteLine($"catalog unchanged ({Path.GetFileName(latest)})");
+else
+{
+    // never edit a migration that may already be deployed: add a new one
+    string name = DateTime.UtcNow.ToString("yyyyMMddHHmmss") + CatalogExport.FileSuffix;
+    File.WriteAllText(Path.Combine(migrations, name), sql);
+    Console.WriteLine($"catalog changed -> new migration {name} (commit it; Supabase applies it on deploy)");
+}
+string vec = Path.Combine(root, "supabase/dev-tests/vectors");
 Directory.CreateDirectory(vec);
 
 // 1) PRNG (mulberry32) raw outputs

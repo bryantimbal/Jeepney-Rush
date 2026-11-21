@@ -35,7 +35,7 @@ server-side validation.** The game stays fully playable offline.
 **New**
 * `supabase/migrations/20261121000000_jr_online.sql`: schema, RLS, 13 RPCs, private helpers
 * `supabase/migrations/20261121000100_jr_catalog.sql`: generated catalog
-* `supabase/tests/run.sh`, `shim.sql`, `vectors.sql`, `behaviour.sql`, `vectors/*.csv`, `contract/*.json`
+* `supabase/dev-tests/run.sh`, `shim.sql`, `vectors.sql`, `behaviour.sql`, `vectors/*.csv`, `contract/*.json`
 * `unity/tools/ExportCatalog/`: catalog + vector generator
 * `Scripts/Logic/Online.cs`: PhilippineTime, DailyChallenge, RunReport, RunBounds, ServerSnapshot & DTOs, ServerSync, OfflineQueue, OnlineText, Json
 * `Scripts/Logic/CatalogExport.cs`
@@ -54,7 +54,7 @@ server-side validation.** The game stays fully playable offline.
   untouched, impossible ones rejected, inflated ones clamped), snapshot merge, offline queue, names and codes, catalog
   freshness, achievement stat keys, and **JSON contract** tests (the real server responses contain every field the
   client reads, every RPC and argument the client uses exists, the server reads every report field).
-* **Supabase tests (`supabase/tests/run.sh`, PostgreSQL 16): all pass.**
+* **Supabase tests (`supabase/dev-tests/run.sh`, PostgreSQL 16): all pass.**
   * **vectors:** 54 PRNG values, 2,510 mission rows, 730 daily challenges, 267 dates, 10 levels and 400 run-bound
     cases, all identical to C#.
   * **behaviour:** sign-up trigger, RLS and grants, anon denied, accept / duplicate / reject / clamp runs,

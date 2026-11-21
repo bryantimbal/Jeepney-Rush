@@ -173,8 +173,8 @@ namespace JeepneyRush.Tests
         {
             string root = RepoRoot();
             if (root == null) Assert.Ignore("supabase/ folder not found next to the project");
-            string path = System.IO.Path.Combine(root, "supabase", "migrations", CatalogExport.FileName);
-            Assert.IsTrue(System.IO.File.Exists(path), "catalog migration missing – run unity/tools/ExportCatalog");
+            string path = CatalogExport.LatestFile(System.IO.Path.Combine(root, "supabase", "migrations"));
+            Assert.IsNotNull(path, "catalog migration missing – run unity/tools/ExportCatalog");
             Assert.AreEqual(CatalogExport.Sql(), System.IO.File.ReadAllText(path).Replace("\r\n", "\n"),
                 "Prices/missions/achievements changed in C# – re-run: dotnet run --project unity/tools/ExportCatalog");
         }

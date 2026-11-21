@@ -20,6 +20,25 @@ About 10 minutes, free tier is enough.
   Linking a guest to an email keeps working on the current phone right away.
 
 ## 3. Create the database objects
+**Option 0 – GitHub integration (recommended, what this repo is set up for).** The repository is a standard
+Supabase project folder:
+```
+supabase/
+  config.toml            # project settings (guest sign-ins ON) for local dev + preview branches
+  migrations/            # applied in timestamp order on deploy
+    20261121000000_jr_online.sql    # tables, Row Level Security, jr_* functions
+    20261121000100_jr_catalog.sql   # game catalog (generated from C#)
+  seed.sql               # empty on purpose (the catalog is a migration so it reaches production)
+  dev-tests/             # local Postgres test harness (not used by Supabase)
+```
+In the Supabase dashboard: **Project Settings ▸ Integrations ▸ GitHub** → connect this repository, set
+**Supabase directory** to `.` (the folder that *contains* `supabase/`) and choose your **production branch**
+(e.g. `main`). Supabase applies the migrations when that branch receives them – so merge the work branch into
+your production branch (or open a pull request: with *Branching* enabled, each PR gets its own preview database
+with these migrations and `config.toml` applied). Check **Database ▸ Migrations** afterwards: both files should be listed.
+> Note: `config.toml` settings apply to local/preview databases. For the **production** project still set the
+> Auth switches of step 2 in the dashboard.
+
 Option A, Dashboard (no tools needed):
 1. **SQL Editor ▸ New query.**
 2. Paste the whole file `supabase/migrations/20261121000000_jr_online.sql` and click **Run**.
@@ -69,11 +88,13 @@ Prices, upgrade costs, missions and achievements are defined in C#. The SQL cata
 ```bash
 dotnet run --project unity/tools/ExportCatalog     # rewrites supabase/migrations/*_jr_catalog.sql + test vectors
 ```
-Then run the catalog file in the SQL editor again. A unit test fails if you forget to regenerate it.
+If anything changed, the tool writes a **new** migration (`<timestamp>_jr_catalog.sql`) instead of editing the
+old one – Supabase never re-runs an applied migration. Commit it and it deploys like any other migration.
+A unit test fails if the newest catalog migration doesn't match the C# definitions.
 
 ## Testing the backend locally (developers)
 ```bash
-supabase/tests/run.sh
+supabase/dev-tests/run.sh
 ```
 This starts a throw-away PostgreSQL 15/16 server, applies the migrations twice (they're idempotent), and runs:
 * `vectors.sql`: the SQL rules give **bit-identical** results to the C# game (random numbers, 2,510 mission rows,

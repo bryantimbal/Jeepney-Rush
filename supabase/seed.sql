@@ -1,0 +1,3 @@
+-- Seed data for local development / preview branches.
+-- The game catalog (prices, missions, achievements) is shipped as a MIGRATION
+-- (*_jr_catalog.sql) so it also reaches production; nothing else needs seeding.

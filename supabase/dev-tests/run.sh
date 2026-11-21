@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the Supabase migrations and tests against a throw-away local Postgres 15/16.
-# Usage: supabase/tests/run.sh      (needs the postgres server binaries; uses port 54329)
+# Usage: supabase/dev-tests/run.sh      (needs the postgres server binaries; uses port 54329)
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"

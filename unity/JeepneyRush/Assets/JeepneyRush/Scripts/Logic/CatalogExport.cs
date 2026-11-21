@@ -13,7 +13,21 @@ namespace JeepneyRush.Logic
     /// </summary>
     public static class CatalogExport
     {
+        /// <summary>The first catalog migration. Later catalog changes go into NEW files
+        /// (*_jr_catalog.sql with a newer timestamp): Supabase never re-runs a migration that was
+        /// already applied, so editing a deployed file would silently do nothing.</summary>
         public const string FileName = "20261121000100_jr_catalog.sql";
+        public const string FileSuffix = "_jr_catalog.sql";
+
+        /// <summary>Newest catalog migration in a migrations folder (null if none).</summary>
+        public static string LatestFile(string migrationsDir)
+        {
+            if (!System.IO.Directory.Exists(migrationsDir)) return null;
+            var files = System.IO.Directory.GetFiles(migrationsDir, "*" + FileSuffix);
+            if (files.Length == 0) return null;
+            Array.Sort(files, StringComparer.Ordinal);
+            return files[files.Length - 1];
+        }
 
         /// <summary>Stat used by an achievement, read from a save (mirrors jr_private.stat_value).</summary>
         public static float StatValue(SaveData d, string key)
