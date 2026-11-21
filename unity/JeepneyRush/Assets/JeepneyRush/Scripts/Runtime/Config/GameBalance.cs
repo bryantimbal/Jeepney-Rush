@@ -19,6 +19,10 @@ namespace JeepneyRush
 
         private static GameBalance _active;
 
+        // statics survive between plays when domain reload is disabled – re-read the asset each play
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => _active = null;
+
         /// <summary>The balance asset from Resources, or built-in defaults if none exists.</summary>
         public static BalanceConfig Active
         {

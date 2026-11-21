@@ -20,6 +20,12 @@ namespace JeepneyRush
         public int timeoutSeconds = 12;
 
         private static OnlineConfig _active;
+        private static bool _fromAsset;
+
+        // With "Enter Play Mode Options" (no domain reload) statics survive between plays: forget the
+        // cached config so values pasted after the first Play are picked up.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() { _active = null; _fromAsset = false; }
 
         public static OnlineConfig Active
         {
@@ -28,6 +34,7 @@ namespace JeepneyRush
                 if (_active == null)
                 {
                     _active = Resources.Load<OnlineConfig>("OnlineConfig");
+                    _fromAsset = _active != null;
                     if (_active == null) { _active = CreateInstance<OnlineConfig>(); _active.name = "OnlineConfig (offline)"; }
                 }
                 return _active;
@@ -35,6 +42,20 @@ namespace JeepneyRush
         }
 
         public bool Configured => !string.IsNullOrWhiteSpace(supabaseUrl) && !string.IsNullOrWhiteSpace(anonKey) && supabaseUrl.Trim().StartsWith("https://") && !IsSecretKey;
+
+        /// <summary>Why online is off (shown on the ACCOUNT screen), or null when configured.</summary>
+        public string Problem
+        {
+            get
+            {
+                if (!_fromAsset) return "No OnlineConfig asset found at Assets/JeepneyRush/Resources/OnlineConfig.asset – run Jeepney Rush ▸ Setup Project (it must be inside a folder named Resources).";
+                if (string.IsNullOrWhiteSpace(supabaseUrl)) return "OnlineConfig: Supabase Url is empty.";
+                if (!supabaseUrl.Trim().StartsWith("https://")) return $"OnlineConfig: Supabase Url must start with https:// (now: \"{supabaseUrl.Trim()}\").";
+                if (string.IsNullOrWhiteSpace(anonKey)) return "OnlineConfig: Anon Key is empty – paste the Publishable key or the legacy anon public key.";
+                if (IsSecretKey) return "OnlineConfig: that is a SECRET key – use the Publishable / anon public key instead.";
+                return null;
+            }
+        }
 
         /// <summary>Refuse to run with a secret key pasted by mistake (it would bypass all security).</summary>
         public bool IsSecretKey => (anonKey ?? "").Trim().StartsWith("sb_secret_") || (anonKey ?? "").Contains("service_role");

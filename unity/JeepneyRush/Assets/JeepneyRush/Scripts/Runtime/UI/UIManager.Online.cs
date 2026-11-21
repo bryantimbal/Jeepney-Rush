@@ -143,6 +143,8 @@ namespace JeepneyRush
             if (!o.Configured)
             {
                 body.Add(Note("Online features (cloud save, rankings, friends) are not set up in this build.", 36, UiKit.Ink));
+                string why = OnlineConfig.Active.Problem;
+                if (why != null) body.Add(Note(why, 32, UiKit.Red));
                 body.Add(Note("Developer: create a free Supabase project, run supabase/migrations, then paste the Project URL and anon key into Assets/JeepneyRush/Resources/OnlineConfig. See docs/SUPABASE_SETUP.md."));
                 body.Add(Note("Your progress is saved on this phone and the whole game works offline."));
                 return;
