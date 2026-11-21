@@ -59,7 +59,7 @@ namespace JeepneyRush.Logic
             sb.Append("-- Re-generate: dotnet run --project unity/tools/ExportCatalog\n\n");
             sb.Append("delete from public.jr_catalog_jeepneys;\n");
             foreach (var j in JeepneyCatalog.All)
-                sb.Append($"insert into public.jr_catalog_jeepneys (id, name, price) values ({Q(j.Id)}, {Q(j.DisplayName)}, {j.Price});\n");
+                sb.Append($"insert into public.jr_catalog_jeepneys (id, name, price, gem_price) values ({Q(j.Id)}, {Q(j.DisplayName)}, {j.Price}, {j.GemPrice});\n");
             sb.Append("\ndelete from public.jr_catalog_upgrades;\n");
             foreach (var k in Upgrades.All)
                 for (int lv = 0; lv < Upgrades.MaxLevel; lv++)
@@ -82,6 +82,9 @@ namespace JeepneyRush.Logic
             sb.Append("\ndelete from public.jr_catalog_routes;\n");
             foreach (var e in Environments.All)
                 sb.Append($"insert into public.jr_catalog_routes (env, name, unlock_distance) values ({(int)e.Kind}, {Q(e.Name)}, {F(e.UnlockDistance)});\n");
+            sb.Append("\ndelete from public.jr_catalog_products;\n");
+            foreach (var p in Products.All)
+                sb.Append($"insert into public.jr_catalog_products (id, kind, title, coins, gems, jeepneys, ad_free) values ({Q(p.Id)}, {Q(p.Kind == ProductKind.Consumable ? "consumable" : "non_consumable")}, {Q(p.Title)}, {p.Coins}, {p.Gems}, array[{string.Join(", ", Array.ConvertAll(p.Jeepneys, Q))}]::text[], {(p.AdFree ? "true" : "false")});\n");
             sb.Append("\n-- game constants used by the server rules\n");
             sb.Append("delete from public.jr_catalog_constants;\n");
             void C(string key, double v) => sb.Append($"insert into public.jr_catalog_constants (key, value) values ({Q(key)}, {v.ToString("0.######", CultureInfo.InvariantCulture)});\n");
@@ -92,6 +95,8 @@ namespace JeepneyRush.Logic
             C("max_upgrade_level", Upgrades.MaxLevel);
             C("coin_bonus_per_level", 0.10);
             C("level_reward_per_level", 100);
+            C("ad_daily_bonus_coins", AdPolicy.DailyBonusCoins);
+            C("ad_max_double_coins", AdPolicy.MaxDoubleCoins);
             return sb.ToString();
         }
     }

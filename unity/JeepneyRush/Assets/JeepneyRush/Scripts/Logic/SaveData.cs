@@ -62,6 +62,14 @@ namespace JeepneyRush.Logic
         public bool signedOut;
         public string lastUserId;
 
+        // ---- Phase 4 (monetization)
+        /// <summary>Premium currency (from purchases; server-authoritative when online).</summary>
+        public int gems;
+        /// <summary>"No Ads" purchased.</summary>
+        public bool adFree;
+        public List<string> ownedProducts = new List<string>();
+        public AdState ads = new AdState();
+
         public bool Owns(string jeepneyId) => ownedJeepneys != null && ownedJeepneys.Contains(jeepneyId);
         public int UpgradeLevel(UpgradeKind k) => upgradeLevels != null && (int)k < upgradeLevels.Length ? upgradeLevels[(int)k] : 0;
     }
@@ -138,6 +146,10 @@ namespace JeepneyRush.Logic
             d.achievementsUnlocked ??= new List<string>();
             d.achievementsClaimed ??= new List<string>();
             d.achievementsClaimed.RemoveAll(a => !d.achievementsUnlocked.Contains(a));
+            d.gems = NonNeg(d.gems);
+            d.ownedProducts ??= new List<string>();
+            d.ads ??= new AdState();
+            d.ads.trialsToday ??= new List<string>();
             d.dailyProgress = Sized(d.dailyProgress, Missions.DailyCount);
             d.dailyClaimed = Sized(d.dailyClaimed, Missions.DailyCount);
             d.weeklyProgress = Sized(d.weeklyProgress, Missions.WeeklyCount);
@@ -202,6 +214,31 @@ namespace JeepneyRush.Logic
             res.AchievementsUnlocked.AddRange(Achievements.Evaluate(d));
             SaveValidation.Sanitize(d);
             return res;
+        }
+
+        /// <summary>Premium alternative: pay a jeepney's gem price.</summary>
+        public static bool BuyJeepneyWithGems(SaveData d, string id)
+        {
+            var j = JeepneyCatalog.Get(id);
+            if (j.Id != id || j.GemPrice <= 0 || d.Owns(id) || d.gems < j.GemPrice) return false;
+            d.gems -= j.GemPrice;
+            d.ownedJeepneys.Add(id);
+            return true;
+        }
+
+        /// <summary>
+        /// Applies a product's contents locally. Only used by the offline test store in development
+        /// builds without a server – real purchases are granted by the server after verification.
+        /// </summary>
+        public static void GrantProductLocally(SaveData d, ProductDef p)
+        {
+            if (p == null) return;
+            if (p.Kind == ProductKind.NonConsumable && d.ownedProducts.Contains(p.Id)) return;
+            d.coins += p.Coins;
+            d.gems += p.Gems;
+            foreach (var j in p.Jeepneys) if (JeepneyCatalog.Exists(j) && !d.Owns(j)) d.ownedJeepneys.Add(j);
+            if (p.AdFree) d.adFree = true;
+            if (p.Kind == ProductKind.NonConsumable) d.ownedProducts.Add(p.Id);
         }
 
         public static bool BuyJeepney(SaveData d, string id)

@@ -12,6 +12,8 @@ namespace JeepneyRush.Logic
         public string DisplayName;
         public string Description;
         public int Price;                 // coins; 0 = free
+        /// <summary>Optional premium price in gems (0 = coins only). Phase 4.</summary>
+        public int GemPrice;
         public JeepneyStyle Style = JeepneyStyle.Classic;
         public ArtMotif Motif = ArtMotif.SunStars;
 
@@ -110,7 +112,7 @@ namespace JeepneyRush.Logic
             },
             new JeepneyLivery
             {
-                Id = "fiesta", DisplayName = "Fiesta Edition", Price = 3000, Motif = ArtMotif.Fiesta,
+                Id = "fiesta", GemPrice = 250, DisplayName = "Fiesta Edition", Price = 3000, Motif = ArtMotif.Fiesta,
                 Description = "Every day is a fiesta: banderitas on the roof and party colours.",
                 Body = "#EF476F", Hood = "#06D6A0", Accent1 = "#FFD166", Accent2 = "#118AB2", Roof = "#FFD166", Trim = "#06D6A0", Mudflap = "#118AB2",
                 RoofSign = "FIESTA!", Route = "PISTA SA NAYON", Slogan = "Fiesta!", RearText = "MABUHAY!", Plate = "PISTA 7",
@@ -118,7 +120,7 @@ namespace JeepneyRush.Logic
             },
             new JeepneyLivery
             {
-                Id = "neon", DisplayName = "Neon Street Racer", Price = 4000, Motif = ArtMotif.Neon,
+                Id = "neon", GemPrice = 320, DisplayName = "Neon Street Racer", Price = 4000, Motif = ArtMotif.Neon,
                 Description = "Midnight paint with glowing neon. Built for speed.",
                 Body = "#14112B", Hood = "#14112B", Accent1 = "#00F5D4", Accent2 = "#F15BB5", Roof = "#241E4E", Trim = "#00F5D4", Mudflap = "#F15BB5",
                 RoofSign = "NEON", Route = "MIDNIGHT RUN", Slogan = "Neon Rush", RearText = "CATCH ME IF YOU CAN", Plate = "NEON 88",
@@ -126,7 +128,7 @@ namespace JeepneyRush.Logic
             },
             new JeepneyLivery
             {
-                Id = "flag", DisplayName = "Philippine Flag Edition", Price = 5000, Motif = ArtMotif.Flag,
+                Id = "flag", GemPrice = 350, DisplayName = "Philippine Flag Edition", Price = 5000, Motif = ArtMotif.Flag,
                 Description = "Blue, red, white and the golden sun – the full flag livery.",
                 Body = "#FFFFFF", Hood = "#0038A8", Accent1 = "#CE1126", Accent2 = "#FCD116", Roof = "#0038A8", Trim = "#CE1126",
                 RoofSign = "MABUHAY", Route = "LUZON - VISAYAS - MINDANAO", Slogan = "Mabuhay!", RearText = "PILIPINAS KONG MAHAL", Plate = "PH 1898",
@@ -134,7 +136,7 @@ namespace JeepneyRush.Logic
             },
             new JeepneyLivery
             {
-                Id = "gold", DisplayName = "Gold VIP Jeepney", Price = 8000, Motif = ArtMotif.Gold,
+                Id = "gold", GemPrice = 500, DisplayName = "Gold VIP Jeepney", Price = 8000, Motif = ArtMotif.Gold,
                 Description = "Gold-plated everything. The ultimate status symbol.",
                 Body = "#1A1A1A", Hood = "#1A1A1A", Accent1 = "#FFD700", Accent2 = "#FFF3B0", Roof = "#1A1A1A", Trim = "#FFD700", Chrome = "#FFC93C",
                 RoofSign = "VIP", Route = "VIP EXPRESS", Slogan = "VIP", RearText = "VERY IMPORTANT PASAHERO", Plate = "VIP 1",

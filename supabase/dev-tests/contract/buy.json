@@ -2,6 +2,7 @@
     "ok": true,
     "snapshot": {
         "xp": 1430,
+        "gems": 0,
         "runs": 4,
         "coins": 5819,
         "level": 4,
@@ -10,6 +11,7 @@
             "sanjuan",
             "manila"
         ],
+        "ad_free": false,
         "day_key": 20261121,
         "user_id": "11111111-1111-1111-1111-111111111111",
         "missions": [
@@ -65,9 +67,9 @@
         "week_key": 151,
         "best_clean": 2500,
         "best_score": 20419,
-        "friend_code": "TNA9GWEC",
+        "friend_code": "4WUZYC9G",
         "total_coins": 4632,
-        "display_name": "Driver-TNA9",
+        "display_name": "Driver-4WUZ",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [
@@ -80,6 +82,8 @@
             700,
             10,
             6
+        ],
+        "owned_products": [
         ],
         "total_distance": 9500,
         "weekly_claimed": [

@@ -249,7 +249,7 @@ reset role;
 -- 9. ledger ---------------------------------------------------------------------------------------
 do $$ begin
   -- every coin in a wallet is explained by the transaction ledger (minus nothing else)
-  assert (select bool_and(p.coins = coalesce((select sum(amount) from jr_transactions t where t.user_id = p.user_id), 0)) from jr_profiles p),
+  assert (select bool_and(p.coins = coalesce((select sum(amount) from jr_transactions t where t.user_id = p.user_id and t.currency = 'coins'), 0)) from jr_profiles p),
     'wallets match the ledger';
   raise notice 'ok  ledger: every wallet equals the sum of its transactions';
 end $$;

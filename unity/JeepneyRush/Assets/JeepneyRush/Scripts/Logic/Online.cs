@@ -143,6 +143,9 @@ namespace JeepneyRush.Logic
         public int total_smooth_humps;
         public float total_wet_distance;
         public int total_refuels;
+        public int gems;
+        public bool ad_free;
+        public string[] owned_products = new string[0];
         public string[] owned = new string[0];
         public int[] upgrades = new int[0];
         public int day_key;
@@ -213,6 +216,9 @@ namespace JeepneyRush.Logic
             }
             d.achievementsUnlocked = new List<string>(s.achievements_unlocked ?? new string[0]);
             d.achievementsClaimed = new List<string>(s.achievements_claimed ?? new string[0]);
+            d.gems = s.gems;
+            d.adFree = s.ad_free;
+            d.ownedProducts = new List<string>(s.owned_products ?? new string[0]);
             SaveValidation.Sanitize(d);
         }
 
