@@ -226,7 +226,7 @@ namespace JeepneyRush.EditorTools
         }
 
         // ------------------------------------------------------------------ ScriptableObjects
-        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys, OnlineConfig)")]
+        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys, OnlineConfig, MonetizationConfig)")]
         public static void CreateConfigAssets()
         {
             EnsureFolder(Res);
@@ -237,6 +237,10 @@ namespace JeepneyRush.EditorTools
             string onlinePath = Res + "/OnlineConfig.asset";
             if (AssetDatabase.LoadAssetAtPath<OnlineConfig>(onlinePath) == null)
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<OnlineConfig>(), onlinePath);
+            // Phase 4: ads & IAP settings (defaults to Google's TEST ad ids)
+            string moneyPath = Res + "/MonetizationConfig.asset";
+            if (AssetDatabase.LoadAssetAtPath<MonetizationConfig>(moneyPath) == null)
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MonetizationConfig>(), moneyPath);
             EnsureFolder(Res + "/Jeepneys");
             var defaults = JeepneySpec.LoadAll(); // runtime defaults when none exist
             foreach (var l in JeepneyCatalog.All)

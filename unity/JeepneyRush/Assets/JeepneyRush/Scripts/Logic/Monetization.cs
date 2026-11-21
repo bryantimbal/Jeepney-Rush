@@ -108,5 +108,14 @@ namespace JeepneyRush.Logic
 
         /// <summary>Custom data sent with a rewarded ad so the server-side verification knows what it was for.</summary>
         public static string RewardData(RewardedKind kind, string reference) => kind.ToString().ToLowerInvariant() + ":" + (reference ?? "");
+
+        /// <summary>
+        /// Custom data with the client's claim id: "kind:ref:nonce". It is part of the message Google
+        /// signs, so the server can store the reward under the nonce the game later claims.
+        /// </summary>
+        public static string RewardData(RewardedKind kind, string reference, string nonce) => RewardData(kind, reference) + ":" + nonce;
+
+        /// <summary>Claim id for a simulated (development) ad: "test-&lt;id&gt;:kind:ref" (server accepts only if allowed).</summary>
+        public static string TestNonce(RewardedKind kind, string reference) => "test-" + Guid.NewGuid().ToString("N") + ":" + RewardData(kind, reference);
     }
 }

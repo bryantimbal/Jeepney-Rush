@@ -36,6 +36,8 @@ namespace JeepneyRush
             Services.Game = _systems.AddComponent<GameManager>();
             // OnlineService before UIManager: the UI hooks into it while building its screens
             Services.Online = _systems.AddComponent<OnlineService>();
+            Services.Ads = _systems.AddComponent<AdsService>();
+            Services.Store = _systems.AddComponent<StoreService>();
             Services.UI = _systems.AddComponent<UIManager>();
             _systems.AddComponent<Haptics>();
             _systems.AddComponent<BackButtonListener>();
@@ -84,6 +86,9 @@ namespace JeepneyRush
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene) Services.Game.SetState(GameState.MainMenu);
             // Phase 3: sign in (guest or saved account) in the background – the game never waits for it
             Services.Online.Connect();
+            // Phase 4: ads and store start after the splash (never block the menu)
+            Services.Ads.Init();
+            Services.Store.Init();
         }
     }
 

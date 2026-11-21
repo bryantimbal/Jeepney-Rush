@@ -165,6 +165,15 @@ namespace JeepneyRush
             yield return Refresh(_ => { });
         }
 
+        // ------------------------------------------------------------------ Edge Functions
+        /// <summary>POST /functions/v1/{name} with the signed-in user's token.</summary>
+        public IEnumerator Function(string name, string bodyJson, Action<string, string> done)
+        {
+            if (!HasSession) { done(null, "no_session"); yield break; }
+            yield return EnsureFresh();
+            yield return Send(Request("POST", "/functions/v1/" + name, string.IsNullOrEmpty(bodyJson) ? "{}" : bodyJson, true), done);
+        }
+
         // ------------------------------------------------------------------ RPC
         /// <summary>POST /rest/v1/rpc/{fn} with a JSON object of named arguments. Returns the JSON result.</summary>
         public IEnumerator Rpc(string fn, string argsJson, Action<string, string> done)

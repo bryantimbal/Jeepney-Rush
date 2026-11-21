@@ -59,7 +59,8 @@ export async function handleAdmobSsv(req: Request, d: SsvDeps): Promise<Response
   if (!p.userId || !p.transactionId) return json(200, { ok: true, note: "no user (console test)" });
   const cd = parseCustomData(p.customData);
   if (!cd) return json(200, { ok: false, reason: "unknown_reward" });
-  const { error } = await d.rpc("jr_srv_record_ad_reward", { p_user: p.userId, p_nonce: p.transactionId, p_kind: cd.kind, p_ref: cd.ref, p_test: false });
+  // stored under the game's claim id (signed) – Google's transaction id is the fallback
+  const { error } = await d.rpc("jr_srv_record_ad_reward", { p_user: p.userId, p_nonce: cd.nonce ?? p.transactionId, p_kind: cd.kind, p_ref: cd.ref, p_test: false });
   if (error) return json(500, { ok: false, reason: "db_error" });
   return json(200, { ok: true });
 }

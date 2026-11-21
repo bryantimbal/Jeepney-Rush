@@ -63,12 +63,15 @@ export async function verifySsv(p: SsvParams, keys: VerifierKey[]): Promise<bool
   }
 }
 
-/** custom_data "kind:ref" set by the game (e.g. "doublecoins:<run id>"). */
-export function parseCustomData(s: string | null): { kind: string; ref: string | null } | null {
+/**
+ * custom_data "kind:ref:nonce" set by the game (e.g. "doublecoins:<run id>:<claim id>").
+ * The nonce is the id the game claims the reward with; it is covered by Google's signature.
+ */
+export function parseCustomData(s: string | null): { kind: string; ref: string | null; nonce: string | null } | null {
   if (!s) return null;
-  const at = s.indexOf(":");
-  const kind = (at < 0 ? s : s.slice(0, at)).toLowerCase();
+  const parts = s.split(":");
+  const kind = parts[0].toLowerCase();
   if (!["revive", "doublecoins", "dailybonus", "trial"].includes(kind)) return null;
-  const ref = at < 0 ? "" : s.slice(at + 1);
-  return { kind, ref: ref === "" ? null : ref };
+  const ref = parts[1] ?? "", nonce = parts[2] ?? "";
+  return { kind, ref: ref === "" ? null : ref, nonce: nonce === "" ? null : nonce };
 }

@@ -16,7 +16,18 @@ namespace JeepneyRush
         /// <summary>Set by the menu to play today's Daily Challenge (fixed seed and route).</summary>
         public static DailyChallenge? Challenge;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => Challenge = null;
+        private static void ResetStatics() { Challenge = null; TrialJeepney = null; }
+
+        /// <summary>Phase 4: a locked jeepney unlocked for ONE run by a rewarded ad (garage "TRY").</summary>
+        public static string TrialJeepney;
+        /// <summary>Jeepney used this run (the trial one, or the player's selection).</summary>
+        private string RunJeepney => !string.IsNullOrEmpty(TrialJeepney) && JeepneyCatalog.Exists(TrialJeepney) ? TrialJeepney : Services.Save.Data.selectedJeepney;
+        // last finished run (Game Over: double coins, interstitial pacing)
+        public string LastRunId { get; private set; }
+        public int LastRunCoins { get; private set; }
+        public float LastRunSeconds { get; private set; }
+        public bool CoinsDoubled { get; set; }
+        private bool _revived;
         private int _seed;
         public bool IsDaily => Challenge.HasValue;
 
@@ -92,7 +103,7 @@ namespace JeepneyRush
         private BalanceConfig BuildRunConfig()
         {
             var d = Services.Save.Data;
-            return Upgrades.Apply(_baseCfg, JeepneyCatalog.Get(d.selectedJeepney), d.UpgradeLevel);
+            return Upgrades.Apply(_baseCfg, JeepneyCatalog.Get(RunJeepney), d.UpgradeLevel);
         }
 
         private void Awake()
@@ -122,7 +133,7 @@ namespace JeepneyRush
             GetOrAdd<BoxCollider>(playerGo);
             GetOrAdd<CollisionHandler>(playerGo);
             _player = GetOrAdd<PlayerController>(playerGo);
-            _player.Init(_cfg, Services.Save.Data.selectedJeepney);
+            _player.Init(_cfg, RunJeepney);
             _input = GetOrAdd<PlayerInputHandler>(playerGo);
             _input.OnAction += OnAction;
 
@@ -204,7 +215,9 @@ namespace JeepneyRush
             _difficulty.Init(_cfg);
             _score.Init(_cfg);
             _fx.Clear();
-            _player.SetLivery(save.selectedJeepney);
+            _player.SetLivery(RunJeepney);
+            _revived = false;
+            if (!string.IsNullOrEmpty(TrialJeepney)) Services.UI.Float("TRIAL RUN: " + JeepneyCatalog.Get(TrialJeepney).DisplayName.ToUpperInvariant(), UIManager.FloatKind.Info);
             _player.Configure(_cfg);
             _passengers.Init(_cfg, _player.Body);
             var route = new PassengerRoute(_cfg, _rng, StopNames.ForEnvironment(_env));
@@ -618,7 +631,7 @@ namespace JeepneyRush
             GameEvents.RaiseHit(c.Health, h.Kind);
             Services.UI.FlashDamage();
             ReactToBump();
-            if (c.Dead) BeginDeath();
+            if (c.Dead) OfferReviveOrDie();
             else Services.UI.Float("BANGGA!", UIManager.FloatKind.Bad);
         }
 
@@ -931,6 +944,47 @@ namespace JeepneyRush
             GameEvents.RaiseMissed(lost);
         }
 
+        /// <summary>
+        /// Last heart lost: offer ONE optional rewarded-ad revive per run (the game is frozen while
+        /// the offer is shown – no ad ever appears while driving). Otherwise the run ends.
+        /// </summary>
+        private void OfferReviveOrDie()
+        {
+            var ads = Services.Ads;
+            if (ads == null || !ads.RewardedReady || !AdPolicy.CanRevive(_revived, _score.MaxDistance)) { BeginDeath(); return; }
+            _revived = true;
+            _input.InputEnabled = false;
+            Time.timeScale = 0f;
+            Services.Audio.StopEngine();
+            Services.UI.ShowRevive(5f, watch =>
+            {
+                if (!watch) { Time.timeScale = 1f; BeginDeath(); return; }
+                ads.ShowRewarded(RewardedKind.Revive, LastRunId, (earned, nonce) =>
+                {
+                    Time.timeScale = 1f;
+                    if (earned) Revive(); else BeginDeath();
+                });
+            });
+        }
+
+        private void Revive()
+        {
+            _player.Collisions.Heal();
+            _player.Collisions.GrantInvulnerability(3f);
+            // clear the road just ahead so the jeepney isn't revived into the same crash
+            foreach (var list in new[] { _traffic.Active, _obstacles.Active })
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    var h = list[i];
+                    float z = h.transform.localPosition.z;
+                    if (!h.Hit && !h.Def.Soft && z > -4f && z < 35f) (HazardCatalog.IsMoving(h.Kind) ? (HazardManagerBase)_traffic : _obstacles).Knock(h, _player.transform.position.x);
+                }
+            _input.InputEnabled = true;
+            if (!_engineDead) Services.Audio.StartEngine();
+            Services.UI.Float("BUHAY PA! ARANGKADA!", UIManager.FloatKind.Big);
+            Services.Audio.Play(Logic.Audio.Sfx.PowerUp);
+        }
+
         private void BeginDeath()
         {
             _dying = true;
@@ -952,9 +1006,16 @@ namespace JeepneyRush
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };
             var rewards = Services.Save.RecordRun(summary);
+            var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);
+            LastRunId = report.run_id;
+            LastRunCoins = summary.Coins;
+            LastRunSeconds = _runTime;
+            CoinsDoubled = false;
+            TrialJeepney = null; // trials last one run
+            Services.Ads?.RunEnded();
             // Phase 3: upload the run (queued on disk if offline; the server re-checks and credits it)
             if (Services.Online != null && Services.Online.SignedIn)
-                Services.Online.SubmitRun(RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, Services.Save.Data.selectedJeepney));
+                Services.Online.SubmitRun(report);
             var d = Services.Save.Data;
             var result = new RunResult
             {

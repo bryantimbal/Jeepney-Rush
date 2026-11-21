@@ -69,6 +69,7 @@ namespace JeepneyRush
             _garageJeepPage.Add(_garageStatus);
             _garageAction = UiKit.Button("SELECT", GarageAction, UiKit.Yellow, UiKit.Ink, 52, 130);
             _garageJeepPage.Add(_garageAction);
+            BuildGarageMonetization(_garageJeepPage);
             card.Add(_garageJeepPage);
 
             // ---- upgrade page
@@ -152,6 +153,7 @@ namespace JeepneyRush
             else if (owned) { _garageAction.text = "SELECT"; _garageAction.SetEnabled(true); }
             else { _garageAction.text = $"BUY · {j.Price:N0}"; _garageAction.SetEnabled(d.coins >= j.Price); }
             _garageAction.style.opacity = _garageAction.enabledSelf ? 1f : 0.55f;
+            RefreshGarageMonetization(j);
             Services.Game.Menu?.ShowLivery(j.Id);
         }
 

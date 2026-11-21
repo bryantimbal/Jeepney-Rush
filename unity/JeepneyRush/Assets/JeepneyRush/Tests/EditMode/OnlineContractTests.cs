@@ -68,7 +68,7 @@ namespace JeepneyRush.Tests
         {
             string dir = Dir();
             if (dir == null) Assert.Ignore("supabase not found");
-            string sql = File.ReadAllText(Path.Combine(dir, "migrations", "20261121000000_jr_online.sql"));
+            string sql = string.Join("\n", Directory.GetFiles(Path.Combine(dir, "migrations"), "*.sql").Select(File.ReadAllText));
             var d = new DirectoryInfo(Directory.GetCurrentDirectory());
             while (d != null && !File.Exists(Path.Combine(d.FullName, "unity", "JeepneyRush", "Assets", "JeepneyRush", "Scripts", "Runtime", "Online", "OnlineService.cs"))) d = d.Parent;
             string client = File.ReadAllText(Path.Combine(d.FullName, "unity", "JeepneyRush", "Assets", "JeepneyRush", "Scripts", "Runtime", "Online", "OnlineService.cs"));

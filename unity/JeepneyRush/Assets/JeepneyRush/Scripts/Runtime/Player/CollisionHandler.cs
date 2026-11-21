@@ -23,6 +23,9 @@ namespace JeepneyRush
         public System.Action<PowerUpPickup> PowerUpTouched;
 
         /// <summary>Repair Kit: restore one health point. Returns false at full health.</summary>
+        /// <summary>Short grace period (e.g. after a revive).</summary>
+        public void GrantInvulnerability(float seconds) => InvulnerableTime = Mathf.Max(InvulnerableTime, seconds);
+
         public bool Heal()
         {
             if (Health >= MaxHealth) return false;

@@ -297,6 +297,14 @@ namespace JeepneyRush
                 case "unknown_code": return "Walang ganyang friend code.";
                 case "self": return "That's your own code!";
                 case "limit": return "Friend list is full (100).";
+                case "gems": return "Kulang ang gems.";
+                case "test_not_allowed": return "Test purchases are switched off on the server.";
+                case "token_used": return "This purchase belongs to another account.";
+                case "pending": return "Payment pending – it will arrive when Google confirms it.";
+                case "canceled": return "The purchase was cancelled.";
+                case "wrong_account": return "This purchase was made for another account.";
+                case "already_today": return "Daily bonus already claimed today.";
+                case "run_not_found": return "That run can't be doubled any more.";
                 default: return reason;
             }
         }
@@ -306,6 +314,59 @@ namespace JeepneyRush
         public void ClaimMission(bool weekly, int slot, Action<bool, string, int> done) => Op("jr_claim_mission", "{\"p_weekly\":" + Json.Bool(weekly) + ",\"p_slot\":" + slot + "}", done);
         public void ClaimAchievement(string id, Action<bool, string, int> done) => Op("jr_claim_achievement", "{\"p_id\":" + Json.Str(id) + "}", done);
         public void SetName(string name, Action<bool, string> done) => Op("jr_set_name", "{\"p_name\":" + Json.Str(name) + "}", (ok, m, _) => done?.Invoke(ok, m));
+
+        // ================================================================== Phase 4: gems, purchases, ad rewards
+        public void BuyJeepneyWithGems(string id, Action<bool, string> done) => Op("jr_buy_jeepney_gems", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
+
+        /// <summary>Sends a store purchase token to the verify-purchase Edge Function (Google Play check + grant).</summary>
+        public void VerifyPurchase(string productId, string token, Action<bool, string> done) => StartCoroutine(VerifyRoutine(productId, token, done));
+
+        private IEnumerator VerifyRoutine(string productId, string token, Action<bool, string> done)
+        {
+            if (!SignedIn) { done?.Invoke(false, "Sign in first (ACCOUNT)."); yield break; }
+            string json = null, err = null;
+            string body = "{\"product_id\":" + Json.Str(productId) + ",\"purchase_token\":" + Json.Str(token) + "}";
+            yield return _client.Function("verify-purchase", body, (j, e) => { json = j; err = e; });
+            if (err != null) { done?.Invoke(false, Friendly(err)); yield break; }
+            var r = JsonUtility.FromJson<OpResult>(json);
+            if (r?.snapshot != null) Apply(r.snapshot);
+            done?.Invoke(r != null && r.ok, ReasonText(r?.reason));
+        }
+
+        /// <summary>
+        /// Claims a rewarded-ad reward. Google's verification callback can arrive a few seconds after
+        /// the ad closes, so "not verified yet" is retried for a while.
+        /// </summary>
+        public void ClaimAdReward(string nonce, Action<bool, string, int> done) => StartCoroutine(ClaimRoutine(nonce, done));
+
+        private IEnumerator ClaimRoutine(string nonce, Action<bool, string, int> done)
+        {
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                string json = null, err = null;
+                yield return _client.Rpc("jr_claim_ad_reward", "{\"p_nonce\":" + Json.Str(nonce) + "}", (j, e) => { json = j; err = e; });
+                if (err != null) { done?.Invoke(false, Friendly(err), 0); yield break; }
+                var r = JsonUtility.FromJson<OpResult>(json);
+                if (r?.snapshot != null) Apply(r.snapshot);
+                // Google's callback (or this run's upload) may still be on its way: retry for a while
+                if (r != null && (r.reason == "not_verified" || r.reason == "run_not_found")) { yield return new WaitForSecondsRealtime(1.5f); continue; }
+                done?.Invoke(r != null && r.ok, ReasonText(r?.reason), r?.reward ?? 0);
+                yield break;
+            }
+            done?.Invoke(false, "Reward not confirmed by Google yet – try again in a minute.", 0);
+        }
+
+        /// <summary>Re-downloads the account (restores purchases made on another phone with the same account).</summary>
+        public void Refresh(Action<bool> done) => StartCoroutine(RefreshRoutine(done));
+
+        private IEnumerator RefreshRoutine(Action<bool> done)
+        {
+            if (!SignedIn) { done?.Invoke(false); yield break; }
+            yield return Pull(false);
+            done?.Invoke(State == OnlineState.Online);
+        }
+
+        public string UserId => _client?.UserId;
 
         // ================================================================== social
         public void Leaderboard(string board, string scope, Action<LeaderboardPage, string> done) => StartCoroutine(Get(

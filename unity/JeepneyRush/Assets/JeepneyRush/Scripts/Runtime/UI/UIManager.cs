@@ -25,7 +25,7 @@ namespace JeepneyRush
         private int _lastHealth = -1, _lastScore = -1, _lastCoins = -1, _lastPax = -1, _lastDist = -1, _lastSpeed = -1;
         private string _lastStop;
         private readonly Stack<VisualElement> _modals = new Stack<VisualElement>();
-        private System.Action _confirmYes;
+        private System.Action _confirmYes, _confirmCancel;
         private Label _confirmTitle, _confirmText;
         private bool _showDebug;
 
@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildConfirm, BuildLoading, BuildSplash })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -102,7 +102,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily })
+            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -114,6 +114,8 @@ namespace JeepneyRush
             Show(_pause, to == GameState.Paused);
             if (to == GameState.Paused) { SyncToggles(); UiKit.PopIn(_pause.Q("card")); }
             if (to == GameState.MainMenu) ShowMainMenu();
+            // banner ads only on menus / game over, never while driving (AdPolicy)
+            Services.Ads?.ShowBannerOnMenus(to == GameState.MainMenu || to == GameState.GameOver);
             if (to == GameState.Playing || to == GameState.Starting) Show(_loading, false);
         }
 
@@ -240,7 +242,11 @@ namespace JeepneyRush
             lvl.Add(lvlCol);
             top.Add(lvl);
             _menuCoins = UiKit.Text("0", 46, Color.white);
-            top.Add(UiKit.Pill(UiKit.Icon("ui_coin", 60), _menuCoins));
+            var wallet = UiKit.Box();
+            wallet.style.alignItems = Align.FlexEnd;
+            wallet.Add(UiKit.Pill(UiKit.Icon("ui_coin", 60), _menuCoins));
+            wallet.Add(BuildMenuGems());
+            top.Add(wallet);
             _menu.Add(top);
             var bestRow = UiKit.Box();
             bestRow.style.flexDirection = FlexDirection.Row;
@@ -286,6 +292,7 @@ namespace JeepneyRush
             var row2 = UiKit.Box();
             row2.style.flexDirection = FlexDirection.Row;
             Small("ROUTES", OpenRoutes, row2);
+            Small("SHOP", OpenShop, row2);
             Small("SETTINGS", () => OpenModal(_settings), row2, true);
             buttons.Add(row2);
             // Phase 3: online
@@ -320,6 +327,7 @@ namespace JeepneyRush
             _menuLevel.text = $"LV {lv}";
             _menuXpFill.style.width = Length.Percent(Mathf.Clamp01((d.xp - a) / (float)Mathf.Max(1, b - a)) * 100f);
             Show(_missionDot, HasClaimable());
+            RefreshGems();
         }
 
         // ======================================================================= modals
@@ -463,8 +471,8 @@ namespace JeepneyRush
             _confirmText = UiKit.Text("", 40, UiKit.Grey, false);
             _confirmText.style.marginBottom = 20;
             card.Add(_confirmText);
-            card.Add(UiKit.Button("YES", () => { CloseModal(); var a = _confirmYes; _confirmYes = null; a?.Invoke(); }, UiKit.Hex("#E5484D"), Color.white, 50, 130));
-            card.Add(UiKit.Button("CANCEL", CloseModal, Color.white, UiKit.Ink, 50, 130));
+            card.Add(UiKit.Button("YES", () => { CloseModal(); var a = _confirmYes; _confirmYes = null; _confirmCancel = null; a?.Invoke(); }, UiKit.Hex("#E5484D"), Color.white, 50, 130));
+            card.Add(UiKit.Button("CANCEL", () => { CloseModal(); var c = _confirmCancel; _confirmCancel = null; _confirmYes = null; c?.Invoke(); }, Color.white, UiKit.Ink, 50, 130));
         }
 
         private void Confirm(string title, string text, System.Action yes)
@@ -472,6 +480,7 @@ namespace JeepneyRush
             _confirmTitle.text = title;
             _confirmText.text = text;
             _confirmYes = yes;
+            _confirmCancel = null;
             OpenModal(_confirm);
         }
 
@@ -911,8 +920,11 @@ namespace JeepneyRush
             _goOnline.style.whiteSpace = WhiteSpace.Normal;
             _goOnline.style.marginBottom = 6;
             card.Add(_goOnline);
-            card.Add(UiKit.Button("RESTART", () => { Show(_gameOver, false); Services.Game.Restart(); }, UiKit.Yellow, UiKit.Ink, 64, 160));
-            card.Add(UiKit.Button("HOME", () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }, Color.white, UiKit.Ink, 48, 128));
+            BuildDoubleCoins(card);
+            // an interstitial may play here – between runs, never during one (capped by AdPolicy)
+            float LastRunSeconds() => Services.Game.Session != null ? Services.Game.Session.LastRunSeconds : 0f;
+            card.Add(UiKit.Button("RESTART", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.Restart(); }), UiKit.Yellow, UiKit.Ink, 64, 160));
+            card.Add(UiKit.Button("HOME", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }), Color.white, UiKit.Ink, 48, 128));
         }
 
         public void ShowGameOver(RunResult r)
@@ -928,6 +940,7 @@ namespace JeepneyRush
             _goBest.text = $"Best score {r.BestScore:N0} · best distance {Mathf.FloorToInt(r.BestDistance):N0} m";
             _goRewards.Clear();
             PrepareOnlineGameOver();
+            PrepareDoubleCoins(r);
             var rw = r.Rewards;
             void Line(string text, Color c)
             {

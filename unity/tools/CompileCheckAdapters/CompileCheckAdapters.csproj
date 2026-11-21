@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compile-checks the AdMob / Unity IAP adapters (JR_ADMOB, JR_UNITY_IAP) against small API
+    stand-ins (Stubs.cs) written from the public docs of Google Mobile Ads Unity 9.x and Unity IAP
+    4.x – the real packages can't be downloaded in CI. It proves the adapters are internally
+    consistent; the authoritative check is compiling in Unity with the real packages installed.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_2021_3_OR_NEWER;UNITY_ANDROID;JR_ADMOB;JR_UNITY_IAP</DefineConstants>
+    <NoWarn>CS1701;CS1702;CS0618;CS0067</NoWarn>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../JeepneyRush/Assets/JeepneyRush/Scripts/Logic/**/*.cs" />
+    <Compile Include="../../JeepneyRush/Assets/JeepneyRush/Scripts/Runtime/**/*.cs" />
+    <Compile Include="Stubs.cs" />
+    <Reference Include="../../.unity-refs/engine/lib/netstandard2.0/*.dll" />
+  </ItemGroup>
+</Project>

@@ -52,8 +52,9 @@ Deno.test("SSV: DER -> raw conversion handles short and padded integers", () => 
 });
 
 Deno.test("SSV: custom data", () => {
-  assertEquals(parseCustomData("doublecoins:abc"), { kind: "doublecoins", ref: "abc" });
-  assertEquals(parseCustomData("dailybonus:"), { kind: "dailybonus", ref: null });
+  assertEquals(parseCustomData("doublecoins:abc:n1"), { kind: "doublecoins", ref: "abc", nonce: "n1" });
+  assertEquals(parseCustomData("dailybonus::n2"), { kind: "dailybonus", ref: null, nonce: "n2" });
+  assertEquals(parseCustomData("dailybonus"), { kind: "dailybonus", ref: null, nonce: null });
   assertEquals(parseCustomData("hack:1"), null);
   assertEquals(parseCustomData(null), null);
 });
@@ -62,9 +63,9 @@ Deno.test("SSV handler records the reward only for valid signatures", async () =
   const { kp, base64 } = await ecKeys();
   const calls: unknown[] = [];
   const deps = { keys: () => Promise.resolve([{ keyId: "7", base64 }]), rpc: (fn: string, a: Record<string, unknown>) => { calls.push([fn, a]); return Promise.resolve({ data: { ok: true }, error: null }); } };
-  const good = await signedSsvUrl(kp, "custom_data=dailybonus%3A&transaction_id=t9&user_id=u1", "7");
+  const good = await signedSsvUrl(kp, "custom_data=dailybonus%3A%3Aclaim-42&transaction_id=t9&user_id=u1", "7");
   assertEquals((await handleAdmobSsv(new Request(good), deps)).status, 200);
-  assertEquals(calls, [["jr_srv_record_ad_reward", { p_user: "u1", p_nonce: "t9", p_kind: "dailybonus", p_ref: null, p_test: false }]]);
+  assertEquals(calls, [["jr_srv_record_ad_reward", { p_user: "u1", p_nonce: "claim-42", p_kind: "dailybonus", p_ref: null, p_test: false }]]);
   const forged = good.replace("user_id=u1", "user_id=u2");
   assertEquals((await handleAdmobSsv(new Request(forged), deps)).status, 403);
   assertEquals(calls.length, 1, "forged request not recorded");

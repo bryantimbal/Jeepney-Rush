@@ -123,6 +123,7 @@ namespace JeepneyRush
                 var claimed = weekly ? d.weeklyClaimed : d.dailyClaimed;
                 var reset = weekly ? now.Date.AddDays(7 - ((int)now.DayOfWeek + 6) % 7) - now : now.Date.AddDays(1) - now;
                 _missionInfo.text = $"New {(weekly ? "weekly" : "daily")} missions in {(reset.Days > 0 ? reset.Days + "d " : "")}{reset.Hours}h {reset.Minutes}m";
+                if (!weekly) { var bonus = DailyBonusRow(); if (bonus != null) _missionList.Add(bonus); }
                 for (int i = 0; i < defs.Length; i++)
                 {
                     int idx = i;

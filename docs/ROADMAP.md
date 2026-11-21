@@ -5,7 +5,7 @@
 | **1. Playable MVP** | Menu, one jeepney, 3-lane driving, traffic & obstacles, coins, passengers, score/distance, game over/restart, SFX/music, local saves, Android shell | ✅ **Done** |
 | 2. Game expansion | Garage, more jeepneys & upgrades, power-ups, more environments, missions, achievements | ✅ Done |
 | 3. Online | Supabase auth (guest + account), cloud save, leaderboards, daily challenges, profiles | ✅ Done (see UNITY_PHASE3_REPORT.md) |
-| 4. Monetization | AdMob (banner on menus, interstitial between selected runs, rewarded), IAP, ad-free | Planned |
+| 4. Monetization | AdMob (banner on menus, interstitial between selected runs, rewarded), IAP, ad-free | ✅ Done (see UNITY_PHASE4_REPORT.md) |
 | 5. Google Play release | Optimisation pass, store listing, privacy policy, internal → closed → production | Planned |
 
 ## Phase 2 – design notes (extension points already in the code)
