@@ -27,7 +27,7 @@ namespace JeepneyRush.Logic
         public const int DailyCount = 3;
         public const int WeeklyCount = 2;
 
-        private static readonly (MissionType type, int min, int max, int step, string text)[] DailyPool =
+        public static readonly (MissionType type, int min, int max, int step, string text)[] DailyPool =
         {
             (MissionType.DistanceInRun, 600, 1800, 100, "Drive {0} m in one run"),
             (MissionType.CoinsInRun, 40, 120, 10, "Collect {0} coins in one run"),
@@ -42,7 +42,7 @@ namespace JeepneyRush.Logic
             (MissionType.Runs, 3, 6, 1, "Play {0} runs"),
         };
 
-        private static readonly (MissionType type, int min, int max, int step, string text)[] WeeklyPool =
+        public static readonly (MissionType type, int min, int max, int step, string text)[] WeeklyPool =
         {
             (MissionType.TotalDistance, 10000, 25000, 1000, "Drive {0} m this week"),
             (MissionType.TotalCoins, 800, 2000, 100, "Earn {0} coins this week"),
@@ -157,6 +157,8 @@ namespace JeepneyRush.Logic
         public float Target;
         public int Reward;
         public Func<SaveData, float> Stat;
+        /// <summary>Name of the stat for the server (see CatalogExport / jr_private.stat_value).</summary>
+        public string StatKey;
     }
 
     /// <summary>Lifetime achievements (from the design document plus a few extras).</summary>
@@ -164,19 +166,19 @@ namespace JeepneyRush.Logic
     {
         public static readonly AchievementDef[] All =
         {
-            new AchievementDef { Id = "first_passenger", Name = "First Passenger", Description = "Pick up your first passenger.", Target = 1, Reward = 50, Stat = d => d.totalPassengers },
-            new AchievementDef { Id = "meters_1000", Name = "1,000 Meters Driven", Description = "Drive 1,000 m in a single run.", Target = 1000, Reward = 150, Stat = d => d.bestDistance },
-            new AchievementDef { Id = "traffic_survivor", Name = "Traffic Survivor", Description = "Drive 1,500 m without a single crash.", Target = 1500, Reward = 300, Stat = d => d.bestCleanDistance },
-            new AchievementDef { Id = "coin_collector", Name = "Coin Collector", Description = "Earn 1,000 coins in total.", Target = 1000, Reward = 200, Stat = d => d.totalCoins },
-            new AchievementDef { Id = "passenger_master", Name = "Passenger Master", Description = "Pick up 500 passengers in total.", Target = 500, Reward = 400, Stat = d => d.totalPassengers },
-            new AchievementDef { Id = "deliveries_100", Name = "100 Deliveries Completed", Description = "Deliver 100 passengers to their stop.", Target = 100, Reward = 300, Stat = d => d.totalDeliveries },
-            new AchievementDef { Id = "highway_legend", Name = "Highway Legend", Description = "Drive 5,000 m in a single run.", Target = 5000, Reward = 1000, Stat = d => d.bestDistance },
-            new AchievementDef { Id = "power_player", Name = "Power Player", Description = "Use 50 power-ups.", Target = 50, Reward = 250, Stat = d => d.totalPowerUps },
-            new AchievementDef { Id = "rain_or_shine", Name = "Rain or Shine", Description = "Drive 2,000 m in rain or typhoon.", Target = 2000, Reward = 300, Stat = d => d.totalWetDistance },
-            new AchievementDef { Id = "smooth_operator", Name = "Smooth Operator", Description = "Cross 50 speed humps slowly.", Target = 50, Reward = 250, Stat = d => d.totalSmoothHumps },
-            new AchievementDef { Id = "collector", Name = "Jeepney Collector", Description = "Own 5 jeepneys.", Target = 5, Reward = 500, Stat = d => d.ownedJeepneys?.Count ?? 0 },
-            new AchievementDef { Id = "fully_loaded", Name = "Fully Loaded", Description = "Max out any upgrade.", Target = Upgrades.MaxLevel, Reward = 300, Stat = d => { int m = 0; if (d.upgradeLevels != null) foreach (var l in d.upgradeLevels) m = Math.Max(m, l); return m; } },
-            new AchievementDef { Id = "island_hopper", Name = "Island Hopper", Description = "Unlock every route.", Target = Environments.All.Length, Reward = 500, Stat = d => { int n = 0; foreach (var e in Environments.All) if (Environments.IsUnlocked(e.Kind, d.bestDistance)) n++; return n; } },
+            new AchievementDef { Id = "first_passenger", StatKey = "total_passengers", Name = "First Passenger", Description = "Pick up your first passenger.", Target = 1, Reward = 50, Stat = d => d.totalPassengers },
+            new AchievementDef { Id = "meters_1000", StatKey = "best_distance", Name = "1,000 Meters Driven", Description = "Drive 1,000 m in a single run.", Target = 1000, Reward = 150, Stat = d => d.bestDistance },
+            new AchievementDef { Id = "traffic_survivor", StatKey = "best_clean", Name = "Traffic Survivor", Description = "Drive 1,500 m without a single crash.", Target = 1500, Reward = 300, Stat = d => d.bestCleanDistance },
+            new AchievementDef { Id = "coin_collector", StatKey = "total_coins", Name = "Coin Collector", Description = "Earn 1,000 coins in total.", Target = 1000, Reward = 200, Stat = d => d.totalCoins },
+            new AchievementDef { Id = "passenger_master", StatKey = "total_passengers", Name = "Passenger Master", Description = "Pick up 500 passengers in total.", Target = 500, Reward = 400, Stat = d => d.totalPassengers },
+            new AchievementDef { Id = "deliveries_100", StatKey = "total_deliveries", Name = "100 Deliveries Completed", Description = "Deliver 100 passengers to their stop.", Target = 100, Reward = 300, Stat = d => d.totalDeliveries },
+            new AchievementDef { Id = "highway_legend", StatKey = "best_distance", Name = "Highway Legend", Description = "Drive 5,000 m in a single run.", Target = 5000, Reward = 1000, Stat = d => d.bestDistance },
+            new AchievementDef { Id = "power_player", StatKey = "total_power_ups", Name = "Power Player", Description = "Use 50 power-ups.", Target = 50, Reward = 250, Stat = d => d.totalPowerUps },
+            new AchievementDef { Id = "rain_or_shine", StatKey = "total_wet_distance", Name = "Rain or Shine", Description = "Drive 2,000 m in rain or typhoon.", Target = 2000, Reward = 300, Stat = d => d.totalWetDistance },
+            new AchievementDef { Id = "smooth_operator", StatKey = "total_smooth_humps", Name = "Smooth Operator", Description = "Cross 50 speed humps slowly.", Target = 50, Reward = 250, Stat = d => d.totalSmoothHumps },
+            new AchievementDef { Id = "collector", StatKey = "owned_jeepneys", Name = "Jeepney Collector", Description = "Own 5 jeepneys.", Target = 5, Reward = 500, Stat = d => d.ownedJeepneys?.Count ?? 0 },
+            new AchievementDef { Id = "fully_loaded", StatKey = "max_upgrade", Name = "Fully Loaded", Description = "Max out any upgrade.", Target = Upgrades.MaxLevel, Reward = 300, Stat = d => { int m = 0; if (d.upgradeLevels != null) foreach (var l in d.upgradeLevels) m = Math.Max(m, l); return m; } },
+            new AchievementDef { Id = "island_hopper", StatKey = "routes_unlocked", Name = "Island Hopper", Description = "Unlock every route.", Target = Environments.All.Length, Reward = 500, Stat = d => { int n = 0; foreach (var e in Environments.All) if (Environments.IsUnlocked(e.Kind, d.bestDistance)) n++; return n; } },
         };
 
         public static float Progress(SaveData d, AchievementDef a) => Math.Min(1f, a.Stat(d) / a.Target);

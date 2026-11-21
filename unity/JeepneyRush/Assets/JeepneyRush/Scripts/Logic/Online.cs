@@ -1,0 +1,325 @@
+using System;
+using System.Collections.Generic;
+
+namespace JeepneyRush.Logic
+{
+    /// <summary>
+    /// Mission days, weeks and the daily challenge follow Philippine time (UTC+8) so every
+    /// player – and the server – agree on what "today" is.
+    /// </summary>
+    public static class PhilippineTime
+    {
+        public static DateTime Now => DateTime.UtcNow.AddHours(8);
+        public static int DayKey => Missions.DayKey(Now);
+        public static int WeekKey => Missions.WeekKey(Now);
+    }
+
+    /// <summary>
+    /// Same seeded run for everyone today: identical traffic, stops, weather and road.
+    /// Must match <c>jr_daily_challenge()</c> in the Supabase migration (cross-checked by tests).
+    /// </summary>
+    public struct DailyChallenge
+    {
+        public int DayKey;
+        public int Seed;
+        public EnvironmentKind Environment;
+
+        public static DailyChallenge For(int dayKey)
+        {
+            var rng = new GameRandom(dayKey * 31 + 7);
+            int seed = 1 + (int)(rng.Next() * 2147483000.0);
+            var env = (EnvironmentKind)rng.Int(0, Environments.All.Length - 1);
+            return new DailyChallenge { DayKey = dayKey, Seed = seed, Environment = env };
+        }
+
+        public static DailyChallenge Today => For(PhilippineTime.DayKey);
+    }
+
+    /// <summary>
+    /// What the client sends to the server after a run (JsonUtility-friendly, snake_case
+    /// to match the SQL function arguments).
+    /// </summary>
+    [Serializable]
+    public class RunReport
+    {
+        public string run_id;
+        public int seed;
+        public int env;
+        public float duration;
+        public int score;
+        public float distance;
+        public int coins;
+        public int passengers;
+        public int deliveries;
+        public int power_ups;
+        public int smooth_humps;
+        public float wet_distance;
+        public int refuels;
+        public int hits;
+        public float clean_distance;
+        public int best_streak;
+        public bool daily;
+        public int day_key;
+        public string jeepney;
+        public int client_version = 3;
+
+        public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
+        {
+            run_id = Guid.NewGuid().ToString(),
+            seed = seed, env = (int)r.Environment, duration = duration, score = r.Score, distance = r.Distance, coins = r.Coins,
+            passengers = r.Passengers, deliveries = r.Deliveries, power_ups = r.PowerUps, smooth_humps = r.SmoothHumps,
+            wet_distance = r.WetDistance, refuels = r.Refuels, hits = r.Hits, clean_distance = r.CleanDistance,
+            best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney,
+        };
+    }
+
+    /// <summary>
+    /// Plausibility limits for a run, derived from the game's own numbers with generous
+    /// headroom (measured: ≤ 0.21 coins/m spawned, ≤ 4.6 stops/km, ≤ 2.2 power-ups/km).
+    /// Hard violations reject the run; soft ones are clamped. Mirrors <c>jr_check_run</c> in SQL.
+    /// </summary>
+    public static class RunBounds
+    {
+        public const float MaxAverageSpeed = 50f;   // m/s – top speed with engine, gas and turbo bursts
+        public const float MinDuration = 5f;
+        public const float MaxDuration = 4 * 3600f;
+        public const int MaxCapacity = 15;
+        public const int MaxFarePerDelivery = 42;   // (fare 5 + group 2) × streak 3 × passenger bonus 2
+
+        public static string HardViolation(RunReport r)
+        {
+            if (r == null) return "empty";
+            if (string.IsNullOrEmpty(r.run_id) || r.run_id.Length > 64) return "run_id";
+            if (!(r.duration >= MinDuration) || r.duration > MaxDuration) return "duration";
+            if (!(r.distance >= 0) || r.distance > MaxAverageSpeed * r.duration + 50f) return "too_fast";
+            if (r.env < 0 || r.env >= Environments.All.Length) return "env";
+            if (r.coins < 0 || r.score < 0 || r.passengers < 0 || r.deliveries < 0 || r.power_ups < 0 || r.smooth_humps < 0 || r.refuels < 0 || r.hits < 0) return "negative";
+            if (r.clean_distance > r.distance + 1f || r.wet_distance > r.distance + 1f || r.clean_distance < 0 || r.wet_distance < 0) return "distance_parts";
+            if (r.deliveries > r.passengers) return "deliveries";
+            return null;
+        }
+
+        public static int MaxPassengers(float d) => (int)((d / 200f + 2f) * MaxCapacity);
+        public static int MaxPowerUps(float d) => (int)(d / 250f) + 3;
+        public static int MaxHumps(float d) => (int)(d / 150f) + 2;
+        public static int MaxRefuels(float d) => (int)(d / 700f) + 1;
+        public static int MaxCoins(float d, int deliveries) => (int)(d * 1.0f) + deliveries * MaxFarePerDelivery + 50;
+        public static int MaxScore(float d, int coins, int passengers, int deliveries, int humps) =>
+            (int)(d * 1.5f) + coins * 10 + passengers * 50 + deliveries * 600 + humps * 50 + (int)(150 * (d / 300f + 1)) + 1000;
+
+        /// <summary>Clamps the soft values in place (after the hard check passed).</summary>
+        public static void Clamp(RunReport r)
+        {
+            r.passengers = Math.Min(r.passengers, MaxPassengers(r.distance));
+            r.deliveries = Math.Min(r.deliveries, r.passengers);
+            r.power_ups = Math.Min(r.power_ups, MaxPowerUps(r.distance));
+            r.smooth_humps = Math.Min(r.smooth_humps, MaxHumps(r.distance));
+            r.refuels = Math.Min(r.refuels, MaxRefuels(r.distance));
+            r.coins = Math.Min(r.coins, MaxCoins(r.distance, r.deliveries));
+            r.score = Math.Min(r.score, MaxScore(r.distance, r.coins, r.passengers, r.deliveries, r.smooth_humps));
+        }
+    }
+
+    /// <summary>The server's authoritative copy of the player's progress (returned by every RPC).</summary>
+    [Serializable]
+    public class ServerSnapshot
+    {
+        public string user_id;
+        public string display_name;
+        public string friend_code;
+        public bool is_anonymous;
+        public int coins;
+        public int xp;
+        public int level;
+        public int best_score;
+        public float best_distance;
+        public float best_clean;
+        public int runs;
+        public float total_distance;
+        public int total_coins;
+        public int total_passengers;
+        public int total_deliveries;
+        public int total_power_ups;
+        public int total_smooth_humps;
+        public float total_wet_distance;
+        public int total_refuels;
+        public string[] owned = new string[0];
+        public int[] upgrades = new int[0];
+        public int day_key;
+        public int[] daily_progress = new int[0];
+        public bool[] daily_claimed = new bool[0];
+        public int week_key;
+        public int[] weekly_progress = new int[0];
+        public bool[] weekly_claimed = new bool[0];
+        public string[] achievements_unlocked = new string[0];
+        public string[] achievements_claimed = new string[0];
+    }
+
+    /// <summary>Result of <c>submit_run</c>.</summary>
+    [Serializable]
+    public class SubmitResult
+    {
+        public bool accepted;
+        public bool duplicate;
+        public string reason;
+        public bool clamped;
+        public int credited_coins;
+        public int coin_bonus;
+        public int xp_gained;
+        public int level_reward;
+        public int rank_all;
+        public int rank_week;
+        public int rank_daily;
+        public ServerSnapshot snapshot;
+    }
+
+    public static class ServerSync
+    {
+        /// <summary>
+        /// Overwrites the economy and progress of the local save with the server's copy
+        /// (server wins). Settings, tutorials and the selected route/jeepney stay local.
+        /// </summary>
+        public static void Apply(SaveData d, ServerSnapshot s)
+        {
+            if (d == null || s == null) return;
+            d.coins = s.coins;
+            d.xp = s.xp;
+            d.level = PlayerLevel.LevelFor(s.xp);
+            d.bestScore = s.best_score;
+            d.bestDistance = s.best_distance;
+            d.bestCleanDistance = s.best_clean;
+            d.runs = s.runs;
+            d.totalDistance = s.total_distance;
+            d.totalCoins = s.total_coins;
+            d.totalPassengers = s.total_passengers;
+            d.totalDeliveries = s.total_deliveries;
+            d.totalPowerUps = s.total_power_ups;
+            d.totalSmoothHumps = s.total_smooth_humps;
+            d.totalWetDistance = s.total_wet_distance;
+            d.ownedJeepneys = new List<string>(s.owned ?? new string[0]);
+            d.upgradeLevels = new int[Upgrades.All.Length];
+            if (s.upgrades != null) for (int i = 0; i < d.upgradeLevels.Length && i < s.upgrades.Length; i++) d.upgradeLevels[i] = s.upgrades[i];
+            if (s.day_key != 0)
+            {
+                d.dailyKey = s.day_key;
+                d.dailyProgress = Copy(s.daily_progress, Missions.DailyCount);
+                d.dailyClaimed = Copy(s.daily_claimed, Missions.DailyCount);
+            }
+            if (s.week_key != 0)
+            {
+                d.weeklyKey = s.week_key;
+                d.weeklyProgress = Copy(s.weekly_progress, Missions.WeeklyCount);
+                d.weeklyClaimed = Copy(s.weekly_claimed, Missions.WeeklyCount);
+            }
+            d.achievementsUnlocked = new List<string>(s.achievements_unlocked ?? new string[0]);
+            d.achievementsClaimed = new List<string>(s.achievements_claimed ?? new string[0]);
+            SaveValidation.Sanitize(d);
+        }
+
+        private static T[] Copy<T>(T[] src, int n)
+        {
+            var a = new T[n];
+            if (src != null) Array.Copy(src, a, Math.Min(n, src.Length));
+            return a;
+        }
+
+        /// <summary>One-time upload of progress made before signing in (the server caps it).</summary>
+        public static LegacyImport ToImport(SaveData d) => new LegacyImport
+        {
+            coins = d.coins, xp = d.xp, best_score = d.bestScore, best_distance = d.bestDistance, runs = d.runs,
+            owned = (d.ownedJeepneys ?? new List<string>()).ToArray(), upgrades = (int[])(d.upgradeLevels ?? new int[0]).Clone(),
+        };
+    }
+
+    [Serializable]
+    public class LegacyImport
+    {
+        public int coins;
+        public int xp;
+        public int best_score;
+        public float best_distance;
+        public int runs;
+        public string[] owned;
+        public int[] upgrades;
+        /// <summary>Server-side caps (also enforced in SQL).</summary>
+        public const int MaxCoins = 20000, MaxXp = 200000, MaxScore = 2000000;
+    }
+
+    /// <summary>Runs waiting to be uploaded (played offline or while the server was unreachable).</summary>
+    [Serializable]
+    public class OfflineQueue
+    {
+        public const int Limit = 50;
+        public List<RunReport> runs = new List<RunReport>();
+
+        public void Add(RunReport r)
+        {
+            if (r == null) return;
+            runs.RemoveAll(x => x.run_id == r.run_id);
+            runs.Add(r);
+            while (runs.Count > Limit) runs.RemoveAt(0); // oldest first
+        }
+
+        public void Remove(string runId) => runs.RemoveAll(x => x.run_id == runId);
+        public int Count => runs.Count;
+    }
+
+    /// <summary>Player-facing validation of names and friend codes (the server re-checks).</summary>
+    public static class OnlineText
+    {
+        public static string CleanName(string n)
+        {
+            if (n == null) return null;
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in n.Trim())
+                if (char.IsLetterOrDigit(c) || c == ' ' || c == '_' || c == '-' || c == '.') sb.Append(c);
+            var s = sb.ToString().Trim();
+            return s.Length >= 3 && s.Length <= 16 ? s : null;
+        }
+
+        public static string NormalizeCode(string code)
+        {
+            if (code == null) return null;
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in code.ToUpperInvariant()) if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) sb.Append(c);
+            return sb.Length == 8 ? sb.ToString() : null;
+        }
+    }
+
+    /// <summary>One leaderboard row (rank, name, score) from <c>get_leaderboard</c>.</summary>
+    [Serializable]
+    public class LeaderboardRow
+    {
+        public int rank;
+        public string user_id;
+        public string display_name;
+        public int score;
+        public float distance;
+        public int level;
+        public bool is_me;
+    }
+
+    [Serializable]
+    public class LeaderboardPage
+    {
+        public string board;
+        public string scope;
+        public LeaderboardRow[] rows = new LeaderboardRow[0];
+        public LeaderboardRow me;
+    }
+
+    [Serializable]
+    public class FriendRow
+    {
+        public string user_id;
+        public string display_name;
+        public int level;
+        public int best_score;
+    }
+
+    [Serializable]
+    public class FriendList
+    {
+        public FriendRow[] friends = new FriendRow[0];
+    }
+}
