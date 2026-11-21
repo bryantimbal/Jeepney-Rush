@@ -32,8 +32,11 @@ namespace JeepneyRush
         public bool Simulated { get; private set; }
         public string ProviderName => _p?.Name ?? "none";
 
+        private bool _initRan;
+
         public void Init()
         {
+            _initRan = true;
             var cfg = MonetizationConfig.Active;
             if (!cfg.iapEnabled) return;
 #if JR_UNITY_IAP && UNITY_ANDROID && !UNITY_EDITOR
@@ -51,12 +54,26 @@ namespace JeepneyRush
         /// <summary>Why buying isn't possible right now (null = it is).</summary>
         public string Blocker()
         {
-            if (_p == null) return "The store isn't available in this build.";
+            if (_p == null) return WhyNoStore();
             if (!_p.Ready) return "Connecting to Google Play…";
             var o = Services.Online;
             if (o != null && o.Configured && !o.Authoritative) return "Go online and sign in (ACCOUNT) to buy.";
             if ((o == null || !o.Configured) && !Simulated) return "Purchases need the online server (see docs/SUPABASE_SETUP.md).";
             return null;
+        }
+
+        /// <summary>Says exactly why there is no store, so a tester knows what to change.</summary>
+        private string WhyNoStore()
+        {
+            var cfg = MonetizationConfig.Active;
+            if (!_initRan) return "The store didn't start. Check the Console for an error.";
+            if (!cfg.iapEnabled) return "Purchases are turned off (MonetizationConfig ▸ IAP Enabled).";
+#if JR_UNITY_IAP
+            if (!Application.isEditor && Application.platform != RuntimePlatform.Android) return "The store works on Android only.";
+#endif
+            if (Application.isEditor || Debug.isDebugBuild)
+                return "TEST store is off (MonetizationConfig ▸ Simulate In Development).";
+            return "The store isn't set up in this build yet. To test, build with \"Development Build\" ticked.";
         }
 
         public void Buy(string productId, Action<bool, string> done)

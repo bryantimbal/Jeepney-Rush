@@ -85,10 +85,11 @@ namespace JeepneyRush
             while (!done && Services.Scenes.IsLoading) yield return null;
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene) Services.Game.SetState(GameState.MainMenu);
             // Phase 3: sign in (guest or saved account) in the background – the game never waits for it
-            Services.Online.Connect();
-            // Phase 4: ads and store start after the splash (never block the menu)
-            Services.Ads.Init();
-            Services.Store.Init();
+            try { Services.Online.Connect(); } catch (System.Exception e) { Debug.LogException(e); }
+            // Phase 4: ads and store start after the splash (never block the menu).
+            // Each one is isolated, so a problem with one never stops the other.
+            try { Services.Store.Init(); } catch (System.Exception e) { Debug.LogException(e); }
+            try { Services.Ads.Init(); } catch (System.Exception e) { Debug.LogException(e); }
         }
     }
 
