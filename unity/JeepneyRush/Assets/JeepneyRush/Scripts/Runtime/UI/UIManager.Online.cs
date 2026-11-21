@@ -100,13 +100,48 @@ namespace JeepneyRush
             return l;
         }
 
+        /// <summary>
+        /// Text input styled by hand: the game's panel has no default theme, so an unstyled
+        /// TextField has a zero-size, invisible input box that can't be tapped.
+        /// </summary>
         private TextField Field(string label, bool password = false)
         {
-            var f = new TextField(label) { isPasswordField = password };
+            var f = new TextField(label) { isPasswordField = password, maskChar = '*' };
             f.AddToClassList(InteractiveClass);
-            f.style.fontSize = 34;
-            f.style.marginBottom = 10;
-            f.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
+            f.pickingMode = PickingMode.Position;
+            f.style.flexDirection = FlexDirection.Column; // label above the box
+            f.style.alignItems = Align.Stretch;
+            f.style.marginBottom = 12;
+            var lbl = f.labelElement;
+            lbl.style.fontSize = 30;
+            lbl.style.color = UiKit.Ink;
+            lbl.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
+            lbl.style.marginBottom = 6;
+            lbl.style.minWidth = 0;
+            var input = f.Q(TextField.textInputUssName) ?? f.Q(className: "unity-base-text-field__input");
+            if (input != null)
+            {
+                input.pickingMode = PickingMode.Position;
+                input.AddToClassList(InteractiveClass);
+                input.style.flexGrow = 1;
+                input.style.minHeight = 92;
+                input.style.backgroundColor = Color.white;
+                UiKit.Border(input.style, 4, UiKit.Ink, 20);
+                UiKit.Pad(input.style, 10, 20);
+                input.style.fontSize = 38;
+                input.style.color = UiKit.Ink;
+                input.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
+                input.style.unityTextAlign = TextAnchor.MiddleLeft;
+                foreach (var t in input.Query<TextElement>().ToList())
+                {
+                    t.style.fontSize = 38;
+                    t.style.color = UiKit.Ink;
+                    t.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
+                }
+                // highlight the focused box so the player sees where they type
+                f.RegisterCallback<FocusInEvent>(_ => input.style.borderTopColor = input.style.borderBottomColor = input.style.borderLeftColor = input.style.borderRightColor = UiKit.Blue);
+                f.RegisterCallback<FocusOutEvent>(_ => input.style.borderTopColor = input.style.borderBottomColor = input.style.borderLeftColor = input.style.borderRightColor = UiKit.Ink);
+            }
             return f;
         }
 

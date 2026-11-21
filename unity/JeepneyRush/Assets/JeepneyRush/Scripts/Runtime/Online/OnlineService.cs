@@ -93,8 +93,12 @@ namespace JeepneyRush
             {
                 string err = null;
                 yield return _client.Refresh(e => err = e);
-                if (err == "offline") { _connecting = false; SetState(OnlineState.Offline, err); yield break; }
-                if (err != null) _client.ClearSession(); // revoked / expired refresh token
+                // Only a definite "this login is gone" from the server drops the session. Anything else
+                // (no internet, server hiccup) keeps it – otherwise a brand-new guest account would be
+                // created and the player's progress would appear to vanish.
+                bool revoked = err != null && (err.Contains("Invalid Refresh Token") || err.Contains("refresh_token_not_found") || err.Contains("invalid_grant") || err.Contains("User from sub claim in JWT does not exist"));
+                if (err != null && !revoked) { _connecting = false; SetState(OnlineState.Offline, err); yield break; }
+                if (revoked) { Debug.LogWarning("[Online] saved login is no longer valid: " + err); _client.ClearSession(); }
             }
             if (!_client.HasSession)
             {
@@ -120,11 +124,22 @@ namespace JeepneyRush
             if (allowImport && !save.onlineLinked && localProgress && snap.runs == 0)
             {
                 string body = "{\"p_data\":" + JsonUtility.ToJson(ServerSync.ToImport(save)) + "}";
+                string importErr = null;
                 yield return _client.Rpc("jr_import_legacy", body, (j, e) =>
                 {
+                    importErr = e;
                     if (e == null) { var r = JsonUtility.FromJson<OpResult>(j); if (r?.snapshot != null) snap = r.snapshot; }
                 });
+                if (importErr != null)
+                {
+                    // never overwrite the phone's progress with an empty account: try again later
+                    Debug.LogWarning("[Online] could not upload this phone's progress yet: " + importErr);
+                    SetState(OnlineState.Offline, importErr);
+                    yield break;
+                }
             }
+            // switching to a different account while this phone holds progress: keep a backup file
+            if (localProgress && !string.IsNullOrEmpty(snap.user_id) && snap.user_id != save.lastUserId) Services.Save.Backup("before-" + snap.user_id.Substring(0, 8));
             Apply(snap);
             save.onlineLinked = true;
             save.signedOut = false;

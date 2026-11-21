@@ -94,6 +94,19 @@ namespace JeepneyRush
             Missions.Refresh(Data, PhilippineTime.DayKey, PhilippineTime.WeekKey);
         }
 
+        /// <summary>Writes a copy of the current save next to it (jeepneyrush_save.&lt;tag&gt;.bak) – recovery insurance.</summary>
+        public void Backup(string tag)
+        {
+            try
+            {
+                string body = JsonUtility.ToJson(Data);
+                var env = new SaveEnvelope { version = SaveData.CurrentVersion, body = body, checksum = SaveValidation.Checksum(body) };
+                File.WriteAllText(Path.Combine(Application.persistentDataPath, $"jeepneyrush_save.{tag}.bak"), JsonUtility.ToJson(env));
+                Debug.Log($"[Save] backup written: jeepneyrush_save.{tag}.bak");
+            }
+            catch (Exception e) { Debug.LogWarning("[Save] backup failed: " + e.Message); }
+        }
+
         public void ResetProgress()
         {
             var keep = Data;
