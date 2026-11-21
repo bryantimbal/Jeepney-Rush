@@ -32,13 +32,26 @@ namespace JeepneyRush
             BuildAccount();
             BuildRanks();
             BuildDaily();
+            HookOnline();
+        }
+
+        private bool _onlineHooked;
+
+        /// <summary>Subscribes to the online service (safe to call before it exists; retried from Start).</summary>
+        private void HookOnline()
+        {
+            if (_onlineHooked || Services.Online == null) return;
             Services.Online.Changed += OnOnlineChanged;
             Services.Online.RunSubmitted += OnRunSubmitted;
+            _onlineHooked = true;
+            UpdateOnlineChip();
         }
+
+        private void Start() => HookOnline();
 
         private void OnDestroy()
         {
-            if (Services.Online == null) return;
+            if (!_onlineHooked || Services.Online == null) return;
             Services.Online.Changed -= OnOnlineChanged;
             Services.Online.RunSubmitted -= OnRunSubmitted;
         }

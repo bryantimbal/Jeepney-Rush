@@ -34,8 +34,9 @@ namespace JeepneyRush
             Services.Scenes = _systems.AddComponent<SceneLoader>();
             Services.Audio = _systems.AddComponent<AudioManager>();
             Services.Game = _systems.AddComponent<GameManager>();
-            Services.UI = _systems.AddComponent<UIManager>();
+            // OnlineService before UIManager: the UI hooks into it while building its screens
             Services.Online = _systems.AddComponent<OnlineService>();
+            Services.UI = _systems.AddComponent<UIManager>();
             _systems.AddComponent<Haptics>();
             _systems.AddComponent<BackButtonListener>();
             GraphicsQuality.Apply(Services.Save.Data.graphicsQuality);

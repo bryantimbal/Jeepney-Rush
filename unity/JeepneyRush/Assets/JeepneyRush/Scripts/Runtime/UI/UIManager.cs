@@ -55,19 +55,14 @@ namespace JeepneyRush
             _root.Add(_safe);
             _root.RegisterCallback<GeometryChangedEvent>(_ => ApplySafeArea());
 
-            BuildHud();
-            BuildJuice();
-            BuildMenu();
-            BuildPause();
-            BuildGameOver();
-            BuildSettings();
-            BuildGarage();
-            BuildMissions();
-            BuildRoutes();
-            BuildOnline();
-            BuildConfirm();
-            BuildLoading();
-            BuildSplash();
+            // each screen is built in isolation: a bug in one must never leave the others
+            // stacked on top of each other (HideAll below always runs)
+            foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings,
+                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildConfirm, BuildLoading, BuildSplash })
+            {
+                try { build(); }
+                catch (System.Exception e) { Debug.LogException(e); }
+            }
             _floats = UiKit.Box("floats");
             _floats.style.position = Position.Absolute;
             _floats.style.left = _floats.style.right = 0;
@@ -107,8 +102,8 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes })
-                e.style.display = DisplayStyle.None;
+            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily })
+                if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
 
