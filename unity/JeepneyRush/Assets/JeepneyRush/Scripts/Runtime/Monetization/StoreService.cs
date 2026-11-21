@@ -54,6 +54,7 @@ namespace JeepneyRush
         /// <summary>Why buying isn't possible right now (null = it is).</summary>
         public string Blocker()
         {
+            if (!_initRan) Bootstrap.StartServices(); // safety net: the shop was opened before startup finished
             if (_p == null) return WhyNoStore();
             if (!_p.Ready) return "Connecting to Google Play…";
             var o = Services.Online;

@@ -13,9 +13,24 @@ namespace JeepneyRush
     public sealed class Bootstrap : MonoBehaviour
     {
         private static GameObject _systems;
+        private static bool _servicesStarted;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => _systems = null; // fast enter-play-mode support
+        private static void ResetStatics() { _systems = null; _servicesStarted = false; } // fast enter-play-mode support
+
+        /// <summary>
+        /// Starts sign-in, ads and the store exactly once. Normally called at the end of the splash;
+        /// also called when Play is pressed directly in the MainMenu or Gameplay scene (no splash),
+        /// so the shop and online features work however the game was started.
+        /// </summary>
+        public static void StartServices()
+        {
+            if (_servicesStarted) return;
+            _servicesStarted = true;
+            try { Services.Online?.Connect(); } catch (System.Exception e) { Debug.LogException(e); }
+            try { Services.Store?.Init(); } catch (System.Exception e) { Debug.LogException(e); }
+            try { Services.Ads?.Init(); } catch (System.Exception e) { Debug.LogException(e); }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void CreateSystems()
@@ -51,7 +66,12 @@ namespace JeepneyRush
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void StartFromAnyScene()
         {
-            if (FindFirstObjectByType<Bootstrap>() != null || FindFirstObjectByType<GameplaySession>() != null || FindFirstObjectByType<MainMenuController>() != null) return;
+            if (FindFirstObjectByType<Bootstrap>() != null) return;
+            if (FindFirstObjectByType<GameplaySession>() != null || FindFirstObjectByType<MainMenuController>() != null)
+            {
+                StartServices(); // started without the splash: still bring up online, ads and store
+                return;
+            }
             Debug.Log("[Jeepney Rush] No game scene open – starting the normal flow. (Tip: open Assets/JeepneyRush/Scenes/Bootstrap.unity.)");
             _systems.AddComponent<Bootstrap>();
         }
@@ -85,11 +105,9 @@ namespace JeepneyRush
             while (!done && Services.Scenes.IsLoading) yield return null;
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene) Services.Game.SetState(GameState.MainMenu);
             // Phase 3: sign in (guest or saved account) in the background – the game never waits for it
-            try { Services.Online.Connect(); } catch (System.Exception e) { Debug.LogException(e); }
-            // Phase 4: ads and store start after the splash (never block the menu).
-            // Each one is isolated, so a problem with one never stops the other.
-            try { Services.Store.Init(); } catch (System.Exception e) { Debug.LogException(e); }
-            try { Services.Ads.Init(); } catch (System.Exception e) { Debug.LogException(e); }
+            // Phase 3/4: sign-in, ads and store start after the splash (never block the menu).
+            // Each one is isolated, so a problem with one never stops the others.
+            StartServices();
         }
     }
 
