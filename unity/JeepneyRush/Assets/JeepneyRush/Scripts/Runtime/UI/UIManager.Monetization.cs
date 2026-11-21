@@ -58,9 +58,8 @@ namespace JeepneyRush
             _shop = ModalShell("shop", "SHOP", out var card);
             _shopGems = UiKit.Text("", 36, UiKit.Ink);
             card.Add(_shopGems);
-            var scroll = new ScrollView(ScrollViewMode.Vertical);
-            scroll.style.maxHeight = 1150;
-            _shopList = UiKit.Box();
+            var scroll = UiKit.Scroll(1250);
+            _shopList = UiKit.Stack();
             scroll.Add(_shopList);
             card.Add(scroll);
             card.Add(UiKit.Button("RESTORE PURCHASES", () => Services.Store.Restore(ok => { Toast(ok ? "Purchases restored from your account." : "Sign in to the account you bought with (ACCOUNT)."); RefreshShop(); }), Color.white, UiKit.Ink, 34, 96));
@@ -93,12 +92,17 @@ namespace JeepneyRush
                 UiKit.Border(row.style, 4, UiKit.Hex("#E2DBC6"), 24);
                 UiKit.Pad(row.style, 10, 16);
                 row.style.marginBottom = 10;
+                row.style.flexShrink = 0;
+                row.style.minHeight = 130;
                 var icon = p.Gems > 0 ? GemIcon(80) : p.Coins > 0 && p.Jeepneys.Length == 0 ? (VisualElement)UiKit.Icon("ui_coin", 80) : UiKit.Icon(p.AdFree ? "ui_pause" : "ui_star", 80);
+                icon.style.flexShrink = 0;
                 row.Add(icon);
                 var col = UiKit.Box();
                 col.style.flexGrow = 1;
                 col.style.flexShrink = 1;
                 col.style.marginLeft = 14;
+                col.style.marginRight = 12;
+                col.style.paddingTop = col.style.paddingBottom = 6;
                 var t = UiKit.Text(p.Title.ToUpperInvariant(), 34, UiKit.Ink);
                 t.style.unityTextAlign = TextAnchor.MiddleLeft;
                 col.Add(t);
@@ -113,6 +117,7 @@ namespace JeepneyRush
                     store.Buy(id, (ok, msg) => { Toast(ok ? "Salamat! Purchase complete." : msg); RefreshShop(); RefreshMenuTop(); });
                 }, owned ? UiKit.Hex("#B9B2C6") : UiKit.Yellow, UiKit.Ink, 34, 96);
                 buy.style.width = 210;
+                buy.style.flexShrink = 0;
                 buy.style.marginTop = buy.style.marginBottom = 0;
                 buy.SetEnabled(!owned && blocker == null);
                 buy.style.opacity = buy.enabledSelf ? 1f : 0.6f;

@@ -183,9 +183,8 @@ namespace JeepneyRush
         private void BuildAccount()
         {
             _account = ModalShell("account", "ACCOUNT", out var card);
-            var scroll = new ScrollView(ScrollViewMode.Vertical);
-            scroll.style.maxHeight = 1350;
-            _accountBody = UiKit.Box();
+            var scroll = UiKit.Scroll(1350);
+            _accountBody = UiKit.Stack();
             scroll.Add(_accountBody);
             card.Add(scroll);
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 46, 120));
@@ -347,9 +346,9 @@ namespace JeepneyRush
             card.Add(scopes);
             _rankInfo = Note("", 28);
             card.Add(_rankInfo);
-            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            var scroll = UiKit.Scroll(900);
             scroll.style.height = 900;
-            _rankList = UiKit.Box();
+            _rankList = UiKit.Stack();
             scroll.Add(_rankList);
             card.Add(scroll);
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 46, 120));

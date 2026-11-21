@@ -116,6 +116,33 @@ namespace JeepneyRush
             return b;
         }
 
+        /// <summary>
+        /// Vertical scroll area that works without Unity's default theme: it shrinks to the space
+        /// left in its card, while its content keeps its natural height (so rows never get squashed
+        /// on top of each other) and scrolls by dragging.
+        /// </summary>
+        public static ScrollView Scroll(float maxHeight)
+        {
+            var sv = new ScrollView(ScrollViewMode.Vertical);
+            sv.style.maxHeight = maxHeight;
+            sv.style.flexShrink = 1;
+            sv.style.minHeight = 160;
+            sv.style.overflow = Overflow.Hidden;
+            sv.touchScrollBehavior = ScrollView.TouchScrollBehavior.Clamped;
+            sv.contentContainer.style.flexShrink = 0;
+            sv.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            return sv;
+        }
+
+        /// <summary>A box whose children keep their natural height (never squashed).</summary>
+        public static VisualElement Stack()
+        {
+            var b = Box();
+            b.style.flexShrink = 0;
+            return b;
+        }
+
         public static VisualElement Card(float width = 940)
         {
             var c = Box("card");
@@ -123,6 +150,7 @@ namespace JeepneyRush
             var s = c.style;
             s.width = width;
             s.maxWidth = Length.Percent(92);
+            s.maxHeight = Length.Percent(94);
             s.backgroundColor = Cream;
             Border(s, 8, Ink, 54);
             s.borderBottomWidth = 20;
