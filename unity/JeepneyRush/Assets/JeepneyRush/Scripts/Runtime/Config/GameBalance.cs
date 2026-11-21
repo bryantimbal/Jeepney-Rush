@@ -39,8 +39,9 @@ namespace JeepneyRush
             var c = config;
             c.laneSpacing = Mathf.Max(1.5f, c.laneSpacing);
             c.laneChangeDuration = Mathf.Clamp(c.laneChangeDuration, 0.05f, 1f);
-            c.jumpDuration = Mathf.Clamp(c.jumpDuration, 0.2f, 2f);
-            c.jumpHeight = Mathf.Clamp(c.jumpHeight, 0.3f, 5f);
+            c.humpSafeFraction = Mathf.Clamp(c.humpSafeFraction, 0.2f, 1f);
+            c.wetLaneChangePenalty = Mathf.Clamp(c.wetLaneChangePenalty, 0f, 1f);
+            c.floodSlowdown = Mathf.Clamp(c.floodSlowdown, 0.3f, 1f);
             c.startSpeed = Mathf.Max(1f, c.startSpeed);
             c.maxSpeed = Mathf.Max(c.startSpeed, c.maxSpeed);
             c.startHealth = Mathf.Max(1, c.startHealth);

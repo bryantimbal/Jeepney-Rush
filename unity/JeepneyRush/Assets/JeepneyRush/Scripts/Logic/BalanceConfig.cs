@@ -13,8 +13,6 @@ namespace JeepneyRush.Logic
         public int laneCount = 3;
         public float laneSpacing = 3.2f;
         public float laneChangeDuration = 0.22f;
-        public float jumpDuration = 0.65f;
-        public float jumpHeight = 1.5f;
         public int startHealth = 3;
         public float invulnerabilityTime = 1.5f;
         /// <summary>Collision half extents of the jeepney (slightly smaller than the mesh = forgiving).</summary>
@@ -40,7 +38,10 @@ namespace JeepneyRush.Logic
         public float minReactionTime = 0.9f;
         /// <summary>Extra seconds the level generator budgets per lane change (human slack).</summary>
         public float laneChangeSlack = 0.12f;
-        public float jumpWallMinDistance = 500f;
+        /// <summary>Speed humps across the whole road appear after this distance.</summary>
+        public float humpMinDistance = 300f;
+        /// <summary>Crossing a hump / pothole faster than this fraction of base speed jolts the passengers.</summary>
+        public float humpSafeFraction = 0.62f;
         public float stopSpacingMin = 220f;
         public float stopSpacingMax = 320f;
         public float stopZoneLength = 16f;
@@ -73,6 +74,13 @@ namespace JeepneyRush.Logic
         public float passengerBonusMultiplier = 2f;
         public int repairKitFallbackCoins = 25;
 
+        // --- weather (rain / typhoon) and floods
+        /// <summary>Lane changes take up to this much longer on a fully soaked road.</summary>
+        public float wetLaneChangePenalty = 0.3f;
+        /// <summary>Speed multiplier while ploughing through flood water.</summary>
+        public float floodSlowdown = 0.7f;
+        public float floodSlowTime = 1.2f;
+
         // --- rewards & score
         public int coinValue = 1;
         public int pickupCoins = 2;
@@ -90,9 +98,6 @@ namespace JeepneyRush.Logic
         }
 
         public float LaneX(int lane) => (lane - (laneCount - 1) * 0.5f) * laneSpacing;
-
-        public float JumpVelocity => 4f * jumpHeight / jumpDuration;
-        public float Gravity => 8f * jumpHeight / (jumpDuration * jumpDuration);
 
         /// <summary>Difficulty 0..1 at a distance, from the configurable curve.</summary>
         public float DifficultyAt(float distance)
@@ -113,14 +118,6 @@ namespace JeepneyRush.Logic
         }
 
         public float SpeedAt(float distance) => startSpeed + (maxSpeed - startSpeed) * DifficultyAt(distance);
-
-        /// <summary>Height of the jeepney's jump arc after t seconds (0 outside the jump).</summary>
-        public float JumpHeightAt(float t)
-        {
-            if (t <= 0 || t >= jumpDuration) return 0;
-            float x = t / jumpDuration;
-            return 4f * jumpHeight * x * (1 - x);
-        }
 
         private static float Clamp01(float v) => v < 0 ? 0 : v > 1 ? 1 : v;
     }

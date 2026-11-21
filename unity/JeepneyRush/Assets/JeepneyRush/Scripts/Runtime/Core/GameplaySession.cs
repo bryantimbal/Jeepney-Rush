@@ -34,8 +34,12 @@ namespace JeepneyRush
         private SpawnDirector _director;
         private GameRandom _rng;
 
-        private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx;
-        private int _jumps, _hits;
+        private WeatherManager _weather;
+        private RoadBender _bender;
+        private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
+        private int _smoothHumps, _hits;
+        private bool _gasWas;
+        private float _revCooldown;
         private bool _dying;
 
         public ScoreManager Score => _score;
@@ -112,6 +116,17 @@ namespace JeepneyRush
             _traffic.CollectAll = _spawner.CollectBlockers;
             _traffic.PlayerLanes = () => _spawner.PlayerLanes;
 
+            // hills & bends are applied for rendering only (gameplay stays in straight lanes)
+            _bender = GetOrAdd<RoadBender>(Child("RoadBender"));
+            _bender.Road = _road;
+            foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _road.SegmentRoot })
+                _bender.AddRoot(root);
+            _weather = GetOrAdd<WeatherManager>(Child("Weather"));
+            _weather.Init(_camera.GetComponent<Camera>(), _road);
+            // moving traffic never swerves into a PARA zone it would occupy before the jeepney passes
+            _traffic.ZoneBlocked = (lane, unityZ, speed, halfLength, tMeet) =>
+                _director != null && _director.CrossesReservation(lane, _score.Distance + unityZ, speed, halfLength, tMeet);
+
             _player.Collisions.HazardHit = OnHazardHit;
             _player.Collisions.CoinTouched = OnCoinTouched;
             _player.Collisions.ZoneEntered = OnZone;
@@ -124,6 +139,8 @@ namespace JeepneyRush
         private void OnDestroy()
         {
             GameEvents.StateChanged -= OnStateChanged;
+            RoadCurve.Shape = null;
+            if (_weather != null) _weather.Stop();
             if (Services.Game != null) Services.Game.Unregister(this);
         }
 
@@ -155,14 +172,19 @@ namespace JeepneyRush
             var route = new PassengerRoute(_cfg, _rng, StopNames.ForEnvironment(_env));
             _passengers.ResetRun(route);
             _powerUps.ResetRun(_cfg, Upgrades.PowerUpDurationScale(save.UpgradeLevel(UpgradeKind.PowerUpDuration)));
-            _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env);
+            RoadCurve.Shape = new RoadShape(seed, _env);
+            RoadCurve.Distance = 0;
+            _weather.ResetRun(seed, _env);
+            _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt);
             _enforcer.ResetRun();
             _combo.Reset();
             _input.Sensitivity = save.swipeSensitivity;
             _player.ResetRun();
             _road.Layout();
             _speed = _runTime = _cleanDistance = _bestClean = 0;
-            _jumps = _hits = 0;
+            _smoothHumps = _hits = 0;
+            _wetDistance = 0;
+            _gasWas = false;
             _dying = false;
             _camera.Snap(_player.transform.position);
             Services.Game.SetState(GameState.Starting);
@@ -183,11 +205,8 @@ namespace JeepneyRush
                     int dir = a == PlayerInputHandler.Action.Left ? -1 : 1;
                     if (_player.MoveLane(dir)) GameEvents.RaiseLane(dir);
                     break;
-                case PlayerInputHandler.Action.Jump:
-                    if (_player.Jump()) { _jumps++; GameEvents.RaiseJump(); }
-                    break;
                 case PlayerInputHandler.Action.Down:
-                    if (_player.Down() && _player.Jumper.Grounded) GameEvents.RaiseBrake();
+                    if (_player.Down()) GameEvents.RaiseBrake();
                     break;
                 case PlayerInputHandler.Action.Horn:
                     Honk();
@@ -221,25 +240,36 @@ namespace JeepneyRush
             if (brakeHeld && !_player.BrakeHeld) GameEvents.RaiseBrake();
             _player.GasHeld = gasHeld && !brakeHeld;
             _player.BrakeHeld = brakeHeld;
+            _revCooldown -= dt;
+            if (_player.GasHeld && !_gasWas && _revCooldown <= 0)
+            {
+                _revCooldown = 0.7f;
+                // stepping on the accelerator: diesel rev + a black cough of smoke
+                Services.Audio.Rev();
+                _fx.GasPuff(_player.transform.position, _speed);
+            }
+            _gasWas = _player.GasHeld;
             _difficulty.Tick(_score.Distance);
             float intro = Mathf.Clamp01(_runTime / 1.2f);
             float target = _dying ? 0 : _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
             float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
             _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
 
+            // ---- weather + road shape
+            _weather.Tick(_score.Distance, dt);
+            float wet = _weather.Wetness;
+            _player.SetWetness(wet);
+            RoadCurve.Distance = _score.Distance;
+            _player.SlopePitch = RoadCurve.PlayerPitch;
+
             // ---- player
-            if (_player.Tick(dt, _speed))
-            {
-                GameEvents.RaiseLand();
-                _fx.Dust(_player.transform.position + new Vector3(0, 0.1f, -1.5f));
-                _camera.AddShake(0.06f);
-                if (_passengers.Route.Count > 0 && _rng.Chance(0.35)) Services.UI.Say(Lines.Pick(Lines.Landing, _rng), _passengers.RandomRiderHead);
-            }
+            _player.Tick(dt, _speed);
             _combo.Tick(dt);
             Services.UI.SetCombo(_combo.Count);
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
+            if (wet > 0.3f) _wetDistance += dz;
             _score.AddDistance(dz, _player.GasHeld ? _cfg.gasScoreMultiplier : 1f);
             _cleanDistance += dz;
             _bestClean = Mathf.Max(_bestClean, _cleanDistance);
@@ -261,11 +291,14 @@ namespace JeepneyRush
             _passengers.Tick(dt, _speed);
             _powerUps.Tick(dt, _speed);
             _enforcer.Tick(dt, _speed);
+            float hump = NextHumpZ();
             if (_enforcer.Active && _enforcer.Z > 0)
                 Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+            else if (hump > 0 && hump < 75f)
+                Services.UI.SetEnforcerBanner($"HUMP AHEAD · BRAKE! {Mathf.CeilToInt(hump)} m");
             else Services.UI.SetEnforcerBanner(null);
             float s01 = Mathf.Clamp01(Speed01 + (pu.IsActive(PowerUpKind.Turbo) ? 0.6f : _player.GasHeld ? 0.25f : 0f));
-            _fx.Tick(dt, _player.transform.position, _speed, s01);
+            _fx.Tick(dt, _player.transform.position, _speed, s01, _player.GasHeld, wet);
             if (pu.IsActive(PowerUpKind.Turbo))
             {
                 _turboFx -= dt;
@@ -274,14 +307,82 @@ namespace JeepneyRush
 
             // ---- camera, audio, HUD
             _camera.Follow(_player.transform.position, _player.Lanes.VelocityX, s01, dt);
-            Services.Audio.UpdateEngine(s01, _player.Braking);
+            Services.Audio.UpdateEngine(s01, _player.Braking, _player.GasHeld);
             if (!_dying) Services.UI.UpdateHud(this);
         }
 
+        /// <summary>Distance (m) to the nearest speed hump ahead, or -1.</summary>
+        private float NextHumpZ()
+        {
+            float best = -1;
+            foreach (var h in _obstacles.Active)
+            {
+                if (h.Kind != HazardKind.SpeedHump || h.Hit) continue;
+                float z = h.transform.localPosition.z;
+                if (z > 0 && (best < 0 || z < best)) best = z;
+            }
+            return best;
+        }
+
         // ---------------------------------------------------------------- physics callbacks
+        /// <summary>Humps, potholes and floods: driven over, never a crash.</summary>
+        private void OnSoftHazard(Hazard h)
+        {
+            h.Hit = true;
+            var pos = _player.transform.position;
+            if (HazardCatalog.IsFlood(h.Kind))
+            {
+                bool big = h.Kind == HazardKind.FloodWide;
+                _player.Flooded();
+                _fx.Splash(pos, _speed, big);
+                _camera.AddShake(big ? 0.18f : 0.1f);
+                Services.Audio.Play(Logic.Audio.Sfx.Splash, big ? 1f : 0.8f);
+                Haptics.Pulse(15);
+                Services.UI.Float(big ? "BAHA! LUSONG!" : "BAHA!", UIManager.FloatKind.Info);
+                if (_passengers.Route.Count > 0 && _rng.Chance(0.6)) Services.UI.Say(Lines.Pick(Lines.Flood, _rng), _passengers.RandomRiderHead);
+                return;
+            }
+            bool isHump = h.Kind == HazardKind.SpeedHump;
+            if (HumpRules.Smooth(_speed, _difficulty.BaseSpeed, _cfg))
+            {
+                // slowed down properly: gentle roll over, passengers are happy
+                _player.Bump(0.08f);
+                Services.Audio.Play(Logic.Audio.Sfx.Bump, 0.35f);
+                if (isHump)
+                {
+                    _smoothHumps++;
+                    _score.AddScore(HumpRules.SmoothBonusScore);
+                    Services.UI.Float($"DAHAN-DAHAN! +{HumpRules.SmoothBonusScore}", UIManager.FloatKind.Good);
+                    if (_passengers.Route.Count > 0 && _rng.Chance(0.5)) Services.UI.Say(Lines.Pick(Lines.Smooth, _rng), _passengers.RandomRiderHead);
+                }
+                return;
+            }
+            // too fast: everyone bounces off their seat
+            float hard = isHump ? 0.4f : 0.3f;
+            _player.Bump(hard);
+            _camera.AddShake(isHump ? 0.4f : 0.3f);
+            Services.Audio.Play(Logic.Audio.Sfx.Bump, 1f);
+            Haptics.Pulse(30);
+            _fx.Dust(pos + new Vector3(0, 0.1f, -1.5f));
+            Services.UI.Float(isHump ? "HUMP! ARAY!" : "LUBAK! ARAY!", UIManager.FloatKind.Bad);
+            var route = _passengers.Route;
+            if (route.Count > 0)
+            {
+                Services.UI.Say(Lines.Pick(isHump ? Lines.Hump : Lines.Bump, _rng), _passengers.RandomRiderHead, true);
+                Services.Audio.Play(Logic.Audio.Sfx.Complain);
+                if (_rng.Chance(0.3) && route.EjectAngry() > 0)
+                {
+                    _passengers.AngryHopOut();
+                    Services.UI.Say(Lines.Pick(Lines.Leave, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
+                    Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
+                }
+            }
+        }
+
         private void OnHazardHit(Hazard h)
         {
             if (_dying || h.Hit) return;
+            if (h.Def.Soft) { OnSoftHazard(h); return; }
             var c = _player.Collisions;
             var pu = _powerUps.State;
             var manager = HazardCatalog.IsMoving(h.Kind) ? (HazardManagerBase)_traffic : _obstacles;
@@ -312,12 +413,12 @@ namespace JeepneyRush
             _player.OnCrash(sideSwipe);
             manager.Knock(h, _player.transform.position.x);
             _fx.Crash(hitPos);
-            _camera.AddShake(h.Def.Jumpable ? 0.25f : 0.55f);
+            _camera.AddShake(0.55f);
             GameEvents.RaiseHit(c.Health, h.Kind);
             Services.UI.FlashDamage();
             ReactToBump();
             if (c.Dead) BeginDeath();
-            else Services.UI.Float(h.Def.Jumpable ? "ARAY!" : "BANGGA!", UIManager.FloatKind.Bad);
+            else Services.UI.Float("BANGGA!", UIManager.FloatKind.Bad);
         }
 
         /// <summary>Passengers complain about a bump; one may storm off; MMDA sets up a checkpoint.</summary>
@@ -449,7 +550,7 @@ namespace JeepneyRush
             var summary = new RunSummary
             {
                 Score = _score.Score, Distance = _score.Distance, Coins = _score.Coins, Passengers = route.PickedUp,
-                Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, Jumps = _jumps, Hits = _hits,
+                Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };
             var rewards = Services.Save.RecordRun(summary);

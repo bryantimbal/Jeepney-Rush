@@ -16,6 +16,8 @@ namespace JeepneyRush
         /// <summary>Supplied by the session: all blockers + player lanes (for safe swerves).</summary>
         public System.Action<List<PredictBlocker>> CollectAll;
         public System.Func<IReadOnlyList<int>> PlayerLanes;
+        /// <summary>(lane, unityZ, speed, halfLength, secondsUntilPlayerPasses) → would this vehicle occupy a PARA zone?</summary>
+        public System.Func<int, float, float, float, float, bool> ZoneBlocked;
 
         protected override void Animate(Hazard h, float dt, ref Vector3 pos)
         {
@@ -62,6 +64,9 @@ namespace JeepneyRush
             }
             if (pick == null) return;
             int to = pick.Lane == 0 ? 1 : pick.Lane == Cfg.laneCount - 1 ? pick.Lane - 1 : (Rng.Chance(0.5) ? pick.Lane - 1 : pick.Lane + 1);
+            float pz = pick.transform.localPosition.z;
+            float tMeet = pz / Mathf.Max(0.5f, playerSpeed - pick.Speed);
+            if (ZoneBlocked != null && ZoneBlocked(to, pz, pick.Speed, pick.Def.HalfLength, tMeet)) return;
             foreach (var o in Items)
                 if (o != pick && (o.Lane == to || o.TargetLane == to) && Mathf.Abs(o.transform.localPosition.z - pick.transform.localPosition.z) < o.Def.HalfLength + pick.Def.HalfLength + 6)
                     return;

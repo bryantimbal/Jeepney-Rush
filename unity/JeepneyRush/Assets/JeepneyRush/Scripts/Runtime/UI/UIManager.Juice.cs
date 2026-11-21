@@ -192,6 +192,41 @@ namespace JeepneyRush
             }
         }
 
+        private Label _weather;
+        private VisualElement _lightning;
+
+        /// <summary>Weather readout under the distance ("UMUULAN · madulas").</summary>
+        public void SetWeather(string text, Color color)
+        {
+            if (_weather == null) return;
+            _weather.text = text ?? "";
+            _weather.style.color = color;
+        }
+
+        /// <summary>Full-screen white lightning flash (double flicker).</summary>
+        public void LightningFlash()
+        {
+            if (_lightning == null)
+            {
+                _lightning = UiKit.Box("lightning");
+                _lightning.style.position = Position.Absolute;
+                _lightning.style.left = _lightning.style.right = _lightning.style.top = _lightning.style.bottom = 0;
+                _lightning.style.backgroundColor = new Color(0.92f, 0.95f, 1f, 1f);
+                _lightning.pickingMode = PickingMode.Ignore;
+                _lightning.style.opacity = 0;
+                _root.Add(_lightning);
+            }
+            long start = 0;
+            _lightning.schedule.Execute(t =>
+            {
+                if (start == 0) start = t.now;
+                float ms = t.now - start;
+                // flash, dip, second flash, fade
+                float o = ms < 70 ? 0.55f : ms < 130 ? 0.1f : ms < 200 ? 0.45f : Mathf.Max(0, 0.45f - (ms - 200) / 500f);
+                _lightning.style.opacity = o;
+            }).Every(16).Until(() => start != 0 && _lightning.style.opacity.value <= 0f);
+        }
+
         private void ClearJuice()
         {
             foreach (var b in _bubbles) b.RemoveFromHierarchy();
@@ -201,6 +236,7 @@ namespace JeepneyRush
             _lastCombo = -1;
             SetCombo(0);
             SetEnforcerBanner(null);
+            SetWeather("", Color.white);
         }
     }
 }

@@ -539,6 +539,10 @@ namespace JeepneyRush
             _distance = UiKit.Text("0 m", 40, UiKit.Yellow, true, 2f);
             _distance.style.unityTextAlign = TextAnchor.MiddleLeft;
             scoreCol.Add(_distance);
+            _weather = UiKit.Text("", 30, Color.white, true, 2f);
+            _weather.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _weather.style.marginTop = 4;
+            scoreCol.Add(_weather);
             top.Add(scoreCol);
             var right = UiKit.Box();
             right.style.alignItems = Align.FlexEnd;
@@ -681,7 +685,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Swipe UP to jump over cones & potholes", "Hold GAS to speed up · hold BRAKE to slow down", "Yellow PARA zones: pick up passengers", "GREEN arrow: drive in to drop them off for fares" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · swipe UP to honk", "Rain = slippery road · avoid floods (BAHA)", "Yellow PARA zones: pick up passengers", "GREEN arrow: drive in to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

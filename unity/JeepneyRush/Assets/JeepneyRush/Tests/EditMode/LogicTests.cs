@@ -9,13 +9,13 @@ namespace JeepneyRush.Tests
     public class OccupancyTests
     {
         private static readonly BalanceConfig Cfg = new BalanceConfig();
-        private static PredictBlocker B(int lane, float z, float halfL = 2, float speed = 0, bool jump = false, int lane2 = -1) => new PredictBlocker(lane, z, halfL, speed, jump, lane2);
+        private static PredictBlocker B(int lane, float z, float halfL = 2, float speed = 0, bool soft = false, int lane2 = -1) => new PredictBlocker(lane, z, halfL, speed, soft, lane2);
         private static bool Pass(List<PredictBlocker> b, float speed, float horizon, IReadOnlyList<int> start = null) =>
             LaneOccupancy.IsPassable(b, speed, horizon, Cfg.playerHalfLength, 3, Cfg.laneChangeDuration + Cfg.laneChangeSlack, start);
 
         [Test] public void EmptyRoadIsPassable() => Assert.IsTrue(Pass(new List<PredictBlocker>(), 15, 5));
         [Test] public void FullWallIsNotPassable() => Assert.IsFalse(Pass(new List<PredictBlocker> { B(0, -50), B(1, -50), B(2, -50) }, 15, 6));
-        [Test] public void JumpablesNeverBlock() => Assert.IsTrue(Pass(new List<PredictBlocker> { B(0, -50, jump: true), B(1, -50, jump: true), B(2, -50, jump: true) }, 15, 6));
+        [Test] public void SoftHazardsNeverBlock() => Assert.IsTrue(Pass(new List<PredictBlocker> { B(0, -50, soft: true), B(1, -50, soft: true), B(2, -50, soft: true) }, 15, 6));
         [Test] public void TwoBlockedLanesLeaveOne() => Assert.IsTrue(Pass(new List<PredictBlocker> { B(0, -50), B(1, -50) }, 15, 6));
 
         [Test]
@@ -53,8 +53,6 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(24f, c.maxSpeed);
             Assert.AreEqual(3.2f, c.laneSpacing);
             Assert.AreEqual(0.22f, c.laneChangeDuration);
-            Assert.AreEqual(0.65f, c.jumpDuration);
-            Assert.AreEqual(1.5f, c.jumpHeight);
             Assert.AreEqual(3, c.startHealth);
             Assert.AreEqual(5, c.passengerCapacity);
             Assert.AreEqual(-3.2f, c.LaneX(0), 1e-4);
@@ -72,38 +70,15 @@ namespace JeepneyRush.Tests
         }
 
         [Test]
-        public void JumpArcPeaksAtConfiguredHeight()
+        public void OnlyHumpsPotholesAndFloodsAreSoft()
         {
-            var c = new BalanceConfig();
-            Assert.AreEqual(1.5f, c.JumpHeightAt(c.jumpDuration / 2), 1e-3);
-            Assert.AreEqual(0f, c.JumpHeightAt(c.jumpDuration));
-        }
-
-        /// <summary>
-        /// Every jumpable obstacle must be clearable at the slowest speed it can appear at
-        /// (jump walls only appear after jumpWallMinDistance).
-        /// </summary>
-        [TestCase(HazardKind.Cone)]
-        [TestCase(HazardKind.Barrier)]
-        [TestCase(HazardKind.Pothole)]
-        public void JumpablesCanBeCleared(HazardKind kind)
-        {
-            var c = new BalanceConfig();
-            var def = HazardCatalog.Get(kind);
-            float speed = c.SpeedAt(c.jumpWallMinDistance);
-            bool cleared = false;
-            // try every take-off distance; one timing must avoid any overlap
-            for (float start = 3f; start < 20f && !cleared; start += 0.05f)
+            foreach (HazardKind k in System.Enum.GetValues(typeof(HazardKind)))
             {
-                bool hit = false;
-                for (float t = 0; t < 1.5f; t += 0.002f)
-                {
-                    float z = -start + speed * t;
-                    if (CollisionMath.Overlaps(c, 0, c.JumpHeightAt(t), 0, z, def)) { hit = true; break; }
-                }
-                if (!hit) cleared = true;
+                bool expected = k == HazardKind.Pothole || k == HazardKind.SpeedHump || k == HazardKind.FloodPuddle || k == HazardKind.FloodWide;
+                Assert.AreEqual(expected, HazardCatalog.Get(k).Soft, k.ToString());
             }
-            Assert.IsTrue(cleared, $"{kind} cannot be jumped at {speed} m/s");
+            Assert.IsTrue(HazardCatalog.IsFlood(HazardKind.FloodWide));
+            Assert.IsFalse(HazardCatalog.IsFlood(HazardKind.SpeedHump));
         }
     }
 

@@ -48,7 +48,7 @@ namespace JeepneyRush
             {
                 if (h.Hit) continue;
                 int lane = h.TargetLane >= 0 ? h.Lane : h.Lane;
-                output.Add(new PredictBlocker(lane, h.LogicZ, h.Def.HalfLength, h.Speed, h.Def.Jumpable && !h.Solid, h.TargetLane));
+                output.Add(new PredictBlocker(lane, h.LogicZ, h.Def.HalfLength, h.Speed, h.Def.Soft && !h.Solid, h.TargetLane));
             }
         }
 
@@ -91,7 +91,8 @@ namespace JeepneyRush
             h.GetComponent<BoxCollider>().enabled = false;
             float away = Mathf.Sign(h.transform.localPosition.x - fromX);
             if (away == 0) away = 1;
-            if (h.Def.Jumpable) { h.KnockVelocity = new Vector3(away * Rng.Range(3, 7), Rng.Range(6, 10), Rng.Range(8, 16)); h.KnockSpin = Rng.Range(-10, 10); }
+            if (h.Def.Soft) { h.KnockVelocity = Vector3.zero; h.KnockSpin = 0; }
+            else if (h.Def.HalfWidth < 1.5f && h.Def.Height < 1.5f) { h.KnockVelocity = new Vector3(away * Rng.Range(3, 7), Rng.Range(6, 10), Rng.Range(8, 16)); h.KnockSpin = Rng.Range(-10, 10); }
             else { h.KnockVelocity = new Vector3(away * 3f, 1.5f, 8f); h.KnockSpin = away * 1.2f; }
         }
     }

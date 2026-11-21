@@ -100,6 +100,8 @@ namespace JeepneyRush
                 case HazardKind.Tricycle: return 5;
                 case HazardKind.Bus: return 4;
                 case HazardKind.Truck: return 4;
+                case HazardKind.FloodPuddle: return 3;
+                case HazardKind.FloodWide: return 2;
                 case HazardKind.ParkedSedan: return VehicleBuilder.CarColors.Length;
                 case HazardKind.ParkedJeepney: return JeepColors.Length;
                 default: return 1;
@@ -137,6 +139,9 @@ namespace JeepneyRush
                 case HazardKind.Pothole: return Get("pothole", VehicleBuilder.Pothole);
                 case HazardKind.ConstructionSign: return Get("csign", VehicleBuilder.ConstructionSign);
                 case HazardKind.Roadblock: return Get("roadblock", VehicleBuilder.Roadblock);
+                case HazardKind.SpeedHump: return Get("hump", VehicleBuilder.SpeedHump);
+                case HazardKind.FloodPuddle: return Get("flood" + v, () => VehicleBuilder.Flood(1.35f, 3.2f, 10 + v));
+                case HazardKind.FloodWide: return Get("floodw" + v, () => VehicleBuilder.Flood(5.3f, 5.5f, 20 + v));
             }
             return Get("cone", VehicleBuilder.Cone);
         }

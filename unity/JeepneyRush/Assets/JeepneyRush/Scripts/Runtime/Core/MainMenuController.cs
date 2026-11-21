@@ -41,6 +41,7 @@ namespace JeepneyRush
             _camera = EnvironmentSetup.EnsureCamera().GetComponent<CameraController>();
             var roadGo = new GameObject("RoadManager");
             roadGo.transform.SetParent(transform, false);
+            RoadCurve.Shape = null; // the menu street is straight and dry
             _road = roadGo.AddComponent<RoadManager>();
             _road.Build(env);
             var fxGo = new GameObject("Effects");

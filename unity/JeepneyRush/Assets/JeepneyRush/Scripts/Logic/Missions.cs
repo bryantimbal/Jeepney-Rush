@@ -6,7 +6,7 @@ namespace JeepneyRush.Logic
     public enum MissionType
     {
         DistanceInRun, CoinsInRun, PassengersInRun, DeliveriesInRun, CleanDistanceInRun, StreakInRun,
-        TotalDistance, TotalCoins, TotalPassengers, TotalDeliveries, TotalPowerUps, TotalJumps, Runs,
+        TotalDistance, TotalCoins, TotalPassengers, TotalDeliveries, TotalPowerUps, TotalSmoothHumps, Runs, TotalWetDistance,
     }
 
     public sealed class MissionDef
@@ -36,7 +36,8 @@ namespace JeepneyRush.Logic
             (MissionType.CleanDistanceInRun, 400, 1200, 100, "Drive {0} m without crashing"),
             (MissionType.StreakInRun, 3, 6, 1, "Reach a x{0} delivery streak"),
             (MissionType.TotalPowerUps, 3, 8, 1, "Use {0} power-ups"),
-            (MissionType.TotalJumps, 10, 30, 5, "Jump {0} times"),
+            (MissionType.TotalSmoothHumps, 5, 15, 1, "Cross {0} speed humps slowly"),
+            (MissionType.TotalWetDistance, 300, 900, 100, "Drive {0} m in the rain"),
             (MissionType.Runs, 3, 6, 1, "Play {0} runs"),
         };
 
@@ -47,6 +48,7 @@ namespace JeepneyRush.Logic
             (MissionType.TotalPassengers, 120, 300, 10, "Pick up {0} passengers this week"),
             (MissionType.TotalDeliveries, 80, 200, 10, "Deliver {0} passengers this week"),
             (MissionType.TotalPowerUps, 25, 60, 5, "Use {0} power-ups this week"),
+            (MissionType.TotalWetDistance, 3000, 8000, 500, "Drive {0} m in rain or typhoon this week"),
         };
 
         public static int DayKey(DateTime local) => local.Year * 10000 + local.Month * 100 + local.Day;
@@ -87,7 +89,8 @@ namespace JeepneyRush.Logic
                 case MissionType.CleanDistanceInRun: return (int)r.CleanDistance;
                 case MissionType.StreakInRun: return r.BestStreak;
                 case MissionType.TotalPowerUps: return r.PowerUps;
-                case MissionType.TotalJumps: return r.Jumps;
+                case MissionType.TotalSmoothHumps: return r.SmoothHumps;
+                case MissionType.TotalWetDistance: return (int)r.WetDistance;
                 case MissionType.Runs: return 1;
             }
             return 0;
@@ -167,6 +170,8 @@ namespace JeepneyRush.Logic
             new AchievementDef { Id = "deliveries_100", Name = "100 Deliveries Completed", Description = "Deliver 100 passengers to their stop.", Target = 100, Reward = 300, Stat = d => d.totalDeliveries },
             new AchievementDef { Id = "highway_legend", Name = "Highway Legend", Description = "Drive 5,000 m in a single run.", Target = 5000, Reward = 1000, Stat = d => d.bestDistance },
             new AchievementDef { Id = "power_player", Name = "Power Player", Description = "Use 50 power-ups.", Target = 50, Reward = 250, Stat = d => d.totalPowerUps },
+            new AchievementDef { Id = "rain_or_shine", Name = "Rain or Shine", Description = "Drive 2,000 m in rain or typhoon.", Target = 2000, Reward = 300, Stat = d => d.totalWetDistance },
+            new AchievementDef { Id = "smooth_operator", Name = "Smooth Operator", Description = "Cross 50 speed humps slowly.", Target = 50, Reward = 250, Stat = d => d.totalSmoothHumps },
             new AchievementDef { Id = "collector", Name = "Jeepney Collector", Description = "Own 5 jeepneys.", Target = 5, Reward = 500, Stat = d => d.ownedJeepneys?.Count ?? 0 },
             new AchievementDef { Id = "fully_loaded", Name = "Fully Loaded", Description = "Max out any upgrade.", Target = Upgrades.MaxLevel, Reward = 300, Stat = d => { int m = 0; if (d.upgradeLevels != null) foreach (var l in d.upgradeLevels) m = Math.Max(m, l); return m; } },
             new AchievementDef { Id = "island_hopper", Name = "Island Hopper", Description = "Unlock every route.", Target = Environments.All.Length, Reward = 500, Stat = d => { int n = 0; foreach (var e in Environments.All) if (Environments.IsUnlocked(e.Kind, d.bestDistance)) n++; return n; } },

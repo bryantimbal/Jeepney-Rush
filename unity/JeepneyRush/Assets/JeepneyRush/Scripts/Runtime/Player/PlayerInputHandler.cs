@@ -11,7 +11,7 @@ namespace JeepneyRush
     /// </summary>
     public sealed class PlayerInputHandler : MonoBehaviour
     {
-        public enum Action { Left, Right, Jump, Down, Horn, Pause }
+        public enum Action { Left, Right, Down, Horn, Pause }
         public event Action<Action> OnAction;
 
         public bool InputEnabled { get; set; }
@@ -41,7 +41,7 @@ namespace JeepneyRush
             }
             if (InputCompat.KeyPressed(InputCompat.Key.Left)) Fire(Action.Left);
             if (InputCompat.KeyPressed(InputCompat.Key.Right)) Fire(Action.Right);
-            if (InputCompat.KeyPressed(InputCompat.Key.Up) || InputCompat.KeyPressed(InputCompat.Key.Jump)) Fire(Action.Jump);
+            if (InputCompat.KeyPressed(InputCompat.Key.Up) || InputCompat.KeyPressed(InputCompat.Key.Jump)) Fire(Action.Horn); // jeepneys don't jump: honk instead
             if (InputCompat.KeyPressed(InputCompat.Key.Down)) Fire(Action.Down);
             if (InputCompat.KeyPressed(InputCompat.Key.Horn)) Fire(Action.Horn);
             if (InputCompat.KeyPressed(InputCompat.Key.Pause)) Fire(Action.Pause);
@@ -64,7 +64,7 @@ namespace JeepneyRush
                     if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) >= Threshold)
                     {
                         if (Mathf.Abs(d.x) > Mathf.Abs(d.y)) Fire(d.x < 0 ? Action.Left : Action.Right);
-                        else Fire(d.y > 0 ? Action.Jump : Action.Down); // screen Y grows upward
+                        else Fire(d.y > 0 ? Action.Horn : Action.Down); // screen Y grows upward; swipe up = honk
                         t.Start = p.Position; // re-arm
                     }
                 }

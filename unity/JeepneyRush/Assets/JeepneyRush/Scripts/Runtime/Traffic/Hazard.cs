@@ -33,7 +33,7 @@ namespace JeepneyRush
         {
             var model = ModelLibrary.Hazard(kind, variant);
             var root = new GameObject(poolKey);
-            var body = ModelLibrary.Instantiate(model, "Body", root.transform, castShadows: kind != HazardKind.Pothole);
+            var body = ModelLibrary.Instantiate(model, "Body", root.transform, castShadows: !HazardCatalog.IsSoft(kind));
             var def = HazardCatalog.Get(kind);
             var col = root.AddComponent<BoxCollider>();
             col.isTrigger = true;

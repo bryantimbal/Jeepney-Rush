@@ -1,0 +1,205 @@
+using JeepneyRush.Logic;
+using UnityEngine;
+
+namespace JeepneyRush
+{
+    /// <summary>
+    /// Philippine weather during a run: sunny ("maaraw"), rain ("umuulan") and typhoon
+    /// ("bagyo") from a deterministic <see cref="WeatherSchedule"/>. Drives rain particles
+    /// (attached to the camera), darker sky / thicker fog, lightning + thunder in typhoons,
+    /// a wet glossy road, the rain loop volume and the HUD label. Gameplay effects
+    /// (slippery steering, floods) read <see cref="Wetness"/>.
+    /// </summary>
+    public sealed class WeatherManager : MonoBehaviour
+    {
+        private WeatherSchedule _schedule;
+        private ParticleSystem _rain;
+        private Camera _cam;
+        private RoadManager _road;
+        private Light _sun;
+        private Material _sky;
+        private float _baseSun, _baseShadow, _baseFogStart, _baseFogEnd, _baseExposure = 1f;
+        private Color _baseFog, _baseAmbSky, _baseAmbEq, _baseAmbGround, _baseSkyTint;
+        private float _lightningTimer, _flashT;
+        private WeatherKind _shownKind = (WeatherKind)(-1);
+
+        public float Wetness { get; private set; }
+        public WeatherKind Kind { get; private set; }
+        public WeatherSchedule Schedule => _schedule;
+
+        private static readonly Color StormFog = new Color(0.46f, 0.5f, 0.56f);
+        private static readonly Color StormSky = new Color(0.32f, 0.35f, 0.4f);
+
+        public void Init(Camera cam, RoadManager road)
+        {
+            _cam = cam;
+            _road = road;
+            if (_rain == null) BuildRain();
+        }
+
+        /// <summary>Call after EnvironmentSetup.Apply so the dry look is captured as the base.</summary>
+        public void ResetRun(int seed, EnvironmentKind env)
+        {
+            if (_schedule != null) Apply(0, 0); // back to the dry look before capturing it
+            _schedule = new WeatherSchedule(seed, env);
+            _sun = RenderSettings.sun;
+            _baseSun = _sun != null ? _sun.intensity : 1.6f;
+            _baseShadow = _sun != null ? _sun.shadowStrength : 0.75f;
+            _baseFog = RenderSettings.fogColor;
+            _baseFogStart = RenderSettings.fogStartDistance;
+            _baseFogEnd = RenderSettings.fogEndDistance;
+            _baseAmbSky = RenderSettings.ambientSkyColor;
+            _baseAmbEq = RenderSettings.ambientEquatorColor;
+            _baseAmbGround = RenderSettings.ambientGroundColor;
+            // own copy of the skybox so the stormy tint never touches the shared asset
+            if (RenderSettings.skybox != null)
+            {
+                if (_sky == null || RenderSettings.skybox != _sky)
+                    _sky = new Material(RenderSettings.skybox) { name = "JR_Skybox_Weather" };
+                RenderSettings.skybox = _sky;
+                _baseSkyTint = _sky.HasProperty("_SkyTint") ? _sky.GetColor("_SkyTint") : Color.white;
+                _baseExposure = _sky.HasProperty("_Exposure") ? _sky.GetFloat("_Exposure") : 1f;
+            }
+            Wetness = 0;
+            Kind = WeatherKind.Clear;
+            _shownKind = (WeatherKind)(-1);
+            _lightningTimer = Random.Range(3f, 6f);
+            _flashT = 0;
+            if (_rain != null) _rain.Clear();
+            Apply(0, 0);
+        }
+
+        /// <summary>Restores the dry look (back to the menu).</summary>
+        public void Stop()
+        {
+            if (_schedule == null) return;
+            Apply(0, 0);
+            _schedule = null;
+            if (_rain != null) { var em = _rain.emission; em.rateOverTime = 0; _rain.Clear(); }
+            Services.Audio?.SetRain(0);
+            _road?.SetWetness(0);
+        }
+
+        private void OnDestroy() => Stop();
+
+        private void BuildRain()
+        {
+            var go = new GameObject("Rain");
+            go.transform.SetParent(_cam != null ? _cam.transform : transform, false);
+            go.transform.localPosition = new Vector3(0, 7f, 18f);
+            _rain = go.AddComponent<ParticleSystem>();
+            _rain.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = _rain.main;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.maxParticles = 2500;
+            main.startLifetime = 0.9f;
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.045f);
+            main.startColor = new Color(0.78f, 0.85f, 0.95f, 0.55f);
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var shape = _rain.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(34f, 1f, 40f);
+            var vel = _rain.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space = ParticleSystemSimulationSpace.Local;
+            vel.x = new ParticleSystem.MinMaxCurve(0f);
+            vel.y = new ParticleSystem.MinMaxCurve(-26f, -22f);
+            vel.z = new ParticleSystem.MinMaxCurve(-6f);
+            var em = _rain.emission;
+            em.enabled = true;
+            em.rateOverTime = 0;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Stretch;
+            r.velocityScale = 0.035f;
+            r.lengthScale = 1f;
+            r.sharedMaterial = MaterialLibrary.Particle();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            _rain.Play();
+        }
+
+        public void Tick(float distance, float dt)
+        {
+            if (_schedule == null) return;
+            Wetness = _schedule.WetnessAt(distance);
+            Kind = _schedule.KindAt(distance);
+            // lightning in typhoons (and the odd strike in heavy rain)
+            if (Wetness > 0.7f)
+            {
+                _lightningTimer -= dt;
+                if (_lightningTimer <= 0)
+                {
+                    _lightningTimer = Random.Range(4f, 10f) / Mathf.Max(0.5f, Wetness);
+                    _flashT = 0.35f;
+                    Services.UI?.LightningFlash();
+                    Services.Audio?.Thunder(Random.Range(0.25f, 1.2f));
+                    Haptics.Pulse(20);
+                }
+            }
+            if (_flashT > 0) _flashT -= dt;
+            Apply(Wetness, _flashT > 0 ? Mathf.Clamp01(_flashT / 0.35f) : 0);
+
+            if (Kind != _shownKind && (Wetness > 0.3f || Kind == WeatherKind.Clear))
+            {
+                bool first = _shownKind == (WeatherKind)(-1);
+                _shownKind = Kind;
+                var ui = Services.UI;
+                if (ui != null)
+                {
+                    switch (Kind)
+                    {
+                        case WeatherKind.Rain:
+                            ui.SetWeather("UMUULAN · MADULAS", new Color(0.6f, 0.82f, 1f));
+                            ui.Float("UMUULAN! MADULAS ANG DAAN", UIManager.FloatKind.Info);
+                            break;
+                        case WeatherKind.Typhoon:
+                            ui.SetWeather("BAGYO! · BAHA", new Color(1f, 0.55f, 0.45f));
+                            ui.Float("SIGNAL NO. 2! MAG-INGAT!", UIManager.FloatKind.Bad);
+                            break;
+                        default:
+                            ui.SetWeather("MAARAW", new Color(1f, 0.85f, 0.35f));
+                            if (!first) ui.Float("TUMILA NA ANG ULAN!", UIManager.FloatKind.Good);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void Apply(float wet, float flash)
+        {
+            if (_rain != null)
+            {
+                var em = _rain.emission;
+                em.rateOverTime = wet < 0.05f ? 0f : 300f + 2000f * wet;
+                var vel = _rain.velocityOverLifetime;
+                float wind = Mathf.Clamp01((wet - 0.6f) / 0.4f);
+                vel.x = new ParticleSystem.MinMaxCurve(-9f * wind - 1f, -4f * wind);
+            }
+            float k = wet; // 0 dry .. 1 typhoon
+            RenderSettings.fogColor = Color.Lerp(_baseFog, StormFog, Mathf.Clamp01(k * 1.1f));
+            RenderSettings.fogStartDistance = Mathf.Lerp(_baseFogStart, 35f, k);
+            RenderSettings.fogEndDistance = Mathf.Lerp(_baseFogEnd, 150f, k);
+            float dark = Mathf.Lerp(1f, 0.55f, k);
+            RenderSettings.ambientSkyColor = Color.Lerp(_baseAmbSky * dark, Color.white, flash);
+            RenderSettings.ambientEquatorColor = Color.Lerp(_baseAmbEq * dark, Color.white, flash);
+            RenderSettings.ambientGroundColor = _baseAmbGround * dark;
+            if (_sun != null)
+            {
+                _sun.intensity = Mathf.Lerp(_baseSun, _baseSun * 0.35f, k) + flash * 2.5f;
+                _sun.shadowStrength = Mathf.Lerp(_baseShadow, 0.2f, k);
+            }
+            if (_sky != null)
+            {
+                if (_sky.HasProperty("_SkyTint")) _sky.SetColor("_SkyTint", Color.Lerp(_baseSkyTint, StormSky, k));
+                if (_sky.HasProperty("_Exposure")) _sky.SetFloat("_Exposure", Mathf.Lerp(_baseExposure, _baseExposure * 0.45f, k) + flash * 1.5f);
+            }
+            if (_cam != null && _cam.clearFlags == CameraClearFlags.SolidColor)
+                _cam.backgroundColor = RenderSettings.fogColor;
+            _road?.SetWetness(Mathf.Clamp01(wet * 1.4f));
+            Services.Audio?.SetRain(wet < 0.05f ? 0 : 0.35f + 0.65f * wet);
+        }
+    }
+}

@@ -30,7 +30,7 @@ namespace JeepneyRush
                 float y = 1.0f;
                 switch (f)
                 {
-                    case CoinFormation.Arc: y = 1.0f + Mathf.Sin(t * Mathf.PI) * (_cfg.jumpHeight + 0.6f); break;
+                    case CoinFormation.Arc: y = 1.0f + Mathf.Sin(t * Mathf.PI) * 1.2f; break; // legacy (no longer generated)
                     case CoinFormation.Zigzag:
                         // first third in lane, middle third crossing, last third in lane2
                         float k = Mathf.Clamp01((t - 0.33f) / 0.34f);

@@ -5,21 +5,24 @@ using UnityEngine;
 namespace JeepneyRush
 {
     /// <summary>
-    /// The player's jeepney: lane movement, jump, brake ("special maneuver" on swipe
-    /// down), speed modifiers and all the juicy body motion (lean, pitch, diesel shake,
-    /// spinning wheels, damage blink). Physics: kinematic Rigidbody + box collider.
+    /// The player's jeepney: lane movement, brake ("special maneuver" on swipe down),
+    /// speed modifiers and all the juicy body motion (lean, pitch on slopes and humps,
+    /// diesel shake, wet-road fishtail, spinning wheels, damage blink).
+    /// Physics: kinematic Rigidbody + box collider.
     /// </summary>
     [RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
     public sealed class PlayerController : MonoBehaviour
     {
         private BalanceConfig _cfg;
         public LaneController Lanes { get; private set; }
-        public JumpController Jumper { get; private set; }
         public CollisionHandler Collisions { get; private set; }
         public Transform Body { get; private set; }
         private Transform[] _wheels = new Transform[0];
         private GameObject _bodyModel;
         private float _lean, _pitch, _wheelSpin, _time, _brakeT, _brakeCooldown, _crashSlow = 1f;
+        private float _bumpY, _bumpV, _floodSlowT, _slip;
+        /// <summary>Road slope under the jeepney (radians, + = uphill), set by the session.</summary>
+        public float SlopePitch;
         private string _livery;
 
         public bool Braking => _brakeT > 0 || BrakeHeld;
@@ -34,6 +37,7 @@ namespace JeepneyRush
                 if (BrakeHeld) m *= _cfg.brakeHoldMultiplier;
                 else if (_brakeT > 0) m *= _cfg.brakeMultiplier;
                 else if (GasHeld) m *= _cfg.gasMultiplier;
+                if (_floodSlowT > 0) m *= _cfg.floodSlowdown;
                 return m;
             }
         }
@@ -54,7 +58,6 @@ namespace JeepneyRush
         {
             _cfg = cfg;
             Lanes = new LaneController(cfg);
-            Jumper = new JumpController(cfg);
             var rb = GetComponent<Rigidbody>();
             rb.isKinematic = true;
             rb.useGravity = false;
@@ -89,7 +92,7 @@ namespace JeepneyRush
         public void ResetRun()
         {
             Lanes.Reset();
-            Jumper.Reset();
+            _bumpY = _bumpV = _floodSlowT = _slip = SlopePitch = 0;
             Collisions.ResetRun();
             _brakeT = _brakeCooldown = 0;
             _crashSlow = 1f;
@@ -100,12 +103,27 @@ namespace JeepneyRush
         }
 
         public bool MoveLane(int dir) => Lanes.Move(dir);
-        public bool Jump() => Jumper.Jump();
+        /// <summary>Speed hump / pothole: kick the suspension (0.1 = gentle, 0.4 = hard).</summary>
+        public void Bump(float strength)
+        {
+            _bumpV = Mathf.Max(_bumpV, strength * 9f);
+            _pitch -= strength * 10f;
+        }
 
-        /// <summary>Swipe down: emergency brake on the ground, slam down in the air.</summary>
+        /// <summary>Driving into flood water: drag slows the jeepney down for a moment.</summary>
+        public void Flooded() => _floodSlowT = _cfg.floodSlowTime;
+        public bool InFlood => _floodSlowT > 0;
+
+        /// <summary>Road wetness 0..1: slower, slidier lane changes.</summary>
+        public void SetWetness(float wetness)
+        {
+            _slip = wetness;
+            Lanes.DurationScale = Logic.WeatherSchedule.LaneChangeFactor(_cfg, wetness) * (_floodSlowT > 0 ? 1.15f : 1f);
+        }
+
+        /// <summary>Swipe down: emergency brake.</summary>
         public bool Down()
         {
-            if (!Jumper.Grounded) return Jumper.FastFall();
             if (_brakeCooldown > 0) return false;
             _brakeT = _cfg.brakeDuration;
             _brakeCooldown = _cfg.brakeCooldown;
@@ -118,34 +136,38 @@ namespace JeepneyRush
             _crashSlow = _cfg.crashSlowdown;
         }
 
-        /// <summary>Returns true on the landing frame.</summary>
-        public bool Tick(float dt, float speed)
+        public void Tick(float dt, float speed)
         {
             _time += dt;
             if (_brakeT > 0) _brakeT -= dt;
             if (_brakeCooldown > 0) _brakeCooldown -= dt;
             _crashSlow = Mathf.MoveTowards(_crashSlow, 1f, dt * 0.6f);
+            if (_floodSlowT > 0) _floodSlowT -= dt;
             Lanes.Tick(dt);
-            bool landed = Jumper.Tick(dt);
             Collisions.Tick(dt);
 
-            transform.localPosition = new Vector3(Lanes.X, Jumper.Y, 0);
+            transform.localPosition = new Vector3(Lanes.X, 0, 0);
+            // whole jeepney follows the slope of the road (nose up uphill)
+            transform.localRotation = Quaternion.Euler(-SlopePitch * Mathf.Rad2Deg, 0, 0);
             // visuals ---------------------------------------------------------------
+            // suspension spring for humps / potholes
+            _bumpV -= (_bumpY * 140f + _bumpV * 9f) * dt;
+            _bumpY += _bumpV * dt;
             float targetLean = Mathf.Clamp(-Lanes.VelocityX * 0.7f, -12f, 12f);
             _lean = Mathf.Lerp(_lean, targetLean, 1f - Mathf.Exp(-dt * 14f));
-            float targetPitch = Jumper.Grounded ? (Braking ? 2.5f : GasHeld ? -1.5f : 0f) : -Jumper.Phase * 6f;
-            if (landed) _pitch = 3f;
+            float targetPitch = Braking ? 2.5f : GasHeld ? -1.5f : 0f;
             _pitch = Mathf.Lerp(_pitch, targetPitch, 1f - Mathf.Exp(-dt * 8f));
-            float shake = Jumper.Grounded ? Mathf.Sin(_time * 9f) * 0.008f + Mathf.Max(0, Mathf.Sin(_time * 3.1f)) * 0.015f : 0f;
-            Body.localPosition = new Vector3(0, shake, 0);
-            Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.25f, _lean);
+            float shake = Mathf.Sin(_time * 9f) * 0.008f + Mathf.Max(0, Mathf.Sin(_time * 3.1f)) * 0.015f;
+            // wet road: the rear steps out a little during lane changes (fishtail)
+            float fishtail = _slip * Mathf.Clamp(Lanes.VelocityX, -12f, 12f) * 0.55f;
+            Body.localPosition = new Vector3(0, shake + Mathf.Max(-0.05f, _bumpY), 0);
+            Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.25f + fishtail, _lean);
             _wheelSpin += speed * dt / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg;
             foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_wheelSpin, 0, 0);
             // invulnerability blink
             // gentle blink: mostly visible, short off-beats at 5 Hz (avoids a strobe/flicker look)
             bool visible = !Collisions.Invulnerable || (Collisions.InvulnerableTime * 5f) % 1f > 0.3f;
             if (_bodyModel.activeSelf != visible) _bodyModel.SetActive(visible);
-            return landed;
         }
     }
 }

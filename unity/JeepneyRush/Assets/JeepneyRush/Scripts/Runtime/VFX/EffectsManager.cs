@@ -9,7 +9,7 @@ namespace JeepneyRush
     /// </summary>
     public sealed class EffectsManager : MonoBehaviour
     {
-        private ParticleSystem _sparks, _smoke, _sparkle, _confetti, _dust, _exhaust, _speedLines;
+        private ParticleSystem _sparks, _smoke, _sparkle, _confetti, _dust, _exhaust, _diesel, _speedLines, _splash;
         private float _exhaustTimer;
 
         public void Build()
@@ -20,6 +20,9 @@ namespace JeepneyRush
             _confetti = Make("Confetti", 300, 1.2f, 0.14f, Color.white, 9f);
             _dust = Make("Dust", 100, 0.6f, 0.45f, new Color(0.8f, 0.72f, 0.6f, 0.7f), -0.5f, true);
             _exhaust = Make("Exhaust", 120, 0.7f, 0.22f, new Color(0.6f, 0.6f, 0.6f, 0.6f), -1.5f, true);
+            // thick black diesel smoke ("usok") when stepping on the gas
+            _diesel = Make("DieselSmoke", 260, 1.3f, 0.55f, new Color(0.13f, 0.12f, 0.12f, 0.85f), -1.2f, true);
+            _splash = Make("Splash", 260, 0.7f, 0.18f, new Color(0.75f, 0.88f, 0.95f, 0.85f), 14f);
             _speedLines = Make("SpeedLines", 80, 0.4f, 0.06f, new Color(1, 1, 1, 0.5f), 0f);
             var r = _speedLines.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Stretch;
@@ -110,17 +113,49 @@ namespace JeepneyRush
             Confetti(pos, 20);
         }
 
+        private static readonly Vector3 Pipe = new Vector3(0.55f, 0.42f, -3.35f);
+
+        /// <summary>The first press of the accelerator: a fat black cough of diesel smoke.</summary>
+        public void GasPuff(Vector3 playerPos, float worldSpeed)
+        {
+            Burst(_diesel, playerPos + Pipe, 14, new Vector3(0.6f, 1.4f, -worldSpeed * 0.35f - 3f), 1.4f);
+        }
+
+        /// <summary>Water thrown up by the wheels when driving through a flood.</summary>
+        public void Splash(Vector3 pos, float worldSpeed, bool big)
+        {
+            foreach (float side in new[] { -1.1f, 1.1f })
+                Burst(_splash, pos + new Vector3(side, 0.2f, 0.5f), big ? 22 : 12, new Vector3(side * 3.5f, 5f, -worldSpeed * 0.3f), 2.2f);
+        }
+
+        /// <summary>Small spray behind the tyres on a wet road.</summary>
+        public void Spray(Vector3 pos, float worldSpeed)
+        {
+            foreach (float side in new[] { -0.95f, 0.95f })
+                Burst(_splash, pos + new Vector3(side, 0.15f, -2.2f), 1, new Vector3(side * 0.6f, 1.6f, -worldSpeed * 0.35f), 0.6f, new Color(0.85f, 0.9f, 0.95f, 0.45f));
+        }
+
         public void Dust(Vector3 pos) => Burst(_dust, pos, 10, new Vector3(0, 0.5f, -4), 2f);
 
         /// <summary>Called every frame: diesel puffs from the tail pipe and speed lines at high speed.</summary>
-        public void Tick(float dt, Vector3 playerPos, float worldSpeed, float speed01)
+        public void Tick(float dt, Vector3 playerPos, float worldSpeed, float speed01, bool gas = false, float wetness = 0f)
         {
             _exhaustTimer -= dt;
             if (_exhaustTimer <= 0)
             {
-                _exhaustTimer = 0.12f;
-                Burst(_exhaust, playerPos + new Vector3(0.55f, 0.45f, -3.2f), 1, new Vector3(0, 0.6f, -worldSpeed * 0.5f - 2f), 0.4f);
+                if (gas)
+                {
+                    // accelerating: dense, dark, rolling diesel smoke
+                    _exhaustTimer = 0.035f;
+                    Burst(_diesel, playerPos + Pipe, 2, new Vector3(0.5f, 1.1f, -worldSpeed * 0.45f - 2.5f), 0.8f);
+                }
+                else
+                {
+                    _exhaustTimer = 0.12f;
+                    Burst(_exhaust, playerPos + Pipe, 1, new Vector3(0, 0.6f, -worldSpeed * 0.5f - 2f), 0.4f);
+                }
             }
+            if (wetness > 0.2f && Random.value < wetness * dt * 30f) Spray(playerPos, worldSpeed);
             if (speed01 > 0.7f && Random.value < (speed01 - 0.65f) * dt * 18f)
             {
                 float side = Random.value < 0.5f ? -1 : 1;
@@ -131,7 +166,7 @@ namespace JeepneyRush
 
         public void Clear()
         {
-            foreach (var ps in new[] { _sparks, _smoke, _sparkle, _confetti, _dust, _exhaust, _speedLines })
+            foreach (var ps in new[] { _sparks, _smoke, _sparkle, _confetti, _dust, _exhaust, _diesel, _speedLines, _splash })
                 if (ps != null) ps.Clear();
         }
     }

@@ -128,6 +128,7 @@ namespace JeepneyRush
                 case "gold": m = Lit(pal, Color.white, 1f, 0.8f); break;
                 case "glow": m = Unlit(pal, Color.white); break;
                 case "bubble": m = Unlit(pal, new Color(1f, 1f, 1f, 0.28f), true); break;
+                case "water": m = Lit(pal, Color.white, 0.35f, 0.97f); break;
                 default:
                     if (key.StartsWith("tex:"))
                     {

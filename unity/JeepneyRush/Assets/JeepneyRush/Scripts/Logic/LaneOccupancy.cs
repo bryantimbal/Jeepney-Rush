@@ -12,11 +12,12 @@ namespace JeepneyRush.Logic
         public float Z;
         public float HalfLength;
         public float Speed;
-        public bool Jumpable;
+        /// <summary>Soft hazards (humps, potholes, floods) never block a lane.</summary>
+        public bool Soft;
 
-        public PredictBlocker(int lane, float z, float halfLength, float speed, bool jumpable, int lane2 = -1)
+        public PredictBlocker(int lane, float z, float halfLength, float speed, bool soft, int lane2 = -1)
         {
-            Lane = lane; Z = z; HalfLength = halfLength; Speed = speed; Jumpable = jumpable; Lane2 = lane2;
+            Lane = lane; Z = z; HalfLength = halfLength; Speed = speed; Soft = soft; Lane2 = lane2;
         }
     }
 
@@ -43,7 +44,7 @@ namespace JeepneyRush.Logic
             result.Clear();
             foreach (var b in blockers)
             {
-                if (b.Jumpable) continue;
+                if (b.Soft) continue;
                 float reach = b.HalfLength + playerHalfLength;
                 float closing = playerSpeed - b.Speed;
                 float t0, t1;

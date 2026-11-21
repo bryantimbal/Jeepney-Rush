@@ -40,7 +40,10 @@ namespace JeepneyRush.Logic
         public int level = 1;
         public int totalDeliveries;
         public int totalPowerUps;
+        /// <summary>Legacy (jumping was removed); kept so old saves still load.</summary>
         public int totalJumps;
+        public int totalSmoothHumps;
+        public float totalWetDistance;
         public float bestCleanDistance;
         public List<string> achievementsUnlocked = new List<string>();
         public List<string> achievementsClaimed = new List<string>();
@@ -122,6 +125,8 @@ namespace JeepneyRush.Logic
             d.totalDeliveries = NonNeg(d.totalDeliveries);
             d.totalPowerUps = NonNeg(d.totalPowerUps);
             d.totalJumps = NonNeg(d.totalJumps);
+            d.totalSmoothHumps = NonNeg(d.totalSmoothHumps);
+            if (!(d.totalWetDistance >= 0) || float.IsInfinity(d.totalWetDistance)) d.totalWetDistance = 0;
             d.bestCleanDistance = NonNeg(d.bestCleanDistance);
             d.achievementsUnlocked ??= new List<string>();
             d.achievementsClaimed ??= new List<string>();
@@ -172,7 +177,8 @@ namespace JeepneyRush.Logic
             d.totalPassengers += Math.Max(0, r.Passengers);
             d.totalDeliveries += Math.Max(0, r.Deliveries);
             d.totalPowerUps += Math.Max(0, r.PowerUps);
-            d.totalJumps += Math.Max(0, r.Jumps);
+            d.totalSmoothHumps += Math.Max(0, r.SmoothHumps);
+            d.totalWetDistance += Math.Max(0, r.WetDistance);
             d.bestCleanDistance = Math.Max(d.bestCleanDistance, r.CleanDistance);
             if (r.Crashed) d.crashes++;
 

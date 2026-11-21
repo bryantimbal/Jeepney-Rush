@@ -11,7 +11,7 @@ namespace JeepneyRush.Logic
         void CollectBlockers(List<PredictBlocker> output);
         /// <summary>Lanes the player currently occupies (two while changing lanes).</summary>
         IReadOnlyList<int> PlayerLanes { get; }
-        /// <param name="solid">Jumpable, but planned as lane-blocking (only jump walls are not solid).</param>
+        /// <param name="solid">Soft hazard that should still be planned as lane-blocking (unused for now).</param>
         void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid);
         /// <param name="lane">Start lane; Zigzag alternates toward <paramref name="lane2"/>.</param>
         void SpawnCoins(CoinFormation formation, int lane, int lane2, float z, int count, float spacing);
@@ -26,7 +26,7 @@ namespace JeepneyRush.Logic
     /// </summary>
     public sealed class SpawnDirector
     {
-        private enum Pattern { Breather, Single, Vehicle, Double, JumpWall, Convoy, Roadwork, Parked, Weaver }
+        private enum Pattern { Breather, Single, Vehicle, Double, HumpRow, Convoy, Roadwork, Parked, Weaver, Flood }
 
         private struct Candidate
         {
@@ -51,6 +51,8 @@ namespace JeepneyRush.Logic
         private float _nextStopAt = 120f;
         private float _nextPowerUpAt;
         private readonly float[] _traffic;
+        private readonly Func<float, float> _wetness;
+        private float _planWet;
         /// <summary>Slow traffic can take a long time to reach the player; plan that far ahead.</summary>
         public const float MaxHorizon = 30f;
 
@@ -60,9 +62,11 @@ namespace JeepneyRush.Logic
 
         public int PowerUpsPlaced { get; private set; }
 
-        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila)
+        /// <param name="wetness">Weather wetness (0..1) at a world distance; floods only appear on wet roads.</param>
+        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila, Func<float, float> wetness = null)
         {
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
+            _wetness = wetness ?? (_ => 0f);
             _traffic = Environments.TrafficWeights(environment);
             _nextPowerUpAt = 200f + _rng.Range(0, 150);
             PlanStops();
@@ -70,6 +74,8 @@ namespace JeepneyRush.Logic
 
         public void Update(float distance, float speed)
         {
+            // wet roads make steering slower: plan with the worst wetness in the look-ahead window
+            _planWet = Math.Max(_wetness(distance), Math.Max(_wetness(distance + 150), _wetness(distance + 400)));
             PlanStops();
             for (int i = _pendingStops.Count - 1; i >= 0; i--)
             {
@@ -98,6 +104,30 @@ namespace JeepneyRush.Logic
             }
         }
 
+        /// <summary>
+        /// True if a vehicle starting at world position <paramref name="w0"/> with forward speed
+        /// <paramref name="s"/> occupies a stop zone in <paramref name="lane"/> at any moment before
+        /// the jeepney catches up with it (time <paramref name="tMeet"/>).
+        /// </summary>
+        public bool CrossesReservation(int lane, float w0, float s, float halfLength, float tMeet)
+        {
+            foreach (var r in _reservations)
+            {
+                if (r.Lane != lane) continue;
+                float ta = (r.From - halfLength - w0) / s;
+                float tb = (r.To + halfLength - w0) / s;
+                if (ta < tMeet + 0.5f && tb > 0) return true;
+            }
+            return false;
+        }
+
+        /// <summary>For traffic lane changes: is a stop zone in this lane near world position w?</summary>
+        public bool ZoneNear(int lane, float w, float margin)
+        {
+            foreach (var r in _reservations) if (r.Lane == lane && w + margin > r.From && w - margin < r.To) return true;
+            return false;
+        }
+
         private bool Reserved(int lane, float at, float halfLength)
         {
             foreach (var r in _reservations) if (r.Lane == lane && at + halfLength > r.From && at - halfLength < r.To) return true;
@@ -121,9 +151,6 @@ namespace JeepneyRush.Logic
                 lastPattern = pattern;
                 BuildPattern(pattern, d, speed);
                 if (_cands.Count == 0) break;
-                if (pattern != Pattern.JumpWall)
-                    for (int i = 0; i < _cands.Count; i++)
-                        if (HazardCatalog.Get(_cands[i].Kind).Jumpable) { var c = _cands[i]; c.Solid = true; _cands[i] = c; }
                 if (Validate(z, distance, speed)) placed = true;
                 else Rejected++;
             }
@@ -133,20 +160,22 @@ namespace JeepneyRush.Logic
                 foreach (var c in _cands) _sink.SpawnHazard(c.Kind, c.Lane, z + c.Dz, c.Speed, c.Solid);
             }
             else _cands.Clear();
-            PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.JumpWall);
+            PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.HumpRow);
         }
 
         private Pattern PickPattern(float d, float at)
         {
             bool early = at < 300;
-            bool walls = at >= _cfg.jumpWallMinDistance;
+            bool humps = at >= _cfg.humpMinDistance;
+            float wet = _wetness(at);
             return _rng.Weighted(new (Pattern, float)[]
             {
                 (Pattern.Breather, 0.9f - d * 0.6f),
                 (Pattern.Single, 2.2f),
                 (Pattern.Vehicle, 2.6f),
                 (Pattern.Double, early ? 0.2f : 0.6f + 2.2f * d),
-                (Pattern.JumpWall, walls ? 0.35f + 0.8f * d : 0f),
+                (Pattern.HumpRow, humps ? 0.45f + 0.5f * d : 0f),
+                (Pattern.Flood, wet > 0.25f ? 1.0f + 2.0f * wet : 0f),
                 (Pattern.Convoy, early ? 0.3f : 0.9f + 0.5f * d),
                 (Pattern.Roadwork, 0.7f),
                 (Pattern.Parked, 0.8f),
@@ -169,7 +198,7 @@ namespace JeepneyRush.Logic
 
         private HazardKind RandomStatic() => _rng.Weighted(new (HazardKind, float)[]
         {
-            (HazardKind.Cone, 2f), (HazardKind.Barrier, 1.6f), (HazardKind.Pothole, 1.5f), (HazardKind.ConstructionSign, 0.8f), (HazardKind.Roadblock, 0.8f),
+            (HazardKind.Cone, 1.6f), (HazardKind.Barrier, 1.6f), (HazardKind.Pothole, 1.4f), (HazardKind.ConstructionSign, 0.9f), (HazardKind.Roadblock, 0.9f),
         });
 
         private void BuildPattern(Pattern p, float d, float speed)
@@ -192,19 +221,25 @@ namespace JeepneyRush.Logic
                     if (_rng.Chance(0.5)) Veh(RandomVehicle(d), l2, -_rng.Range(0, 8)); else Stat(RandomStatic(), l2);
                     break;
                 }
-                case Pattern.JumpWall:
-                {
-                    var k = _rng.Pick(new[] { HazardKind.Cone, HazardKind.Barrier, HazardKind.Pothole });
-                    for (int l = 0; l < lanes; l++) Stat(k, l);
+                case Pattern.HumpRow:
+                    // one speed hump across the whole road (centre lane holds the object)
+                    Stat(HazardKind.SpeedHump, (lanes - 1) / 2);
                     break;
-                }
+                case Pattern.Flood:
+                    if (_wetness(Cursor) > 0.8f && _rng.Chance(0.35)) Stat(HazardKind.FloodWide, (lanes - 1) / 2);
+                    else
+                    {
+                        Stat(HazardKind.FloodPuddle, lane);
+                        if (_rng.Chance(0.4)) Stat(HazardKind.FloodPuddle, Other(lane), -_rng.Range(4, 12));
+                    }
+                    break;
                 case Pattern.Convoy: Veh(_rng.Chance(0.55) ? HazardKind.Bus : HazardKind.Truck, lane); break;
                 case Pattern.Roadwork:
-                    // a cone line leading to a road block: too long to jump, so it blocks the lane
+                    // a cone line leading to a road block
                     Stat(HazardKind.Roadblock, lane, -6f);
-                    Stat(HazardKind.Cone, lane, 0f, true);
-                    Stat(HazardKind.Cone, lane, 3.2f, true);
-                    Stat(HazardKind.Cone, lane, 6.4f, true);
+                    Stat(HazardKind.Cone, lane, 0f);
+                    Stat(HazardKind.Cone, lane, 3.2f);
+                    Stat(HazardKind.Cone, lane, 6.4f);
                     break;
                 case Pattern.Parked:
                     Stat(_rng.Chance(0.5) ? HazardKind.ParkedSedan : HazardKind.ParkedJeepney, _rng.Chance(0.5) ? 0 : lanes - 1);
@@ -224,14 +259,21 @@ namespace JeepneyRush.Logic
                 float closing = Math.Max(0.5f, speed - c.Speed);
                 float t = -(rowZ + c.Dz) / closing;
                 float meetAt = distance + speed * t;
-                if (Reserved(c.Lane, meetAt, def.HalfLength + _cfg.playerHalfLength)) return false;
+                bool fullWidth = def.HalfWidth >= HazardCatalog.FullRoadHalfWidth - 0.01f;
+                for (int l = 0; l < _cfg.laneCount; l++)
+                {
+                    if (!fullWidth && l != c.Lane) continue;
+                    if (Reserved(l, meetAt, def.HalfLength + _cfg.playerHalfLength)) return false;
+                    // moving traffic must not even drive THROUGH a PARA zone before the jeepney passes it
+                    if (c.Speed > 0 && CrossesReservation(l, distance - (rowZ + c.Dz), c.Speed, def.HalfLength, t)) return false;
+                }
             }
             _blockers.Clear();
             _sink.CollectBlockers(_blockers);
             foreach (var c in _cands)
             {
                 var def = HazardCatalog.Get(c.Kind);
-                _blockers.Add(new PredictBlocker(c.Lane, rowZ + c.Dz, def.HalfLength, c.Speed, def.Jumpable && !c.Solid));
+                _blockers.Add(new PredictBlocker(c.Lane, rowZ + c.Dz, def.HalfLength, c.Speed, def.Soft && !c.Solid));
             }
             // The player keeps accelerating, which changes when slow traffic arrives relative to
             // static obstacles. Validate at the current speed and at the speed reached by the
@@ -246,7 +288,7 @@ namespace JeepneyRush.Logic
             _sink.CollectBlockers(_blockers);
             LaneOccupancy.BlockedIntervals(_blockers, speed, MaxHorizon, _cfg.playerHalfLength, _intervals);
             foreach (var b in _blockers)
-                if (b.Jumpable)
+                if (b.Soft)
                 {
                     float tj = -b.Z / Math.Max(1f, speed);
                     _intervals.Add(new LaneInterval { Lane = b.Lane, T0 = tj - 0.4f, T1 = tj + 0.4f });
@@ -270,26 +312,26 @@ namespace JeepneyRush.Logic
             float horizon = 1;
             foreach (var b in _blockers)
             {
-                if (b.Jumpable) continue;
+                if (b.Soft) continue;
                 float closing = Math.Max(0.5f, speed - b.Speed);
                 horizon = Math.Max(horizon, (b.HalfLength + _cfg.playerHalfLength - b.Z) / closing + 0.6f);
             }
             horizon = Math.Min(horizon, MaxHorizon);
-            return LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, _cfg.laneChangeDuration + _cfg.laneChangeSlack, _sink.PlayerLanes);
+            return LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, _cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(_cfg, _planWet) + _cfg.laneChangeSlack, _sink.PlayerLanes);
         }
 
-        private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool jumpWall)
+        private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool hump)
         {
             if (Cursor - gap >= _nextPowerUpAt && TryPlacePowerUp(rowZ - gap * 0.5f, distance, speed))
             {
                 _nextPowerUpAt = Cursor + _rng.Range(_cfg.powerUpSpacingMin, _cfg.powerUpSpacingMax);
                 return;
             }
-            if (jumpWall && _rng.Chance(0.8))
+            if (hump && _rng.Chance(0.6))
             {
-                // special formation: an arc over the wall
+                // reward for slowing down: a short coin line just after the hump
                 int l = _rng.Int(0, _cfg.laneCount - 1);
-                _sink.SpawnCoins(CoinFormation.Arc, l, l, rowZ + 6f, 5, 3f);
+                if (!Reserved(l, distance - rowZ + 10, 10)) _sink.SpawnCoins(CoinFormation.Line, l, l, rowZ - 4f, 5, 2.5f);
                 return;
             }
             if (!_rng.Chance(0.75)) return;
@@ -299,7 +341,7 @@ namespace JeepneyRush.Logic
             LaneOccupancy.BlockedIntervals(_blockers, speed, horizon, _cfg.playerHalfLength, _intervals);
             // jumpables are not in the intervals; treat them as blocking for coin placement
             foreach (var b in _blockers)
-                if (b.Jumpable)
+                if (b.Soft)
                 {
                     float t = -b.Z / Math.Max(1f, speed);
                     _intervals.Add(new LaneInterval { Lane = b.Lane, T0 = t - 0.4f, T1 = t + 0.4f });

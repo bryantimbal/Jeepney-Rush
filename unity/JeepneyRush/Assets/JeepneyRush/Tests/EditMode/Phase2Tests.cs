@@ -145,7 +145,7 @@ namespace JeepneyRush.Tests
             var d = SaveValidation.Sanitize(new SaveData());
             const int day = 20261121, week = 152;
             Missions.Refresh(d, day, week);
-            var huge = new RunSummary { Distance = 99999, Coins = 9999, Passengers = 999, Deliveries = 999, CleanDistance = 99999, BestStreak = 99, PowerUps = 99, Jumps = 999 };
+            var huge = new RunSummary { Distance = 99999, Coins = 9999, Passengers = 999, Deliveries = 999, CleanDistance = 99999, BestStreak = 99, PowerUps = 99, SmoothHumps = 999, WetDistance = 99999 };
             var done = Missions.ApplyRun(d, huge, day, week);
             Assert.GreaterOrEqual(done.Count, Missions.DailyCount); // every daily is done (Runs needs several runs only if picked)
             int coins = d.coins;

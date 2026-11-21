@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 
 namespace JeepneyRush.Logic.Geometry
@@ -251,6 +252,82 @@ namespace JeepneyRush.Logic.Geometry
             for (int i = 0; i < 8; i++) b.Box("paint", i % 2 == 1 ? "#FFFFFF" : "#D00000", 0.3f, 0.42f, 0.08f, -1.05f + i * 0.3f, 1.5f, 0);
             b.Box("paint", "#FFD60A", 2.5f, 0.5f, 0.08f, 0, 0.75f, 0);
             b.Box("paint", "#111111", 1.7f, 0.18f, 0.09f, 0, 0.75f, 0.01f);
+            return b.Data;
+        }
+
+        /// <summary>
+        /// Painted speed hump across the whole road (centred on the middle lane) with a
+        /// yellow "HUMP" warning sign at the right curb and white chevrons before it.
+        /// Local +Z is the driving direction; the jeepney approaches from -Z.
+        /// </summary>
+        public static MeshData SpeedHump()
+        {
+            var b = new MeshBuilder();
+            const float half = 5.0f;
+            var profile = new List<V2>();
+            for (int i = 0; i <= 8; i++)
+            {
+                float t = i / 8f;
+                float z = -0.45f + 0.9f * t;
+                profile.Add(new V2(z, 0.01f + 0.13f * (float)Math.Sin(Math.PI * t)));
+            }
+            profile.Reverse();
+            profile.Add(new V2(-0.45f, 0f));
+            profile.Add(new V2(0.45f, 0f));
+            profile.Reverse();
+            const int stripes = 12;
+            for (int i = 0; i < stripes; i++)
+            {
+                float x0 = -half + 2 * half * i / stripes, x1 = -half + 2 * half * (i + 1) / stripes;
+                b.ExtrudeX("paint", i % 2 == 0 ? "#FFC300" : "#1B1B1B", profile, x0, x1);
+            }
+            // white chevrons painted on the road before the hump
+            foreach (float z in new[] { -5f, -8f })
+                foreach (float lx in new[] { -3.2f, 0f, 3.2f })
+                {
+                    b.Box("paint", "#F1F1F1", 0.9f, 0.012f, 0.18f, lx - 0.38f, 0.008f, z, new Rot(0, -0.6f, 0));
+                    b.Box("paint", "#F1F1F1", 0.9f, 0.012f, 0.18f, lx + 0.38f, 0.008f, z, new Rot(0, 0.6f, 0));
+                }
+            // warning sign on the right curb, ahead of the hump, facing the driver (-Z)
+            float sx = 6.4f, sz = -9f;
+            b.Box("paint", "#9AA0A6", 0.09f, 2.3f, 0.09f, sx, 1.15f, sz);
+            b.Box("paint", "#111111", 1.2f, 1.2f, 0.05f, sx, 2.5f, sz, new Rot(0, 0, (float)(Math.PI / 4)));
+            b.Box("paint", "#FFD60A", 1.05f, 1.05f, 0.06f, sx, 2.5f, sz - 0.005f, new Rot(0, 0, (float)(Math.PI / 4)));
+            // pictogram: a black bump with a road line
+            b.Box("paint", "#111111", 0.8f, 0.07f, 0.07f, sx, 2.25f, sz - 0.04f);
+            b.Sphere("paint", "#111111", 0.25f, sx, 2.27f, sz - 0.04f, 8, 1f, 0.75f, 0.2f);
+            // little "HUMP" plate under the diamond (four black bars as lettering stand-in)
+            b.Box("paint", "#FFD60A", 1.0f, 0.32f, 0.06f, sx, 1.55f, sz - 0.005f);
+            for (int k = 0; k < 4; k++) b.Box("paint", "#111111", 0.14f, 0.18f, 0.03f, sx - 0.33f + k * 0.22f, 1.55f, sz - 0.04f);
+            return b.Data;
+        }
+
+        /// <summary>Flood water: muddy, glossy water with lighter ripple rings ("baha").</summary>
+        public static MeshData Flood(float halfWidth, float halfLength, int seed)
+        {
+            var b = new MeshBuilder();
+            var rng = new GameRandom(seed);
+            // muddy rim where the water meets the asphalt, then the water on top
+            b.FlatEllipse("paint", "#4A4134", 0, 0.008f, 0, halfWidth * 1.06f, halfLength * 1.05f, 20, 0.08f, seed);
+            b.FlatEllipse("water", "#3F5F69", 0, 0.016f, 0, halfWidth, halfLength, 20, 0.08f, seed + 1);
+            int blobs = halfWidth > 3 ? 5 : 2;
+            for (int i = 0; i < blobs; i++)
+            {
+                float bx = rng.Range(-halfWidth * 0.5f, halfWidth * 0.5f), bz = rng.Range(-halfLength * 0.5f, halfLength * 0.5f);
+                b.FlatEllipse("water", "#4C6E78", bx, 0.02f + i * 0.002f, bz, halfWidth * 0.35f, halfLength * 0.3f, 14, 0.15f, seed + 7 + i);
+            }
+            // ripple rings (bright, thin)
+            int rings = halfWidth > 3 ? 9 : 3;
+            for (int i = 0; i < rings; i++)
+            {
+                float rx = rng.Range(-halfWidth * 0.6f, halfWidth * 0.6f), rz = rng.Range(-halfLength * 0.6f, halfLength * 0.6f);
+                float rr = rng.Range(0.25f, 0.5f);
+                for (int k = 0; k < 10; k++)
+                {
+                    float a = k / 10f * 6.2832f;
+                    b.Box("water", "#A9C7CE", rr * 0.62f, 0.004f, 0.035f, rx + (float)Math.Cos(a) * rr, 0.035f, rz + (float)Math.Sin(a) * rr, new Rot(0, -a + 1.5708f, 0));
+                }
+            }
             return b.Data;
         }
     }

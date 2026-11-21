@@ -184,6 +184,24 @@ namespace JeepneyRush.Logic.Geometry
             }
         }
 
+        /// <summary>Flat, upward-facing ellipse (puddles, decals). Optional wobble makes the outline irregular.</summary>
+        public void FlatEllipse(string key, string color, float x, float y, float z, float rx, float rz, int segments = 16, float wobble = 0, int seed = 0)
+        {
+            var idx = Data.Submesh(key);
+            var uv = _palette.Uv(color);
+            var up = TN(new V3(0, 1, 0));
+            int c = Vert(TP(new V3(x, y, z)), up, uv);
+            var ring = new int[segments];
+            var rng = new GameRandom(seed);
+            for (int i = 0; i < segments; i++)
+            {
+                double a = 2 * Math.PI * i / segments;
+                float w = 1 + wobble * (rng.Range(-1f, 1f));
+                ring[i] = Vert(TP(new V3(x + (float)Math.Cos(a) * rx * w, y, z + (float)Math.Sin(a) * rz * w)), up, uv);
+            }
+            for (int i = 0; i < segments; i++) Tri(idx, c, ring[i], ring[(i + 1) % segments], up);
+        }
+
         /// <summary>
         /// Extrudes a 2D side profile (points are (z, y) in the local frame) between
         /// x0 and x1. Ideal for fenders, hoods and visors seen from the side.

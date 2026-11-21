@@ -18,6 +18,9 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("cone", VehicleBuilder.Cone());
             yield return ("barrier", VehicleBuilder.Barrier());
             yield return ("pothole", VehicleBuilder.Pothole());
+            yield return ("speed_hump", VehicleBuilder.SpeedHump());
+            yield return ("flood_puddle", VehicleBuilder.Flood(1.35f, 3.2f, 1));
+            yield return ("flood_wide", VehicleBuilder.Flood(5.3f, 5.5f, 2));
             yield return ("construction_sign", VehicleBuilder.ConstructionSign());
             yield return ("roadblock", VehicleBuilder.Roadblock());
             yield return ("person", PropBuilder.Person(1));

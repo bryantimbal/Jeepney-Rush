@@ -69,6 +69,9 @@ namespace JeepneyRush.Logic
         public static readonly string[] Bump = { "ARAY KO!", "DAHAN-DAHAN PO!", "KUYA, INGAT!", "ANO BA 'YAN?!", "NAKU PO!", "SAN KA NATUTONG MAGMANEHO?!" };
         public static readonly string[] Leave = { "BABABA NA AKO!", "LALAKAD NA LANG AKO!", "IBANG JEEP NA LANG!" };
         public static readonly string[] Landing = { "WHOA!", "SUSMARYOSEP!", "PARANG RIDE!" };
+        public static readonly string[] Hump = { "ARAY! ANG HUMP!", "KUYA, MAY HUMP!", "TUMALBOG AKO!", "ANG SAKIT NG PWET KO!" };
+        public static readonly string[] Smooth = { "AYOS, KUYA!", "SMOOTH!", "GALING MAG-DRIVE!" };
+        public static readonly string[] Flood = { "BAHA! BAHA!", "BASA PAA KO!", "LUSONG NA, KUYA!", "LUBOG NA TAYO!" };
         public static readonly string[] Board = { "BAYAD PO!", "ISANG QUIAPO PO!", "PAKIABOT PO!", "SAKAY PO!" };
         public static readonly string[] Alight = { "PARA PO!", "SALAMAT PO!", "DITO NA LANG PO!" };
         public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };

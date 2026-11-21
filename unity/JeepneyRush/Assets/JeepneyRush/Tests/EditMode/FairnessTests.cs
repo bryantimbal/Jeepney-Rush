@@ -7,18 +7,19 @@ namespace JeepneyRush.Tests
 {
     /// <summary>
     /// A bot with perfect information but real constraints (lane change takes
-    /// laneChangeDuration, real jump arc) drives through generated traffic. If the
+    /// laneChangeDuration, longer on wet roads) drives through generated traffic. If the
     /// generator ever produces an unavoidable situation, the bot crashes and the test fails.
     /// </summary>
     public class FairnessTests
     {
-        private sealed class Obj { public HazardKind Kind; public int Lane; public float Z; public float Speed; public bool Solid; public bool Hit; }
+        private sealed class Obj { public float W; public HazardKind Kind; public int Lane; public float Z; public float Speed; public bool Solid; public bool Hit; }
 
         private sealed class MockWorld : ISpawnSink
         {
             public readonly List<Obj> Objs = new List<Obj>();
             public readonly List<(PassengerStop stop, float z)> Stops = new List<(PassengerStop, float)>();
             public int CoinFormations;
+            public float Distance;
             public int[] Lanes = { 1 };
             public IReadOnlyList<int> PlayerLanes => Lanes;
 
@@ -28,33 +29,40 @@ namespace JeepneyRush.Tests
                 {
                     if (o.Hit) continue;
                     var d = HazardCatalog.Get(o.Kind);
-                    output.Add(new PredictBlocker(o.Lane, o.Z, d.HalfLength, o.Speed, d.Jumpable && !o.Solid));
+                    output.Add(new PredictBlocker(o.Lane, o.Z, d.HalfLength, o.Speed, d.Soft && !o.Solid));
                 }
             }
 
-            public void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid) => Objs.Add(new Obj { Kind = kind, Lane = lane, Z = z, Speed = speed, Solid = solid });
+            public readonly Dictionary<HazardKind, int> Spawned = new Dictionary<HazardKind, int>();
+            public void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid)
+            {
+                Objs.Add(new Obj { W = Distance - z, Kind = kind, Lane = lane, Z = z, Speed = speed, Solid = solid });
+                Spawned[kind] = Spawned.TryGetValue(kind, out var n) ? n + 1 : 1;
+            }
             public void SpawnCoins(CoinFormation f, int lane, int lane2, float z, int count, float spacing) => CoinFormations++;
             public void SpawnStop(PassengerStop stop, float z) => Stops.Add((stop, z));
             public int PowerUps;
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => PowerUps++;
         }
 
-        private static (List<string> hits, int stops, int coins, int passengers, int powerUps) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
+        private static (List<string> hits, int stops, int coins, int passengers, int powerUps, List<string> zoneIntrusions, MockWorld world) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
         {
             var cfg = new BalanceConfig();
             var rng = new GameRandom(seed);
             var world = new MockWorld();
             var route = new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env));
-            var director = new SpawnDirector(cfg, rng, world, route, env);
+            var weather = new WeatherSchedule(seed, env);
+            var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt);
             const float dt = 1f / 30f;
             float distance = 0;
             int lane = 1, from = 1;
-            float laneT = 1, x = cfg.LaneX(1), jumpT = -1;
+            float laneT = 1, x = cfg.LaneX(1), laneDur = cfg.laneChangeDuration;
             var hits = new List<string>();
+            var intrusions = new List<string>();
             var blockers = new List<PredictBlocker>();
             var ivs = new List<LaneInterval>();
             const float step = 0.05f;
-            int move = (int)Math.Ceiling(cfg.laneChangeDuration / step);
+            int maxMove = (int)Math.Ceiling(cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, 1) / step) + 1;
             const int horizonSteps = 600; // 30 s, same as the generator
 
             while (distance < metres)
@@ -70,20 +78,35 @@ namespace JeepneyRush.Tests
                     z += speed * dt;
                     world.Stops[i] = (s, z);
                     if (!s.Resolved && z > 10) route.Serve(s);
+                    // nothing may stand or drive in the PARA zone lane while the jeepney approaches it
+                    if (s.Resolved || z < -110 || z > cfg.stopZoneLength / 2) continue;
+                    foreach (var o in world.Objs)
+                    {
+                        var d = HazardCatalog.Get(o.Kind);
+                        bool fullWidth = d.HalfWidth >= HazardCatalog.FullRoadHalfWidth - 0.01f;
+                        if ((o.Lane == s.Lane || fullWidth) && Math.Abs(o.Z - z) < cfg.stopZoneLength / 2 + d.HalfLength)
+                        {
+                            string tag = $"{o.Kind}@stop{s.Id}";
+                            if (!intrusions.Contains(tag)) intrusions.Add(tag);
+                        }
+                    }
                 }
                 distance += speed * dt;
 
                 // ---- plan: backward DP over a fine grid with real steering time
                 if (laneT >= 1)
                 {
+                    // slippery road: steering takes longer when wet
+                    laneDur = cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, weather.WetnessAt(distance));
+                    int move = (int)Math.Ceiling(laneDur / step);
                     int best = -1;
                     foreach (bool cautious in new[] { true, false })
                     {
                         blockers.Clear();
                         world.CollectBlockers(blockers);
-                        if (cautious) for (int i = 0; i < blockers.Count; i++) { var b = blockers[i]; b.Jumpable = false; blockers[i] = b; }
+                        if (cautious) for (int i = 0; i < blockers.Count; i++) { var b = blockers[i]; b.Soft = false; blockers[i] = b; }
                         LaneOccupancy.BlockedIntervals(blockers, speed, 30.5f, cfg.playerHalfLength, ivs);
-                        var free = new int[horizonSteps + move + 1];
+                        var free = new int[horizonSteps + maxMove + 1];
                         for (int k = 0; k < free.Length; k++) free[k] = 7;
                         foreach (var iv in ivs)
                         {
@@ -92,7 +115,7 @@ namespace JeepneyRush.Tests
                             for (int k = k0; k <= k1; k++) free[k] &= ~(1 << iv.Lane);
                         }
                         bool Clear(int l, int k0, int n) { for (int k = k0; k < k0 + n; k++) if ((free[k] & (1 << l)) == 0) return false; return true; }
-                        var alive = new int[horizonSteps + move + 1];
+                        var alive = new int[horizonSteps + maxMove + 1];
                         for (int k = horizonSteps; k < alive.Length; k++) alive[k] = 7;
                         for (int k = horizonSteps - 1; k >= 0; k--)
                         {
@@ -112,32 +135,15 @@ namespace JeepneyRush.Tests
                     }
                     if (best >= 0 && best != lane) { from = lane; lane = best; laneT = 0; }
                 }
-                if (laneT < 1) laneT = Math.Min(1, laneT + dt / cfg.laneChangeDuration);
+                if (laneT < 1) laneT = Math.Min(1, laneT + dt / laneDur);
                 float e = 1 - (float)Math.Pow(1 - laneT, 3);
                 x = cfg.LaneX(from) + (cfg.LaneX(lane) - cfg.LaneX(from)) * e;
 
-                // ---- jump over jumpables ahead in our lane
-                if (jumpT < 0)
-                {
-                    foreach (var o in world.Objs)
-                    {
-                        var d = HazardCatalog.Get(o.Kind);
-                        if (o.Hit || !d.Jumpable || o.Solid || Math.Abs(cfg.LaneX(o.Lane) - x) > 1.6f) continue;
-                        float gap = -o.Z - d.HalfLength - cfg.playerHalfLength;
-                        if (gap > 0 && gap < speed * 0.12f) { jumpT = 0; break; }
-                    }
-                }
-                float y = 0;
-                if (jumpT >= 0)
-                {
-                    jumpT += dt;
-                    y = cfg.JumpHeightAt(jumpT);
-                    if (jumpT >= cfg.jumpDuration) jumpT = -1;
-                }
+                const float y = 0; // jeepneys don't jump: humps/potholes/floods are driven over
 
                 foreach (var o in world.Objs)
                 {
-                    if (o.Hit) continue;
+                    if (o.Hit || HazardCatalog.Get(o.Kind).Soft) continue;
                     if (CollisionMath.Overlaps(cfg, x, y, cfg.LaneX(o.Lane), o.Z, HazardCatalog.Get(o.Kind)))
                     {
                         o.Hit = true;
@@ -150,7 +156,7 @@ namespace JeepneyRush.Tests
                     }
                 }
             }
-            return (hits, world.Stops.Count, world.CoinFormations, route.PickedUp, world.PowerUps);
+            return (hits, world.Stops.Count, world.CoinFormations, route.PickedUp, world.PowerUps, intrusions, world);
         }
 
         [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
@@ -158,12 +164,45 @@ namespace JeepneyRush.Tests
         public void SkilledBotSurvivesFourKilometres(int seed)
         {
             var env = (EnvironmentKind)(seed % 3);
-            var (hits, stops, coins, passengers, powerUps) = Simulate(seed, 4000, env);
+            var (hits, stops, coins, passengers, powerUps, intrusions, world) = Simulate(seed, 4000, env);
             CollectionAssert.IsEmpty(hits, string.Join(", ", hits));
             Assert.Greater(powerUps, 4);
             Assert.Greater(stops, 8);
             Assert.Greater(coins, 40);
             Assert.Greater(passengers, 10);
+            CollectionAssert.IsEmpty(intrusions, "vehicles/obstacles in PARA zones: " + string.Join(", ", intrusions));
+            Assert.Greater(world.Spawned.TryGetValue(HazardKind.SpeedHump, out var humps) ? humps : 0, 0, "no speed humps in 4 km");
+        }
+
+        [Test]
+        public void FloodsOnlyOnWetRoadsAndAppearInRain()
+        {
+            int floods = 0;
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var (_, _, _, _, _, _, world) = Simulate(seed, 4000, (EnvironmentKind)(seed % 3));
+                floods += (world.Spawned.TryGetValue(HazardKind.FloodPuddle, out var a) ? a : 0) + (world.Spawned.TryGetValue(HazardKind.FloodWide, out var b) ? b : 0);
+            }
+            Assert.Greater(floods, 0);
+        }
+
+        [Test]
+        public void NoRowOfConesAcrossAllLanes()
+        {
+            var cfg = new BalanceConfig();
+            var world = new MockWorld();
+            var rng = new GameRandom(42);
+            var director = new SpawnDirector(cfg, rng, world, new PassengerRoute(cfg, rng));
+            for (float d = 0; d < 5000; d += 0.5f) { world.Distance = d; director.Update(d, cfg.SpeedAt(d)); }
+            var byZ = new Dictionary<int, HashSet<int>>();
+            foreach (var o in world.Objs)
+            {
+                if (HazardCatalog.Get(o.Kind).Soft || o.Speed > 0) continue;
+                int key = (int)Math.Round(o.W / 2f);
+                if (!byZ.TryGetValue(key, out var set)) byZ[key] = set = new HashSet<int>();
+                set.Add(o.Lane);
+            }
+            foreach (var kv in byZ) Assert.Less(kv.Value.Count, cfg.laneCount, $"solid wall at z={kv.Key}");
         }
     }
 }

@@ -16,6 +16,8 @@ namespace JeepneyRush
         public float VelocityX { get; private set; }
         public bool Changing => _t < 1f;
         public int FromLane => _from;
+        /// <summary>Lane-change time multiplier (wet / flooded road = slippery = slower steering).</summary>
+        public float DurationScale = 1f;
 
         public LaneController(BalanceConfig cfg) { _cfg = cfg; Reset(); }
 
@@ -62,7 +64,7 @@ namespace JeepneyRush
             float prev = X;
             if (_t < 1f)
             {
-                _t = Mathf.Min(1f, _t + dt / _cfg.laneChangeDuration);
+                _t = Mathf.Min(1f, _t + dt / (_cfg.laneChangeDuration * Mathf.Max(0.5f, DurationScale)));
                 if (_t >= 1f && _queued >= 0)
                 {
                     int q = _queued;

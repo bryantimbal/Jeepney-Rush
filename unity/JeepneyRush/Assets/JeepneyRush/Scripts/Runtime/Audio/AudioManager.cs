@@ -14,11 +14,13 @@ namespace JeepneyRush
     public sealed class AudioManager : MonoBehaviour
     {
         private readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
-        private AudioClip _menuMusic, _engine;
+        private AudioClip _menuMusic, _engine, _rain;
         private readonly AudioClip[] _runMusicByRoute = new AudioClip[3];
         private AudioClip _runMusic => _runMusicByRoute[Mathf.Clamp(_route, 0, 2)];
         private int _route;
-        private AudioSource _musicA, _musicB, _engineSrc;
+        private AudioSource _musicA, _musicB, _engineSrc, _rainSrc;
+        private float _rainTarget;
+        private Coroutine _fade;
         private readonly List<AudioSource> _voices = new List<AudioSource>();
         private int _nextVoice;
         private bool _musicOn = true, _sfxOn = true;
@@ -30,9 +32,9 @@ namespace JeepneyRush
             _musicA = NewSource("MusicA", true);
             _musicB = NewSource("MusicB", true);
             _engineSrc = NewSource("Engine", true);
+            _rainSrc = NewSource("Rain", true);
             for (int i = 0; i < 10; i++) _voices.Add(NewSource("Voice" + i, false));
             // coin sounds are played by the session with the combo pitch (PlayCoin)
-            GameEvents.Jumped += () => Play(Sfx.Jump);
             GameEvents.Landed += () => Play(Sfx.Land, 0.8f);
             GameEvents.LaneChanged += _ => Play(Sfx.Lane, 0.6f);
             GameEvents.Braked += () => Play(Sfx.Brake, 0.7f);
@@ -83,6 +85,7 @@ namespace JeepneyRush
                 yield return null;
             }
             _engine = Clip("Engine", SoundBank.EngineLoop(), true);
+            _rain = Clip("Rain", SoundBank.RainLoop(), true);
             progress?.Invoke(++done / (float)total);
             yield return null;
             _menuMusic = Clip("MenuMusic", MusicComposer.RenderMenu(), true);
@@ -115,6 +118,7 @@ namespace JeepneyRush
             _sfxOn = d == null || d.sfx;
             _musicA.mute = _musicB.mute = !_musicOn;
             _engineSrc.mute = !_sfxOn;
+            _rainSrc.mute = !_sfxOn;
             foreach (var v in _voices) v.mute = !_sfxOn;
         }
 
@@ -122,16 +126,16 @@ namespace JeepneyRush
         {
             switch (to)
             {
-                case GameState.MainMenu: PlayMusic(false); StopEngine(); break;
+                case GameState.MainMenu: PlayMusic(false); StopEngine(); SetRain(0); break;
                 case GameState.Starting:
                 case GameState.Playing:
                     PlayMusic(true);
                     StartEngine();
                     break;
-                case GameState.Paused: _engineSrc.Pause(); break;
-                case GameState.GameOver: StopEngine(); break;
+                case GameState.Paused: _engineSrc.Pause(); _rainSrc.Pause(); break;
+                case GameState.GameOver: StopEngine(); SetRain(0); break;
             }
-            if (from == GameState.Paused && to == GameState.Playing) _engineSrc.UnPause();
+            if (from == GameState.Paused && to == GameState.Playing) { _engineSrc.UnPause(); _rainSrc.UnPause(); }
         }
 
         // ------------------------------------------------------------------ music
@@ -149,8 +153,8 @@ namespace JeepneyRush
             _musicA.clip = clip;
             _musicA.volume = 0f;
             _musicA.Play();
-            StopAllCoroutines();
-            StartCoroutine(Fade());
+            if (_fade != null) StopCoroutine(_fade);
+            _fade = StartCoroutine(Fade());
         }
 
         private IEnumerator Fade()
@@ -179,13 +183,44 @@ namespace JeepneyRush
 
         public void StopEngine() => _engineSrc.Stop();
 
-        /// <summary>0..1 speed factor → pitch/volume of the diesel loop.</summary>
-        public void UpdateEngine(float speed01, bool braking)
+        /// <summary>
+        /// 0..1 speed factor → pitch/volume of the diesel loop. Holding the accelerator
+        /// revs the engine harder and louder (the rev "vroom" itself is <see cref="Rev"/>).
+        /// </summary>
+        public void UpdateEngine(float speed01, bool braking, bool gas = false)
         {
             if (!_engineSrc.isPlaying) return;
-            float targetPitch = 0.85f + speed01 * 0.9f - (braking ? 0.15f : 0f);
-            _engineSrc.pitch = Mathf.MoveTowards(_engineSrc.pitch, targetPitch, Time.deltaTime * 1.5f);
-            _engineSrc.volume = 0.25f + speed01 * 0.12f;
+            float targetPitch = 0.85f + speed01 * 0.9f - (braking ? 0.15f : 0f) + (gas ? 0.3f : 0f);
+            _engineSrc.pitch = Mathf.MoveTowards(_engineSrc.pitch, targetPitch, Time.deltaTime * (gas ? 2.4f : 1.5f));
+            float targetVol = 0.25f + speed01 * 0.12f + (gas ? 0.16f : 0f);
+            _engineSrc.volume = Mathf.MoveTowards(_engineSrc.volume, targetVol, Time.deltaTime * 1.2f);
+        }
+
+        /// <summary>Stepping on the accelerator: the diesel revs up with a throaty roar.</summary>
+        public void Rev() => Play(Sfx.Rev, 0.85f, UnityEngine.Random.Range(0.95f, 1.05f));
+
+        // ------------------------------------------------------------------ weather
+        /// <summary>Rain loop volume 0..1 (faded smoothly).</summary>
+        public void SetRain(float volume)
+        {
+            _rainTarget = Mathf.Clamp01(volume);
+            if (_rainTarget > 0 && _rain != null && !_rainSrc.isPlaying) { _rainSrc.clip = _rain; _rainSrc.volume = 0; _rainSrc.Play(); }
+        }
+
+        private void Update()
+        {
+            if (_rainSrc == null) return;
+            _rainSrc.volume = Mathf.MoveTowards(_rainSrc.volume, _rainTarget * 0.55f, Time.unscaledDeltaTime * 0.4f);
+            if (_rainTarget <= 0 && _rainSrc.isPlaying && _rainSrc.volume <= 0.001f) _rainSrc.Stop();
+        }
+
+        /// <summary>Thunder a moment after the lightning flash (sound is slower than light).</summary>
+        public void Thunder(float delay) => StartCoroutine(PlayLater(Sfx.Thunder, delay, UnityEngine.Random.Range(0.8f, 1f)));
+
+        private IEnumerator PlayLater(Sfx s, float delay, float volume)
+        {
+            yield return new WaitForSeconds(delay);
+            Play(s, volume, UnityEngine.Random.Range(0.85f, 1.1f));
         }
 
         // ------------------------------------------------------------------ sfx

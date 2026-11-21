@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -126,6 +126,31 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Tone(b, Synth.Wave.Saw, 0.2f, 0.25f, 260, 180, 0.3f, 0.01f, 900);
                     Synth.Noise(b, 0, 0.45f, 0.15f, 700, 400, 1.5f);
                     return Synth.Normalize(b, 0.5f);
+                case Sfx.Rev:
+                    return Rev();
+                case Sfx.Bump:
+                    // tyres thumping over a speed hump + rattling body panels
+                    b = Synth.Buffer(0.55f);
+                    Synth.Tone(b, Synth.Wave.Sine, 0, 0.16f, 95, 45, 1f);
+                    Synth.Tone(b, Synth.Wave.Sine, 0.2f, 0.16f, 90, 45, 0.85f);
+                    Synth.Noise(b, 0, 0.12f, 0.5f, 900, 300, 0.8f, lowpassOnly: true);
+                    Synth.Noise(b, 0.2f, 0.12f, 0.45f, 900, 300, 0.8f, lowpassOnly: true);
+                    Synth.Noise(b, 0.02f, 0.45f, 0.18f, 3500, 2500, 4f); // tin rattle
+                    return Synth.Normalize(b, 0.8f);
+                case Sfx.Splash:
+                    b = Synth.Buffer(0.9f);
+                    Synth.Noise(b, 0, 0.8f, 1f, 2500, 700, 0.9f);
+                    Synth.Noise(b, 0.05f, 0.6f, 0.5f, 6000, 3000, 1f, highpass: true);
+                    Synth.Tone(b, Synth.Wave.Sine, 0, 0.2f, 180, 70, 0.4f);
+                    return Synth.Normalize(b, 0.7f);
+                case Sfx.Thunder:
+                    b = Synth.Buffer(2.6f);
+                    Synth.Noise(b, 0, 0.25f, 0.8f, 3000, 800, 0.7f, lowpassOnly: true); // crack
+                    Synth.Noise(b, 0.08f, 2.4f, 1f, 260, 70, 0.7f, lowpassOnly: true);  // rumble
+                    Synth.Noise(b, 0.6f, 1.6f, 0.6f, 160, 60, 0.7f, lowpassOnly: true);
+                    Synth.Tone(b, Synth.Wave.Sine, 0.05f, 1.8f, 55, 32, 0.5f, 0.05f);
+                    Synth.Drive(b, 1.5f);
+                    return Synth.Normalize(b, 0.9f);
                 case Sfx.Horn:
                 case Sfx.Start:
                     return Horn();
@@ -183,6 +208,80 @@ namespace JeepneyRush.Logic.Audio
         }
 
         /// <summary>
+        /// Stepping on the accelerator: the old surplus diesel of a jeepney clatters up
+        /// from idle to high revs ("brrRRRAAAM") with a throaty exhaust and loose-panel rattle.
+        /// Built from individual cylinder firings so it sounds like an engine, not a tone.
+        /// </summary>
+        public static float[] Rev()
+        {
+            const float dur = 1.4f;
+            var b = Synth.Buffer(dur);
+            var rng = new Random(77);
+            double t = 0, nextFire = 0;
+            float lp = 0, lp2 = 0;
+            for (int i = 0; i < b.Length; i++, t += 1.0 / Synth.Rate)
+            {
+                // rpm curve: quick throttle blip up, hold, then ease back toward cruise
+                double rise = Math.Min(1, t / 0.55);
+                double rpmShape = t < 0.55 ? rise * rise * (3 - 2 * rise) : 1 - 0.35 * Math.Min(1, (t - 0.55) / 0.85);
+                double firingHz = 14 + 46 * rpmShape;
+                float sample = 0;
+                if (t >= nextFire)
+                {
+                    nextFire = t + 1.0 / firingHz * (0.94 + 0.12 * rng.NextDouble()); // uneven old engine
+                }
+                double since = t - (nextFire - 1.0 / firingHz);
+                // each firing: a sharp knock (diesel clatter) plus a low thump
+                double knock = Math.Exp(-since * 260) * (rng.NextDouble() * 2 - 1) * 0.9;
+                double thump = Math.Exp(-since * 55) * Math.Sin(2 * Math.PI * 70 * since) * 1.2;
+                sample = (float)(knock + thump);
+                // exhaust roar: band of noise that opens up with throttle
+                double roar = (rng.NextDouble() * 2 - 1) * (0.15 + 0.5 * rpmShape);
+                lp += (float)(0.06 + 0.1 * rpmShape) * ((float)roar - lp);
+                sample += lp * 2.2f;
+                float env = (float)(Math.Min(1, t / 0.03) * Math.Min(1, (dur - t) / 0.35));
+                lp2 += 0.35f * (sample - lp2); // tame the very top
+                b[i] = lp2 * env;
+            }
+            Synth.Drive(b, 2.2f);
+            return Synth.Normalize(b, 0.8f);
+        }
+
+        /// <summary>Seamless rain loop: hiss plus random droplet ticks (2 s).</summary>
+        public static float[] RainLoop()
+        {
+            var b = Synth.Buffer(2f);
+            int n = b.Length;
+            var rng = new Random(5);
+            float lp = 0, hp = 0;
+            for (int pass = 0; pass < 2; pass++)
+                for (int i = 0; i < n; i++)
+                {
+                    float x = (float)(rng.NextDouble() * 2 - 1);
+                    lp += 0.25f * (x - lp);
+                    hp = lp - hp * 0.2f;
+                    if (pass == 1) b[i] = hp * 0.5f;
+                }
+            // droplets
+            for (int d = 0; d < 140; d++)
+            {
+                int at = rng.Next(n);
+                float f = 1800 + (float)rng.NextDouble() * 2600;
+                for (int k = 0; k < 600; k++)
+                    b[(at + k) % n] += (float)(Math.Sin(2 * Math.PI * f * k / Synth.Rate) * Math.Exp(-k / 90.0) * 0.35);
+            }
+            // cross-fade the ends so the loop is seamless
+            int fade = Synth.Rate / 20;
+            for (int i = 0; i < fade; i++)
+            {
+                float w = i / (float)fade;
+                b[i] = b[i] * w + b[n - fade + i] * (1 - w);
+            }
+            Array.Resize(ref b, n - fade);
+            return Synth.Normalize(b, 0.6f);
+        }
+
+        /// <summary>
         /// Seamlessly looping diesel idle. Every partial completes a whole number of
         /// cycles in the loop length; pitch is raised at runtime with AudioSource.pitch.
         /// </summary>
@@ -197,7 +296,9 @@ namespace JeepneyRush.Logic.Audio
                 double t = i / (double)Synth.Rate;
                 double chug = 0.65 + 0.35 * Math.Sin(2 * Math.PI * 12 * t); // 12 firings/s
                 double s = Synth.Osc(Synth.Wave.Saw, f * t) * 0.6 + Synth.Osc(Synth.Wave.Square, f / 2.0 * t) * 0.35 + Math.Sin(2 * Math.PI * 96 * t) * 0.2;
-                b[i] = (float)(s * chug);
+                double since = (t * 12) - Math.Floor(t * 12);  // time since last firing (in firing periods)
+                double knock = Math.Exp(-since * 22) * Synth.Osc(Synth.Wave.Noise, 0) * 0.45;
+                b[i] = (float)(s * chug + knock);
             }
             // gentle low-pass (wraps around so the loop point stays continuous)
             float lp = 0, a = 1f - (float)Math.Exp(-2 * Math.PI * 450 / Synth.Rate);
