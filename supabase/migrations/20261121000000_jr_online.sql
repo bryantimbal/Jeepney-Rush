@@ -610,9 +610,8 @@ begin
     end if;
     k := k + 1;
   end loop;
-  if coalesce((p_data->>'best_score')::int, 0) > 0 then
-    perform jr_private.post_score(uid, 'all', least((p_data->>'best_score')::int, 2000000), least(coalesce((p_data->>'best_distance')::real, 0), 200000));
-  end if;
+  -- note: imported progress never reaches the leaderboards (a local save can be edited);
+  -- only runs uploaded and checked by jr_submit_run are ranked.
   insert into public.jr_transactions (user_id, kind, amount, ref) values (uid, 'legacy_import', least(greatest(coalesce((p_data->>'coins')::int, 0), 0), 20000), null);
   return jsonb_build_object('ok', true, 'snapshot', jr_private.snapshot(uid));
 end $$;

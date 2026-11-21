@@ -82,8 +82,8 @@ namespace JeepneyRush
         /// <summary>Applies a finished run (bests, coins, XP, missions, achievements) and saves.</summary>
         public Progress.RunRewards RecordRun(RunSummary run)
         {
-            var now = DateTime.Now;
-            var result = Progress.Apply(Data, run, Missions.DayKey(now), Missions.WeekKey(now));
+            // missions follow Philippine time (UTC+8), the same clock the server uses
+            var result = Progress.Apply(Data, run, PhilippineTime.DayKey, PhilippineTime.WeekKey);
             Save();
             return result;
         }
@@ -91,8 +91,7 @@ namespace JeepneyRush
         /// <summary>Rolls daily/weekly missions over when the date changed.</summary>
         public void RefreshMissions()
         {
-            var now = DateTime.Now;
-            Missions.Refresh(Data, Missions.DayKey(now), Missions.WeekKey(now));
+            Missions.Refresh(Data, PhilippineTime.DayKey, PhilippineTime.WeekKey);
         }
 
         public void ResetProgress()

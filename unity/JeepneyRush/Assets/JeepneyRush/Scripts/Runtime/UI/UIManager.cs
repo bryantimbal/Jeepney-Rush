@@ -64,6 +64,7 @@ namespace JeepneyRush
             BuildGarage();
             BuildMissions();
             BuildRoutes();
+            BuildOnline();
             BuildConfirm();
             BuildLoading();
             BuildSplash();
@@ -254,6 +255,7 @@ namespace JeepneyRush
             _menuBest = UiKit.Text("0 m", 40, Color.white);
             bestRow.Add(UiKit.Pill(bestLabel, _menuBest));
             _menu.Add(bestRow);
+            _menu.Add(BuildOnlineChip());
             var logo = UiKit.Icon("logo", 780);
             logo.style.height = 400;
             _menu.Add(logo);
@@ -291,6 +293,13 @@ namespace JeepneyRush
             Small("ROUTES", OpenRoutes, row2);
             Small("SETTINGS", () => OpenModal(_settings), row2, true);
             buttons.Add(row2);
+            // Phase 3: online
+            var row3 = UiKit.Box();
+            row3.style.flexDirection = FlexDirection.Row;
+            Small("DAILY", OpenDaily, row3);
+            Small("RANKINGS", () => OpenRanks(), row3);
+            Small("ACCOUNT", OpenAccount, row3, true);
+            buttons.Add(row3);
             _menu.Add(buttons);
             var ver = UiKit.Text($"v{Application.version} · Beep beep! Tap the horn on the road.", 26, new Color(1, 1, 1, 0.85f), false);
             ver.style.marginBottom = 16;
@@ -883,6 +892,10 @@ namespace JeepneyRush
             _goRewards = UiKit.Box("rewards");
             _goRewards.style.marginTop = 8;
             card.Add(_goRewards);
+            _goOnline = UiKit.Text("", 32, UiKit.Blue, false);
+            _goOnline.style.whiteSpace = WhiteSpace.Normal;
+            _goOnline.style.marginBottom = 6;
+            card.Add(_goOnline);
             card.Add(UiKit.Button("RESTART", () => { Show(_gameOver, false); Services.Game.Restart(); }, UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("HOME", () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }, Color.white, UiKit.Ink, 48, 128));
         }
@@ -899,6 +912,7 @@ namespace JeepneyRush
             _goDelivered.text = r.Deliveries.ToString();
             _goBest.text = $"Best score {r.BestScore:N0} · best distance {Mathf.FloorToInt(r.BestDistance):N0} m";
             _goRewards.Clear();
+            PrepareOnlineGameOver();
             var rw = r.Rewards;
             void Line(string text, Color c)
             {

@@ -226,13 +226,17 @@ namespace JeepneyRush.EditorTools
         }
 
         // ------------------------------------------------------------------ ScriptableObjects
-        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys)")]
+        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys, OnlineConfig)")]
         public static void CreateConfigAssets()
         {
             EnsureFolder(Res);
             string balancePath = Res + "/GameBalance.asset";
             if (AssetDatabase.LoadAssetAtPath<GameBalance>(balancePath) == null)
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<GameBalance>(), balancePath);
+            // Phase 3: Supabase settings (empty = offline build). Never overwritten once you fill it in.
+            string onlinePath = Res + "/OnlineConfig.asset";
+            if (AssetDatabase.LoadAssetAtPath<OnlineConfig>(onlinePath) == null)
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<OnlineConfig>(), onlinePath);
             EnsureFolder(Res + "/Jeepneys");
             var defaults = JeepneySpec.LoadAll(); // runtime defaults when none exist
             foreach (var l in JeepneyCatalog.All)

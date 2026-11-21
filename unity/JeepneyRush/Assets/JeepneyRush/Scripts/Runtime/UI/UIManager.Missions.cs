@@ -114,7 +114,7 @@ namespace JeepneyRush
             var d = Services.Save.Data;
             for (int i = 0; i < _missionTabs.Length; i++) _missionTabs[i].style.backgroundColor = i == _missionTab ? UiKit.Yellow : Color.white;
             _missionList.Clear();
-            var now = DateTime.Now;
+            var now = PhilippineTime.Now; // missions reset at midnight Philippine time
             if (_missionTab < 2)
             {
                 bool weekly = _missionTab == 1;
@@ -130,6 +130,12 @@ namespace JeepneyRush
                     bool done = progress[i] >= m.Target;
                     _missionList.Add(ProgressRow(m.Text, $"Reward: {m.Reward} coins", progress[i] / (float)m.Target, $"{progress[i]:N0} / {m.Target:N0}", done && !claimed[i], claimed[i], () =>
                     {
+                        if (UseServer())
+                        {
+                            Services.Online.ClaimMission(weekly, idx, (ok, msg, reward) => { if (ok) Services.Audio.Play(Logic.Audio.Sfx.Purchase); else Toast(msg); RefreshMissions(); });
+                            return;
+                        }
+                        if (Services.Online != null && Services.Online.SignedIn) { Toast("Kailangan ng internet para mag-claim."); return; }
                         if (Missions.Claim(Services.Save.Data, weekly, idx) > 0) { Services.Audio.Play(Logic.Audio.Sfx.Purchase); Services.Save.Save(); }
                         RefreshMissions();
                     }));
@@ -145,6 +151,12 @@ namespace JeepneyRush
                     float val = Mathf.Min(a.Stat(d), a.Target);
                     _missionList.Add(ProgressRow(a.Name, $"{a.Description} · {a.Reward} coins", Achievements.Progress(d, a), $"{val:N0} / {a.Target:N0}", unlocked && !claimedA, claimedA, () =>
                     {
+                        if (UseServer())
+                        {
+                            Services.Online.ClaimAchievement(ach.Id, (ok, msg, reward) => { if (ok) Services.Audio.Play(Logic.Audio.Sfx.Purchase); else Toast(msg); RefreshMissions(); });
+                            return;
+                        }
+                        if (Services.Online != null && Services.Online.SignedIn) { Toast("Kailangan ng internet para mag-claim."); return; }
                         if (Achievements.Claim(Services.Save.Data, ach.Id) > 0) { Services.Audio.Play(Logic.Audio.Sfx.Purchase); Services.Save.Save(); }
                         RefreshMissions();
                     }));

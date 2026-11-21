@@ -1,0 +1,109 @@
+{
+    "xp": 1160,
+    "runs": 3,
+    "coins": 5749,
+    "level": 4,
+    "owned": [
+        "pilipinas",
+        "sanjuan",
+        "manila"
+    ],
+    "day_key": 20261121,
+    "user_id": "11111111-1111-1111-1111-111111111111",
+    "missions": [
+        {
+            "slot": 0,
+            "text": "Drive 700 m without crashing",
+            "type": "CleanDistanceInRun",
+            "period": "daily",
+            "reward": 137,
+            "target": 700
+        },
+        {
+            "slot": 1,
+            "text": "Pick up 11 passengers in one run",
+            "type": "PassengersInRun",
+            "period": "daily",
+            "reward": 125,
+            "target": 11
+        },
+        {
+            "slot": 2,
+            "text": "Deliver 13 passengers in one run",
+            "type": "DeliveriesInRun",
+            "period": "daily",
+            "reward": 180,
+            "target": 13
+        },
+        {
+            "slot": 0,
+            "text": "Earn 1,600 coins this week",
+            "type": "TotalCoins",
+            "period": "weekly",
+            "reward": 833,
+            "target": 1600
+        },
+        {
+            "slot": 1,
+            "text": "Deliver 80 passengers this week",
+            "type": "TotalDeliveries",
+            "period": "weekly",
+            "reward": 500,
+            "target": 80
+        }
+    ],
+    "upgrades": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+    ],
+    "week_key": 151,
+    "best_clean": 2500,
+    "best_score": 20419,
+    "friend_code": "EZYJUVNA",
+    "total_coins": 4412,
+    "display_name": "Driver-EZYJ",
+    "is_anonymous": true,
+    "best_distance": 5000,
+    "daily_claimed": [
+        true,
+        false,
+        false
+    ],
+    "total_refuels": 3,
+    "daily_progress": [
+        1000000,
+        10,
+        6
+    ],
+    "total_distance": 8000,
+    "weekly_claimed": [
+        false,
+        false
+    ],
+    "total_power_ups": 6,
+    "weekly_progress": [
+        1600,
+        18
+    ],
+    "total_deliveries": 18,
+    "total_passengers": 30,
+    "total_smooth_humps": 9,
+    "total_wet_distance": 2666.6666564941406,
+    "achievements_claimed": [
+        "first_passenger",
+        "highway_legend"
+    ],
+    "achievements_unlocked": [
+        "coin_collector",
+        "first_passenger",
+        "highway_legend",
+        "island_hopper",
+        "meters_1000",
+        "rain_or_shine",
+        "traffic_survivor"
+    ]
+}

@@ -55,6 +55,13 @@ namespace JeepneyRush.Logic
         public bool[] weeklyClaimed = new bool[Missions.WeeklyCount];
         public bool controlsTutorialDone;
 
+        // ---- Phase 3 (online)
+        /// <summary>This device's progress has been uploaded to / replaced by an online account.</summary>
+        public bool onlineLinked;
+        /// <summary>The player signed out on purpose: don't auto-create a guest account.</summary>
+        public bool signedOut;
+        public string lastUserId;
+
         public bool Owns(string jeepneyId) => ownedJeepneys != null && ownedJeepneys.Contains(jeepneyId);
         public int UpgradeLevel(UpgradeKind k) => upgradeLevels != null && (int)k < upgradeLevels.Length ? upgradeLevels[(int)k] : 0;
     }

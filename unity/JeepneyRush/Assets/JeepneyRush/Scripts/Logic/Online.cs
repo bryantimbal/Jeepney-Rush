@@ -322,4 +322,51 @@ namespace JeepneyRush.Logic
     {
         public FriendRow[] friends = new FriendRow[0];
     }
+
+    /// <summary>Generic result of purchases / claims / name changes.</summary>
+    [Serializable]
+    public class OpResult
+    {
+        public bool ok;
+        public string reason;
+        public int reward;
+        public string friend;
+        public ServerSnapshot snapshot;
+    }
+
+    [Serializable]
+    public class DailyInfo
+    {
+        public int day_key;
+        public int seed;
+        public int env;
+    }
+
+    /// <summary>Minimal JSON helpers for building RPC argument objects.</summary>
+    public static class Json
+    {
+        public static string Str(string s)
+        {
+            if (s == null) return "null";
+            var sb = new System.Text.StringBuilder("\"");
+            foreach (char c in s)
+            {
+                switch (c)
+                {
+                    case '"': sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    default:
+                        if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                        else sb.Append(c);
+                        break;
+                }
+            }
+            return sb.Append('"').ToString();
+        }
+
+        public static string Bool(bool b) => b ? "true" : "false";
+    }
 }

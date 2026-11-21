@@ -13,6 +13,13 @@ namespace JeepneyRush
         [Tooltip("Fixed seed for reproducible runs (0 = random each run).")]
         public int debugSeed;
 
+        /// <summary>Set by the menu to play today's Daily Challenge (fixed seed and route).</summary>
+        public static DailyChallenge? Challenge;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => Challenge = null;
+        private int _seed;
+        public bool IsDaily => Challenge.HasValue;
+
         private BalanceConfig _baseCfg, _cfg;
         private EnvironmentKind _env;
         private PlayerController _player;
@@ -94,7 +101,7 @@ namespace JeepneyRush
             Services.Audio.EnsureLoaded(); // when Play is pressed directly in this scene
             _baseCfg = GameBalance.Active;
             _cfg = BuildRunConfig();
-            _env = (EnvironmentKind)Services.Save.Data.selectedEnvironment;
+            _env = Challenge.HasValue ? Challenge.Value.Environment : (EnvironmentKind)Services.Save.Data.selectedEnvironment;
             Services.Audio.SetRoute(_env);
             EnvironmentSetup.Apply(_env);
             _camera = EnvironmentSetup.EnsureCamera().GetComponent<CameraController>();
@@ -181,7 +188,8 @@ namespace JeepneyRush
             Time.timeScale = 1f;
             var save = Services.Save.Data;
             _cfg = BuildRunConfig();
-            int seed = debugSeed != 0 ? debugSeed : System.Environment.TickCount & 0x7fffffff;
+            int seed = Challenge.HasValue ? Challenge.Value.Seed : debugSeed != 0 ? debugSeed : System.Environment.TickCount & 0x7fffffff;
+            _seed = seed;
             _rng = new GameRandom(seed);
             _traffic.Clear();
             _obstacles.Clear();
@@ -228,7 +236,7 @@ namespace JeepneyRush
             _camera.Snap(_player.transform.position);
             Services.Game.SetState(GameState.Starting);
             Services.UI.ShowHud(!save.tutorialDone, !save.controlsTutorialDone);
-            Services.UI.Float("ARANGKADA!", UIManager.FloatKind.Big);
+            Services.UI.Float(IsDaily ? "DAILY CHALLENGE!" : "ARANGKADA!", UIManager.FloatKind.Big);
             GameEvents.RaiseHonk();
         }
 
@@ -917,6 +925,9 @@ namespace JeepneyRush
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };
             var rewards = Services.Save.RecordRun(summary);
+            // Phase 3: upload the run (queued on disk if offline; the server re-checks and credits it)
+            if (Services.Online != null && Services.Online.SignedIn)
+                Services.Online.SubmitRun(RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, Services.Save.Data.selectedJeepney));
             var d = Services.Save.Data;
             var result = new RunResult
             {

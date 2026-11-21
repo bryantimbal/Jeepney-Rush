@@ -35,6 +35,7 @@ namespace JeepneyRush
             Services.Audio = _systems.AddComponent<AudioManager>();
             Services.Game = _systems.AddComponent<GameManager>();
             Services.UI = _systems.AddComponent<UIManager>();
+            Services.Online = _systems.AddComponent<OnlineService>();
             _systems.AddComponent<Haptics>();
             _systems.AddComponent<BackButtonListener>();
             GraphicsQuality.Apply(Services.Save.Data.graphicsQuality);
@@ -80,6 +81,8 @@ namespace JeepneyRush
             Services.Scenes.Load(SceneLoader.MainMenuScene, p => ui.SetSplashProgress(0.85f + p * 0.15f, "Opening the terminal…"), () => done = true);
             while (!done && Services.Scenes.IsLoading) yield return null;
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene) Services.Game.SetState(GameState.MainMenu);
+            // Phase 3: sign in (guest or saved account) in the background – the game never waits for it
+            Services.Online.Connect();
         }
     }
 

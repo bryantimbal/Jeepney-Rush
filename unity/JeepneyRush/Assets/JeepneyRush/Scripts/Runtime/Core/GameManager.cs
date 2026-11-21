@@ -1,3 +1,4 @@
+using JeepneyRush.Logic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -30,6 +31,7 @@ namespace JeepneyRush
         // ------------------------------------------------------------------ navigation
         public void Play()
         {
+            if (GameplaySession.Challenge.HasValue && Session == null) GameplaySession.Challenge = null;
             if (Session != null)
             {
                 Session.StartRun();
@@ -41,8 +43,18 @@ namespace JeepneyRush
             // the GameplaySession starts the run in its Start()
         }
 
+        /// <summary>Plays today's Daily Challenge: same seed and route for every player.</summary>
+        public void PlayDaily(DailyChallenge c)
+        {
+            GameplaySession.Challenge = c;
+            Services.Pools.ReleaseAll();
+            SetState(GameState.Loading);
+            Services.Scenes.Load(SceneLoader.GameplayScene, p => Services.UI.ShowLoading(p));
+        }
+
         public void GoToMainMenu()
         {
+            GameplaySession.Challenge = null;
             Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene)

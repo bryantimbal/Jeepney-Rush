@@ -161,6 +161,22 @@ namespace JeepneyRush
             var j = JeepneyCatalog.All[_garageIndex];
             if (!d.Owns(j.Id))
             {
+                if (UseServer())
+                {
+                    // online: the server checks the price and our coins, then we select it
+                    _garageAction.SetEnabled(false);
+                    Services.Online.BuyJeepney(j.Id, (ok, msg) =>
+                    {
+                        if (!ok) { Toast(msg ?? "Purchase failed"); RefreshGarage(); return; }
+                        Services.Audio.Play(Logic.Audio.Sfx.Purchase);
+                        Services.Save.Data.selectedJeepney = j.Id;
+                        Services.Save.Save();
+                        Services.Audio.Play(Logic.Audio.Sfx.Horn);
+                        RefreshGarage();
+                    });
+                    return;
+                }
+                if (Services.Online != null && Services.Online.SignedIn) { Toast("Kailangan ng internet para bumili."); return; }
                 if (!Progress.BuyJeepney(d, j.Id)) return;
                 Services.Audio.Play(Logic.Audio.Sfx.Purchase);
                 Achievements.Evaluate(d);
@@ -213,6 +229,16 @@ namespace JeepneyRush
                 var kind = k;
                 var buy = UiKit.Button(cost < 0 ? "MAX" : $"{cost:N0}", () =>
                 {
+                    if (UseServer())
+                    {
+                        Services.Online.BuyUpgrade(kind, (ok, msg) =>
+                        {
+                            if (ok) Services.Audio.Play(Logic.Audio.Sfx.Purchase); else Toast(msg ?? "Upgrade failed");
+                            RefreshGarage();
+                        });
+                        return;
+                    }
+                    if (Services.Online != null && Services.Online.SignedIn) { Toast("Kailangan ng internet para mag-upgrade."); return; }
                     if (!Progress.BuyUpgrade(Services.Save.Data, kind)) return;
                     Achievements.Evaluate(Services.Save.Data);
                     Services.Save.Save();

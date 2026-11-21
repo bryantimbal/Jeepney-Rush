@@ -12,10 +12,11 @@ namespace JeepneyRush
         public static PoolManager Pools { get; internal set; }
         public static SceneLoader Scenes { get; internal set; }
         public static UIManager UI { get; internal set; }
+        public static OnlineService Online { get; internal set; }
 
         internal static void Reset()
         {
-            Game = null; Save = null; Audio = null; Pools = null; Scenes = null; UI = null;
+            Game = null; Save = null; Audio = null; Pools = null; Scenes = null; UI = null; Online = null;
         }
 
         public static bool Ready => Game != null && Save != null && Audio != null && Pools != null && UI != null;

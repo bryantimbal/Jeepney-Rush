@@ -3,8 +3,8 @@
 | Phase | Scope | Status |
 |---|---|---|
 | **1. Playable MVP** | Menu, one jeepney, 3-lane driving, traffic & obstacles, coins, passengers, score/distance, game over/restart, SFX/music, local saves, Android shell | ✅ **Done** |
-| 2. Game expansion | Garage, more jeepneys & upgrades, power-ups, more environments, missions, achievements | ⏳ Next |
-| 3. Online | Supabase auth (guest + account), cloud save, leaderboards, daily challenges, profiles | Planned |
+| 2. Game expansion | Garage, more jeepneys & upgrades, power-ups, more environments, missions, achievements | ✅ Done |
+| 3. Online | Supabase auth (guest + account), cloud save, leaderboards, daily challenges, profiles | ✅ Done (see UNITY_PHASE3_REPORT.md) |
 | 4. Monetization | AdMob (banner on menus, interstitial between selected runs, rewarded), IAP, ad-free | Planned |
 | 5. Google Play release | Optimisation pass, store listing, privacy policy, internal → closed → production | Planned |
 
@@ -26,6 +26,8 @@
 * **Modes**: Passenger Challenge / Time Attack reuse the run loop with a goal and timer.
 
 ## Phase 3 – backend plan (Supabase)
+> **As built:** the server rules ended up as Postgres `SECURITY DEFINER` functions (called via PostgREST RPC) instead of Edge Functions – same server-side authority, atomic with the data, and testable locally. See `docs/UNITY_PHASE3_REPORT.md` and `docs/SUPABASE_SETUP.md`.
+
 Tables: `profiles, player_inventory, jeepneys, jeepney_upgrades, game_sessions,
 player_scores, missions, mission_progress, achievements, player_achievements,
 daily_rewards, transactions`, all with Row Level Security. Currency and score

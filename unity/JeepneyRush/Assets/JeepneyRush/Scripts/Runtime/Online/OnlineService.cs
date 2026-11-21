@@ -1,0 +1,329 @@
+using System;
+using System.Collections;
+using System.IO;
+using JeepneyRush.Logic;
+using UnityEngine;
+
+namespace JeepneyRush
+{
+    public enum OnlineState { Disabled, SignedOut, Connecting, Online, Offline }
+
+    /// <summary>
+    /// Phase 3 online layer. Offline-first: the game always works locally; when a Supabase
+    /// project is configured and the player is signed in (guest or email), the server is the
+    /// authority for coins, purchases, missions, achievements and leaderboards. Finished runs
+    /// are queued on disk and uploaded when a connection is available (idempotent per run id).
+    /// </summary>
+    public sealed class OnlineService : MonoBehaviour
+    {
+        private OnlineConfig _cfg;
+        private SupabaseClient _client;
+        private OfflineQueue _queue = new OfflineQueue();
+        private bool _flushing, _connecting;
+        private float _retryT;
+
+        public OnlineState State { get; private set; } = OnlineState.Disabled;
+        public ServerSnapshot Snapshot { get; private set; }
+        public string LastError { get; private set; }
+        public int QueuedRuns => _queue.Count;
+
+        /// <summary>A Supabase project is set up in OnlineConfig.</summary>
+        public bool Configured => _cfg != null && _cfg.Configured;
+        /// <summary>There is a signed-in account (possibly offline right now).</summary>
+        public bool SignedIn => Configured && _client != null && _client.HasSession;
+        /// <summary>The server owns the economy right now (purchases/claims go through it).</summary>
+        public bool Authoritative => SignedIn && State == OnlineState.Online;
+        public bool IsGuest => _client == null || _client.IsAnonymous;
+        public string Email => _client?.Email;
+
+        public event Action Changed;
+        public event Action<SubmitResult> RunSubmitted;
+
+        private string QueuePath => Path.Combine(Application.persistentDataPath, "jeepneyrush_runqueue.json");
+
+        private void Awake()
+        {
+            _cfg = OnlineConfig.Active;
+            if (!_cfg.Configured) { State = OnlineState.Disabled; return; }
+            _client = new SupabaseClient(_cfg);
+            try { if (File.Exists(QueuePath)) _queue = JsonUtility.FromJson<OfflineQueue>(File.ReadAllText(QueuePath)) ?? new OfflineQueue(); }
+            catch (Exception e) { Debug.LogWarning("[Online] queue unreadable: " + e.Message); _queue = new OfflineQueue(); }
+            State = _client.HasSession ? OnlineState.Offline : OnlineState.SignedOut;
+        }
+
+        private void SaveQueue()
+        {
+            try { File.WriteAllText(QueuePath, JsonUtility.ToJson(_queue)); }
+            catch (Exception e) { Debug.LogWarning("[Online] could not save queue: " + e.Message); }
+        }
+
+        private void SetState(OnlineState s, string error = null)
+        {
+            State = s;
+            LastError = error;
+            Changed?.Invoke();
+        }
+
+        private void Update()
+        {
+            // reconnect every 30 s while offline (never during a run: it would cost frames)
+            if (State != OnlineState.Offline || _connecting || Services.Game == null || Services.Game.State == GameState.Playing) return;
+            _retryT += Time.unscaledDeltaTime;
+            if (_retryT > 30f) { _retryT = 0; Connect(); }
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused && Configured && State == OnlineState.Offline) Connect();
+        }
+
+        // ================================================================== connect / accounts
+        public void Connect()
+        {
+            if (!Configured || _connecting) return;
+            StartCoroutine(ConnectRoutine());
+        }
+
+        private IEnumerator ConnectRoutine()
+        {
+            _connecting = true;
+            var save = Services.Save.Data;
+            SetState(OnlineState.Connecting);
+            if (_client.HasSession)
+            {
+                string err = null;
+                yield return _client.Refresh(e => err = e);
+                if (err == "offline") { _connecting = false; SetState(OnlineState.Offline, err); yield break; }
+                if (err != null) _client.ClearSession(); // revoked / expired refresh token
+            }
+            if (!_client.HasSession)
+            {
+                if (!_cfg.autoGuest || save.signedOut) { _connecting = false; SetState(OnlineState.SignedOut); yield break; }
+                string err = null;
+                yield return _client.SignInAnonymously(e => err = e);
+                if (err != null) { _connecting = false; SetState(OnlineState.SignedOut, err); yield break; }
+            }
+            yield return Pull(true);
+            _connecting = false;
+            if (State == OnlineState.Online) StartCoroutine(Flush());
+        }
+
+        /// <summary>Downloads the server state; on the first link of this device, uploads its progress once.</summary>
+        private IEnumerator Pull(bool allowImport)
+        {
+            string json = null, err = null;
+            yield return _client.Rpc("jr_get_state", "{}", (j, e) => { json = j; err = e; });
+            if (err != null) { SetState(OnlineState.Offline, err); yield break; }
+            var snap = JsonUtility.FromJson<ServerSnapshot>(json);
+            var save = Services.Save.Data;
+            bool localProgress = save.runs > 0 || save.coins > 0 || save.xp > 0;
+            if (allowImport && !save.onlineLinked && localProgress && snap.runs == 0)
+            {
+                string body = "{\"p_data\":" + JsonUtility.ToJson(ServerSync.ToImport(save)) + "}";
+                yield return _client.Rpc("jr_import_legacy", body, (j, e) =>
+                {
+                    if (e == null) { var r = JsonUtility.FromJson<OpResult>(j); if (r?.snapshot != null) snap = r.snapshot; }
+                });
+            }
+            Apply(snap);
+            save.onlineLinked = true;
+            save.signedOut = false;
+            save.lastUserId = snap.user_id;
+            Services.Save.Save();
+            SetState(OnlineState.Online);
+        }
+
+        private void Apply(ServerSnapshot s)
+        {
+            if (s == null) return;
+            Snapshot = s;
+            ServerSync.Apply(Services.Save.Data, s);
+            Services.Save.Save();
+            Changed?.Invoke();
+        }
+
+        /// <summary>Guest → email account (progress stays: same user id), or a brand-new email account.</summary>
+        public void CreateEmailAccount(string email, string password, Action<bool, string> done) => StartCoroutine(LinkRoutine(email, password, done));
+
+        private IEnumerator LinkRoutine(string email, string password, Action<bool, string> done)
+        {
+            string err = null;
+            if (_client.HasSession && _client.IsAnonymous) yield return _client.LinkEmail(email, password, e => err = e);
+            else yield return _client.SignUp(email, password, e => err = e);
+            if (err == null) yield return Pull(false);
+            done?.Invoke(err == null, Friendly(err));
+            Changed?.Invoke();
+        }
+
+        /// <summary>Signs in to an existing email account. This device then shows that account's progress.</summary>
+        public void SignIn(string email, string password, Action<bool, string> done) => StartCoroutine(SignInRoutine(email, password, done));
+
+        private IEnumerator SignInRoutine(string email, string password, Action<bool, string> done)
+        {
+            string previous = _client.UserId;
+            string err = null;
+            yield return _client.SignIn(email, password, e => err = e);
+            if (err == null)
+            {
+                if (previous != _client.UserId) { _queue = new OfflineQueue(); SaveQueue(); } // runs belonged to the old account
+                yield return Pull(false);
+            }
+            done?.Invoke(err == null, Friendly(err));
+            Changed?.Invoke();
+        }
+
+        /// <summary>Signs out. Local coins/progress are cleared (they live on the account) – settings stay.</summary>
+        public void SignOut(Action done)
+        {
+            if (!Configured) { done?.Invoke(); return; }
+            StartCoroutine(_client.SignOut(() =>
+            {
+                _queue = new OfflineQueue();
+                SaveQueue();
+                Snapshot = null;
+                Services.Save.ResetProgress();
+                Services.Save.Data.onlineLinked = true;
+                Services.Save.Data.signedOut = true;
+                Services.Save.Save();
+                SetState(OnlineState.SignedOut);
+                done?.Invoke();
+            }));
+        }
+
+        /// <summary>After signing out: start a fresh guest account.</summary>
+        public void PlayAsGuest()
+        {
+            if (!Configured) return;
+            Services.Save.Data.signedOut = false;
+            Connect();
+        }
+
+        public static string Friendly(string err)
+        {
+            if (string.IsNullOrEmpty(err)) return null;
+            if (err == "offline") return "Walang internet. Try again later.";
+            if (err == "confirm_email") return "Check your email to confirm the account, then sign in.";
+            if (err.Contains("Invalid login")) return "Wrong email or password.";
+            if (err.Contains("already") && err.Contains("registered")) return "That email already has an account – sign in instead.";
+            if (err.Contains("Password")) return err;
+            if (err.Contains("Anonymous sign-ins are disabled")) return "Guest accounts are disabled on the server.";
+            return err;
+        }
+
+        // ================================================================== runs
+        /// <summary>Queues a finished run for upload (kept on disk until the server answers).</summary>
+        public void SubmitRun(RunReport report)
+        {
+            if (!SignedIn || report == null) return;
+            _queue.Add(report);
+            SaveQueue();
+            if (!_flushing) StartCoroutine(Flush());
+        }
+
+        private IEnumerator Flush()
+        {
+            if (_flushing || !SignedIn) yield break;
+            _flushing = true;
+            while (_queue.Count > 0)
+            {
+                var r = _queue.runs[0];
+                string json = null, err = null;
+                yield return _client.Rpc("jr_submit_run", "{\"p_report\":" + JsonUtility.ToJson(r) + "}", (j, e) => { json = j; err = e; });
+                if (err != null)
+                {
+                    // network/server trouble: keep the run and try again later
+                    SetState(OnlineState.Offline, err);
+                    break;
+                }
+                _queue.Remove(r.run_id);
+                SaveQueue();
+                var res = JsonUtility.FromJson<SubmitResult>(json);
+                if (res != null)
+                {
+                    if (!res.accepted && !res.duplicate) Debug.LogWarning($"[Online] run {r.run_id} rejected: {res.reason}");
+                    if (res.snapshot != null) Apply(res.snapshot);
+                    if (State != OnlineState.Online) SetState(OnlineState.Online);
+                    RunSubmitted?.Invoke(res);
+                }
+            }
+            _flushing = false;
+        }
+
+        // ================================================================== economy (server-side)
+        private void Op(string fn, string args, Action<bool, string, int> done) => StartCoroutine(OpRoutine(fn, args, done));
+
+        private IEnumerator OpRoutine(string fn, string args, Action<bool, string, int> done)
+        {
+            string json = null, err = null;
+            yield return _client.Rpc(fn, args, (j, e) => { json = j; err = e; });
+            if (err != null)
+            {
+                if (err == "offline") SetState(OnlineState.Offline, err);
+                done?.Invoke(false, Friendly(err), 0);
+                yield break;
+            }
+            var r = JsonUtility.FromJson<OpResult>(json);
+            if (r?.snapshot != null) Apply(r.snapshot);
+            done?.Invoke(r != null && r.ok, ReasonText(r?.reason), r?.reward ?? 0);
+        }
+
+        public static string ReasonText(string reason)
+        {
+            switch (reason)
+            {
+                case null: return null;
+                case "coins": return "Kulang ang coins.";
+                case "owned": return "Owned na.";
+                case "max_level": return "Max level na.";
+                case "not_done": return "Hindi pa tapos.";
+                case "claimed": return "Na-claim na.";
+                case "invalid_name": return "Name: 3–16 letters, numbers, spaces.";
+                case "blocked_name": return "Please choose another name.";
+                case "unknown_code": return "Walang ganyang friend code.";
+                case "self": return "That's your own code!";
+                case "limit": return "Friend list is full (100).";
+                default: return reason;
+            }
+        }
+
+        public void BuyJeepney(string id, Action<bool, string> done) => Op("jr_buy_jeepney", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
+        public void BuyUpgrade(UpgradeKind k, Action<bool, string> done) => Op("jr_buy_upgrade", "{\"p_kind\":" + (int)k + "}", (ok, m, _) => done?.Invoke(ok, m));
+        public void ClaimMission(bool weekly, int slot, Action<bool, string, int> done) => Op("jr_claim_mission", "{\"p_weekly\":" + Json.Bool(weekly) + ",\"p_slot\":" + slot + "}", done);
+        public void ClaimAchievement(string id, Action<bool, string, int> done) => Op("jr_claim_achievement", "{\"p_id\":" + Json.Str(id) + "}", done);
+        public void SetName(string name, Action<bool, string> done) => Op("jr_set_name", "{\"p_name\":" + Json.Str(name) + "}", (ok, m, _) => done?.Invoke(ok, m));
+
+        // ================================================================== social
+        public void Leaderboard(string board, string scope, Action<LeaderboardPage, string> done) => StartCoroutine(Get(
+            "jr_leaderboard", "{\"p_board\":" + Json.Str(board) + ",\"p_scope\":" + Json.Str(scope) + ",\"p_limit\":50}", done));
+
+        public void Friends(Action<FriendList, string> done) => StartCoroutine(Get("jr_list_friends", "{}", done));
+
+        public void AddFriend(string code, Action<bool, string> done)
+        {
+            string norm = OnlineText.NormalizeCode(code);
+            if (norm == null) { done?.Invoke(false, "A friend code has 8 letters/numbers."); return; }
+            Op("jr_add_friend", "{\"p_code\":" + Json.Str(norm) + "}", (ok, m, _) => done?.Invoke(ok, m));
+        }
+
+        public void RemoveFriend(string userId, Action<bool, string> done) => Op("jr_remove_friend", "{\"p_user\":" + Json.Str(userId) + "}", (ok, m, _) => done?.Invoke(ok, m));
+
+        /// <summary>Today's challenge: from the server when online, otherwise computed locally (same algorithm).</summary>
+        public void Daily(Action<DailyChallenge> done)
+        {
+            if (!Authoritative) { done?.Invoke(DailyChallenge.Today); return; }
+            StartCoroutine(Get<DailyInfo>("jr_daily_challenge", "{}", (d, err) =>
+                done?.Invoke(d != null && err == null ? new DailyChallenge { DayKey = d.day_key, Seed = d.seed, Environment = (EnvironmentKind)d.env } : DailyChallenge.Today)));
+        }
+
+        private IEnumerator Get<T>(string fn, string args, Action<T, string> done) where T : class
+        {
+            if (!SignedIn) { done?.Invoke(null, Configured ? "Sign in first." : "Online features are not set up."); yield break; }
+            string json = null, err = null;
+            yield return _client.Rpc(fn, args, (j, e) => { json = j; err = e; });
+            if (err != null) { if (err == "offline") SetState(OnlineState.Offline, err); done?.Invoke(null, Friendly(err)); yield break; }
+            T value = null;
+            try { value = JsonUtility.FromJson<T>(json); } catch (Exception e) { err = e.Message; }
+            done?.Invoke(value, err);
+        }
+    }
+}

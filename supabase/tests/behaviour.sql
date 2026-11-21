@@ -253,3 +253,22 @@ do $$ begin
     'wallets match the ledger';
   raise notice 'ok  ledger: every wallet equals the sum of its transactions';
 end $$;
+
+-- 10. contract samples: real responses, checked against the C# DTOs by OnlineContractTests ------
+select pg_temp.as_user(:'a') \g /dev/null
+set role authenticated;
+\o contract/get_state.json
+select jsonb_pretty(public.jr_get_state());
+\o contract/submit_run.json
+select jsonb_pretty(public.jr_submit_run(pg_temp.report('contract-run', 1500, 120, 200, 4000)));
+\o contract/buy.json
+select jsonb_pretty(public.jr_buy_upgrade(0));
+\o contract/leaderboard.json
+select jsonb_pretty(public.jr_leaderboard('all', 'global', 10));
+\o contract/friends.json
+select jsonb_pretty(public.jr_list_friends());
+\o contract/daily.json
+select jsonb_pretty(public.jr_daily_challenge());
+\o
+reset role;
+do $$ begin raise notice 'ok  contract samples written'; end $$;
