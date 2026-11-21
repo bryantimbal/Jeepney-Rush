@@ -67,7 +67,7 @@ namespace JeepneyRush.EditorTools
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
             PlayerSettings.allowedAutorotateToLandscapeRight = false;
-            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+            PlayerSettings.Android.minSdkVersion = (AndroidSdkVersions)26; // Android 8.0: the minimum Unity 6 supports
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
 #if UNITY_2021_2_OR_NEWER
             var android = UnityEditor.Build.NamedBuildTarget.Android;

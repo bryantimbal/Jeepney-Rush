@@ -7,7 +7,7 @@ The Android app is a Capacitor 8 project in `android/` (package `ph.jeepneyrush.
 ## Requirements
 * Node 20+ and npm
 * Android Studio (Ladybug or newer) with Android SDK 36 and JDK 21
-* A device or emulator with Android 7.0+ (API 24). WebGL 2 is used when available.
+* A device or emulator with Android 8.0+ (API 26). WebGL 2 is used when available.
 
 ## Debug build
 ```bash
