@@ -90,7 +90,29 @@ namespace JeepneyRush.Logic
     public static class HumpRules
     {
         public const int SmoothBonusScore = 50;
-        public static bool Smooth(float speed, float baseSpeed, BalanceConfig cfg) => speed <= baseSpeed * cfg.humpSafeFraction + 0.01f;
+        /// <summary>
+        /// Smooth crossing: either already slow, or braking at the hump (and not still
+        /// flying in at full gas). Passengers only complain when the driver didn't slow down.
+        /// </summary>
+        public static bool Smooth(float speed, float baseSpeed, BalanceConfig cfg, bool braking = false) =>
+            speed <= baseSpeed * cfg.humpSafeFraction + 0.01f || (braking && speed <= baseSpeed * cfg.humpBrakingFraction + 0.01f);
+    }
+
+    /// <summary>PARA stops: passengers only board or get off when the jeepney has fully stopped in the zone.</summary>
+    public static class StopRules
+    {
+        public static bool Stopped(float speed, BalanceConfig cfg) => speed <= cfg.stopSpeed;
+
+        /// <summary>Is the jeepney (centre at 0) inside the zone whose centre is <paramref name="zoneZ"/> ahead, in its lane?</summary>
+        public static bool InZone(float zoneZ, int playerLane, bool changingLane, int zoneLane, BalanceConfig cfg) =>
+            !changingLane && playerLane == zoneLane && Math.Abs(zoneZ) <= cfg.stopZoneLength / 2f;
+
+        /// <summary>How long the jeepney waits while people get on and off.</summary>
+        public static float LoadTime(PickupResult r, BalanceConfig cfg) =>
+            Math.Min(2.4f, 0.4f + cfg.loadTimePerPassenger * (r.Boarded + r.Alighted));
+
+        /// <summary>Distance needed to stop from <paramref name="speed"/> with the brakes.</summary>
+        public static float StoppingDistance(float speed, BalanceConfig cfg) => speed * speed / (2f * Math.Max(0.1f, cfg.brakeDecel));
     }
 
     /// <summary>

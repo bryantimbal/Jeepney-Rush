@@ -49,7 +49,18 @@ namespace JeepneyRush.Logic
         // --- player controls (Phase 2: hold-to-accelerate / hold-to-brake buttons)
         public float gasMultiplier = 1.3f;
         public float gasScoreMultiplier = 1.5f;
+        /// <summary>Legacy (Phase 2): holding BRAKE now decelerates with <see cref="brakeDecel"/> down to a full stop.</summary>
         public float brakeHoldMultiplier = 0.45f;
+        /// <summary>Deceleration while BRAKE is held (m/s²) – the jeepney can come to a complete stop.</summary>
+        public float brakeDecel = 9f;
+        /// <summary>Below this speed (m/s) the jeepney counts as stopped (passengers can board / alight).</summary>
+        public float stopSpeed = 0.5f;
+        /// <summary>Seconds fully stopped inside a PARA zone before passengers start moving.</summary>
+        public float stopDwell = 0.35f;
+        /// <summary>Seconds per passenger boarding or alighting (the jeepney waits).</summary>
+        public float loadTimePerPassenger = 0.3f;
+        /// <summary>Braking while crossing a hump is smooth unless faster than this fraction of base speed.</summary>
+        public float humpBrakingFraction = 0.9f;
 
         // --- passengers (Phase 2: destinations, fares, delivery streaks)
         public int passengerCapacity = 5;

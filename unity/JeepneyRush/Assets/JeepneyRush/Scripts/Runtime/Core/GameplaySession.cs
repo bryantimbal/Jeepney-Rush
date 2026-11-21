@@ -39,7 +39,8 @@ namespace JeepneyRush
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
         private bool _gasWas;
-        private float _revCooldown;
+        private float _revCooldown, _dwell, _loadT;
+        private PassengerStopView _inZone;
         private bool _dying;
 
         public ScoreManager Score => _score;
@@ -129,7 +130,7 @@ namespace JeepneyRush
 
             _player.Collisions.HazardHit = OnHazardHit;
             _player.Collisions.CoinTouched = OnCoinTouched;
-            _player.Collisions.ZoneEntered = OnZone;
+            _player.Collisions.ZoneEntered = OnZoneEntered;
             _player.Collisions.PowerUpTouched = OnPowerUpTouched;
             GameEvents.StateChanged += OnStateChanged;
         }
@@ -185,6 +186,8 @@ namespace JeepneyRush
             _smoothHumps = _hits = 0;
             _wetDistance = 0;
             _gasWas = false;
+            _dwell = _loadT = 0;
+            _inZone = null;
             _dying = false;
             _camera.Snap(_player.transform.position);
             Services.Game.SetState(GameState.Starting);
@@ -251,9 +254,22 @@ namespace JeepneyRush
             _gasWas = _player.GasHeld;
             _difficulty.Tick(_score.Distance);
             float intro = Mathf.Clamp01(_runTime / 1.2f);
-            float target = _dying ? 0 : _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
-            float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
-            _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
+            if (_dying || _loadT > 0)
+            {
+                // crashing, or passengers getting on/off: the jeepney stays put
+                _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * 2f * dt);
+            }
+            else if (brakeHeld)
+            {
+                // real brakes: decelerate all the way to a complete stop
+                _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt);
+            }
+            else
+            {
+                float target = _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
+                float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
+                _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
+            }
 
             // ---- weather + road shape
             _weather.Tick(_score.Distance, dt);
@@ -291,9 +307,18 @@ namespace JeepneyRush
             _passengers.Tick(dt, _speed);
             _powerUps.Tick(dt, _speed);
             _enforcer.Tick(dt, _speed);
+            if (!_dying) UpdateStops(dt);
             float hump = NextHumpZ();
+            var next = _passengers.NextStop();
+            float nextZ = next != null ? next.transform.localPosition.z - _cfg.stopZoneLength / 2f : -1f;
             if (_enforcer.Active && _enforcer.Z > 0)
                 Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+            else if (_loadT > 0)
+                Services.UI.SetEnforcerBanner("SAKAY / BABA... HINTAY LANG");
+            else if (_inZone != null)
+                Services.UI.SetEnforcerBanner("PARA! HOLD BRAKE · FULL STOP");
+            else if (next != null && nextZ > 0 && nextZ < 70f && _route_HasBusiness(next))
+                Services.UI.SetEnforcerBanner($"PARA ZONE {Mathf.CeilToInt(nextZ)} m · BRAKE TO STOP");
             else if (hump > 0 && hump < 75f)
                 Services.UI.SetEnforcerBanner($"HUMP AHEAD · BRAKE! {Mathf.CeilToInt(hump)} m");
             else Services.UI.SetEnforcerBanner(null);
@@ -343,7 +368,7 @@ namespace JeepneyRush
                 return;
             }
             bool isHump = h.Kind == HazardKind.SpeedHump;
-            if (HumpRules.Smooth(_speed, _difficulty.BaseSpeed, _cfg))
+            if (HumpRules.Smooth(_speed, _difficulty.BaseSpeed, _cfg, _player.Braking))
             {
                 // slowed down properly: gentle roll over, passengers are happy
                 _player.Bump(0.08f);
@@ -504,9 +529,50 @@ namespace JeepneyRush
             GameEvents.RaisePowerUp(p.Kind);
         }
 
-        private void OnZone(PassengerStopView stop)
+        /// <summary>Does anyone want to get on or off at this stop?</summary>
+        private bool _route_HasBusiness(PassengerStopView s) =>
+            s.Stop.Waiting > 0 && _passengers.Route.Count < _cfg.passengerCapacity || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
+
+        /// <summary>
+        /// PARA stops: passengers only board / get off once the jeepney has come to a
+        /// complete stop inside the zone (in its lane); then it waits while they move.
+        /// </summary>
+        private void UpdateStops(float dt)
         {
-            if (_dying || stop.Done) return;
+            if (_loadT > 0)
+            {
+                _loadT -= dt;
+                if (_loadT <= 0) Services.UI.Float("ARANGKADA! (GAS)", UIManager.FloatKind.Info);
+                return;
+            }
+            var lanes = _player.Lanes;
+            _inZone = null;
+            foreach (var s in _passengers.Stops)
+                if (!s.Done && StopRules.InZone(s.transform.localPosition.z, lanes.Lane, lanes.Changing, s.Stop.Lane, _cfg)) { _inZone = s; break; }
+            if (_inZone != null && StopRules.Stopped(_speed, _cfg))
+            {
+                _dwell += dt;
+                if (_dwell >= _cfg.stopDwell)
+                {
+                    _dwell = 0;
+                    var r = ServeStop(_inZone);
+                    _loadT = StopRules.LoadTime(r, _cfg);
+                    _inZone = null;
+                }
+            }
+            else _dwell = 0;
+        }
+
+        /// <summary>Driving into the zone only gives a hint; stopping is what counts.</summary>
+        private void OnZoneEntered(PassengerStopView stop)
+        {
+            if (_dying || stop.Done || _speed < 2f) return;
+            Services.UI.Float("PARA! PRENO!", UIManager.FloatKind.Info);
+        }
+
+        private PickupResult ServeStop(PassengerStopView stop)
+        {
+            if (_dying || stop.Done) return default;
             var r = _passengers.Serve(stop);
             _score.AddPickup(r);
             if (r.Alighted > 0)
@@ -524,6 +590,7 @@ namespace JeepneyRush
             }
             if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);
             GameEvents.RaisePassengers(r);
+            return r;
         }
 
         private void OnMissed(int lost, PassengerStop stop)

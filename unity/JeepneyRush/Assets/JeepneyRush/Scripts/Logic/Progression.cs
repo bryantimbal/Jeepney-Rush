@@ -34,7 +34,7 @@ namespace JeepneyRush.Logic
             switch (k)
             {
                 case UpgradeKind.Engine: return $"+{level} m/s top speed, stronger gas";
-                case UpgradeKind.Brakes: return $"{level * 8}% faster lane changes";
+                case UpgradeKind.Brakes: return $"{level * 8}% faster lane changes & stops";
                 case UpgradeKind.Armor: return $"+{ArmorHealth(level)} health, longer invulnerability";
                 case UpgradeKind.Capacity: return $"+{level * 2} seats";
                 case UpgradeKind.CoinBonus: return $"+{level * 10}% coins per run";
@@ -64,7 +64,7 @@ namespace JeepneyRush.Logic
             c.maxSpeed += engine * 1f + jeepney.SpeedBonus;
             c.gasMultiplier += engine * 0.03f;
             c.laneChangeDuration = Math.Max(0.12f, c.laneChangeDuration * (1f - brakes * 0.08f) - jeepney.HandlingBonus);
-            c.brakeHoldMultiplier = Math.Max(0.25f, c.brakeHoldMultiplier - brakes * 0.03f);
+            c.brakeDecel *= 1f + brakes * 0.08f;
             c.startHealth += ArmorHealth(armor) + jeepney.HealthBonus;
             c.invulnerabilityTime += armor * 0.1f;
             c.passengerCapacity = Math.Min(15, c.passengerCapacity + cap * 2 + jeepney.CapacityBonus);

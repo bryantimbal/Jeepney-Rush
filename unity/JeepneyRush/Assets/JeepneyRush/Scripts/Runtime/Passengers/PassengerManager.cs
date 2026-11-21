@@ -23,6 +23,7 @@ namespace JeepneyRush
         public System.Action<int, PassengerStop> Missed;
 
         public PassengerRoute Route => _route;
+        public IReadOnlyList<PassengerStopView> Stops => _stops;
 
         public void Init(BalanceConfig cfg, Transform playerBody)
         {

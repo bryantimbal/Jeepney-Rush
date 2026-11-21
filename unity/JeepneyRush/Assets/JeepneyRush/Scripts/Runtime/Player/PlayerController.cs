@@ -34,7 +34,8 @@ namespace JeepneyRush
             get
             {
                 float m = _crashSlow;
-                if (BrakeHeld) m *= _cfg.brakeHoldMultiplier;
+                // holding BRAKE is real deceleration to a full stop (handled by the session)
+                if (BrakeHeld) { }
                 else if (_brakeT > 0) m *= _cfg.brakeMultiplier;
                 else if (GasHeld) m *= _cfg.gasMultiplier;
                 if (_floodSlowT > 0) m *= _cfg.floodSlowdown;
@@ -155,7 +156,7 @@ namespace JeepneyRush
             _bumpY += _bumpV * dt;
             float targetLean = Mathf.Clamp(-Lanes.VelocityX * 0.7f, -12f, 12f);
             _lean = Mathf.Lerp(_lean, targetLean, 1f - Mathf.Exp(-dt * 14f));
-            float targetPitch = Braking ? 2.5f : GasHeld ? -1.5f : 0f;
+            float targetPitch = Braking && speed > 0.5f ? 2.5f : GasHeld ? -1.5f : 0f; // nose dips while braking, settles when stopped
             _pitch = Mathf.Lerp(_pitch, targetPitch, 1f - Mathf.Exp(-dt * 8f));
             float shake = Mathf.Sin(_time * 9f) * 0.008f + Mathf.Max(0, Mathf.Sin(_time * 3.1f)) * 0.015f;
             // wet road: the rear steps out a little during lane changes (fishtail)

@@ -72,6 +72,39 @@ namespace JeepneyRush.Tests
         }
 
         [Test]
+        public void BrakingAtTheHumpIsSmooth()
+        {
+            var c = new BalanceConfig();
+            float b = c.SpeedAt(400);
+            Assert.IsTrue(HumpRules.Smooth(b * 0.85f, b, c, braking: true), "braking just before the hump counts");
+            Assert.IsFalse(HumpRules.Smooth(b * 0.85f, b, c, braking: false), "not slowing down = complaints");
+            Assert.IsFalse(HumpRules.Smooth(b * 1.3f, b, c, braking: true), "a tap of the brake at full gas is not enough");
+        }
+
+        [Test]
+        public void PassengersOnlyBoardWhenFullyStoppedInTheZone()
+        {
+            var c = new BalanceConfig();
+            Assert.IsTrue(StopRules.Stopped(0f, c));
+            Assert.IsFalse(StopRules.Stopped(3f, c));
+            Assert.IsTrue(StopRules.InZone(2f, 1, false, 1, c));
+            Assert.IsFalse(StopRules.InZone(2f, 0, false, 1, c), "wrong lane");
+            Assert.IsFalse(StopRules.InZone(2f, 1, true, 1, c), "still changing lanes");
+            Assert.IsFalse(StopRules.InZone(c.stopZoneLength, 1, false, 1, c), "zone still ahead");
+            Assert.Greater(StopRules.LoadTime(new PickupResult { Boarded = 3, Alighted = 2 }, c), StopRules.LoadTime(new PickupResult { Boarded = 1 }, c));
+        }
+
+        [Test]
+        public void JeepneyCanStopBeforeTheNextZone()
+        {
+            // even at top speed with gas, the brakes stop the jeepney well within the gap between stops
+            var c = new BalanceConfig();
+            float top = c.maxSpeed * c.gasMultiplier;
+            Assert.Less(StopRules.StoppingDistance(top, c), 60f);
+            Assert.Less(StopRules.StoppingDistance(top, c) + c.stopZoneLength, c.stopSpacingMin);
+        }
+
+        [Test]
         public void RoadIsFlatAtStartAndHillyLater()
         {
             foreach (EnvironmentKind env in Enum.GetValues(typeof(EnvironmentKind)))

@@ -83,3 +83,12 @@ Tests: **65/65 pass**. New tests: weather schedule (starts sunny, smooth, no ear
 **Updating:** copy `unity/JeepneyRush/Assets/JeepneyRush` over your project's `Assets/JeepneyRush` again and choose **Replace**. No new textures, so re-running Setup Project is optional. `Scripts/Runtime/Player/JumpController.cs` is now an empty placeholder so that replacing the folder overwrites the old one. You can delete it.
 
 **Not verified here:** I can't run Unity in this environment. Everything was compile-checked against the Unity API and the game logic is unit-tested, but how the rain, lightning, bends and new sounds look and sound has to be checked on the device.
+
+## Update 4 – full stops at PARA zones and smooth humps with the brake
+| Request | Change |
+|---|---|
+| The jeepney must be able to stop completely | Holding **BRAKE** is now real braking (9 m/s², faster with the Brakes upgrade). The jeepney slows **all the way to 0 km/h** and stays stopped while you hold it. Release BRAKE (or hold GAS) to pull away again. The nose dips while braking and settles once stopped. Traffic behind you waits instead of driving into you. |
+| Passengers only board or get off at a complete stop | Driving through a PARA zone no longer picks anyone up. Stop in the zone's lane, fully (speed ≤ 0.5 m/s, for 0.35 s), and then people board and get off. The jeepney **waits while they move** (0.3 s per passenger, banner "SAKAY / BABA... HINTAY LANG") and then shows "ARANGKADA!". If you drive past without stopping, waiting commuters are left behind, and riders who wanted to get off there are lost as before ("LAGPAS!"). The banner guides you: "PARA ZONE 42 m · BRAKE TO STOP", then "PARA! HOLD BRAKE · FULL STOP" inside the zone. Even at top speed with GAS, the stopping distance (≈54 m) fits easily between stops. |
+| Brake at a hump = smooth, no complaints | Crossing a hump **while braking** now counts as smooth (unless you're still faster than 90% of normal speed), just like crossing already slow. You get "DAHAN-DAHAN! +50" and happy riders. Passengers complain and may walk out **only** if you didn't slow down. |
+
+Tests: **68/68 pass**. New tests: braking-at-hump rules, board only when stopped in the zone's lane, and stopping distance. The compile check has 0 errors.

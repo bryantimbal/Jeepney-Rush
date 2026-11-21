@@ -59,7 +59,9 @@ namespace JeepneyRush
                 var h = Items[i];
                 h.Age += dt;
                 var p = h.transform.localPosition;
-                p.z -= (playerSpeed - h.Speed) * dt;
+                // traffic behind the jeepney never drives into it (it waits when the jeepney stops)
+                float vs = p.z < 0 ? Mathf.Min(h.Speed, playerSpeed) : h.Speed;
+                p.z -= (playerSpeed - vs) * dt;
                 if (h.KnockVelocity != Vector3.zero || h.KnockSpin != 0)
                 {
                     h.KnockVelocity.y -= 25f * dt;
