@@ -11,8 +11,11 @@ namespace JeepneyRush.Tests
         {
             foreach (var l in JeepneyCatalog.All) yield return ("jeepney_" + l.Id, JeepneyBuilder.Build(l));
             yield return ("wheel", JeepneyBuilder.BuildWheel());
+            yield return ("bubble", PropBuilder.Bubble());
             foreach (var m in ModelCatalog.Preview()) yield return m;
             for (int i = 0; i < 6; i++) yield return ("chunk" + i, SceneryBuilder.ManilaChunk(1000 + i * 7919, i == 2));
+            for (int i = 0; i < 6; i++) yield return ("prov" + i, SceneryProvinces.Provincial(2000 + i * 7919, i == 2));
+            for (int i = 0; i < 6; i++) yield return ("beach" + i, SceneryProvinces.Beach(3000 + i * 7919, i == 2));
         }
 
         [Test]

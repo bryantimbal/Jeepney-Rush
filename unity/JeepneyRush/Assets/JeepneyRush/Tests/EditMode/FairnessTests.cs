@@ -35,15 +35,17 @@ namespace JeepneyRush.Tests
             public void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid) => Objs.Add(new Obj { Kind = kind, Lane = lane, Z = z, Speed = speed, Solid = solid });
             public void SpawnCoins(CoinFormation f, int lane, int lane2, float z, int count, float spacing) => CoinFormations++;
             public void SpawnStop(PassengerStop stop, float z) => Stops.Add((stop, z));
+            public int PowerUps;
+            public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => PowerUps++;
         }
 
-        private static (List<string> hits, int stops, int coins, int passengers) Simulate(int seed, float metres)
+        private static (List<string> hits, int stops, int coins, int passengers, int powerUps) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
         {
             var cfg = new BalanceConfig();
             var rng = new GameRandom(seed);
             var world = new MockWorld();
-            var route = new PassengerRoute(cfg, rng);
-            var director = new SpawnDirector(cfg, rng, world, route);
+            var route = new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env));
+            var director = new SpawnDirector(cfg, rng, world, route, env);
             const float dt = 1f / 30f;
             float distance = 0;
             int lane = 1, from = 1;
@@ -148,15 +150,17 @@ namespace JeepneyRush.Tests
                     }
                 }
             }
-            return (hits, world.Stops.Count, world.CoinFormations, route.PickedUp);
+            return (hits, world.Stops.Count, world.CoinFormations, route.PickedUp, world.PowerUps);
         }
 
         [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
         [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(8)]
         public void SkilledBotSurvivesFourKilometres(int seed)
         {
-            var (hits, stops, coins, passengers) = Simulate(seed, 4000);
+            var env = (EnvironmentKind)(seed % 3);
+            var (hits, stops, coins, passengers, powerUps) = Simulate(seed, 4000, env);
             CollectionAssert.IsEmpty(hits, string.Join(", ", hits));
+            Assert.Greater(powerUps, 4);
             Assert.Greater(stops, 8);
             Assert.Greater(coins, 40);
             Assert.Greater(passengers, 10);

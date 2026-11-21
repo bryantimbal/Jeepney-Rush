@@ -16,6 +16,7 @@ namespace JeepneyRush.Logic
         /// <param name="lane">Start lane; Zigzag alternates toward <paramref name="lane2"/>.</param>
         void SpawnCoins(CoinFormation formation, int lane, int lane2, float z, int count, float spacing);
         void SpawnStop(PassengerStop stop, float z);
+        void SpawnPowerUp(PowerUpKind kind, int lane, float z);
     }
 
     /// <summary>
@@ -48,6 +49,8 @@ namespace JeepneyRush.Logic
         private readonly List<LaneInterval> _intervals = new List<LaneInterval>();
         private readonly List<Candidate> _cands = new List<Candidate>();
         private float _nextStopAt = 120f;
+        private float _nextPowerUpAt;
+        private readonly float[] _traffic;
         /// <summary>Slow traffic can take a long time to reach the player; plan that far ahead.</summary>
         public const float MaxHorizon = 30f;
 
@@ -55,9 +58,13 @@ namespace JeepneyRush.Logic
         public int Rejected { get; private set; }
         public int RowsPlaced { get; private set; }
 
-        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route)
+        public int PowerUpsPlaced { get; private set; }
+
+        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila)
         {
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
+            _traffic = Environments.TrafficWeights(environment);
+            _nextPowerUpAt = 200f + _rng.Range(0, 150);
             PlanStops();
         }
 
@@ -80,7 +87,7 @@ namespace JeepneyRush.Logic
 
         private void PlanStops()
         {
-            while (_route.UpcomingCount() < 3)
+            while (_route.UpcomingCount() < 4) // passengers need future stops as destinations
             {
                 int side = _rng.Chance(0.5) ? -1 : 1;
                 int lane = side < 0 ? 0 : _cfg.laneCount - 1;
@@ -156,8 +163,8 @@ namespace JeepneyRush.Logic
 
         private HazardKind RandomVehicle(float d) => _rng.Weighted(new (HazardKind, float)[]
         {
-            (HazardKind.Sedan, 3f), (HazardKind.Suv, 1.6f), (HazardKind.Tricycle, 1.5f), (HazardKind.Motorcycle, 1.1f),
-            (HazardKind.Bus, 0.6f + d), (HazardKind.Truck, 0.6f + d * 0.8f),
+            (HazardKind.Sedan, _traffic[0]), (HazardKind.Suv, _traffic[1]), (HazardKind.Tricycle, _traffic[2]), (HazardKind.Motorcycle, _traffic[3]),
+            (HazardKind.Bus, _traffic[4] * (0.6f + d)), (HazardKind.Truck, _traffic[5] * (0.6f + d * 0.8f)),
         });
 
         private HazardKind RandomStatic() => _rng.Weighted(new (HazardKind, float)[]
@@ -233,6 +240,30 @@ namespace JeepneyRush.Logic
             return PassableAt(speed) && (later - speed < 0.25f || PassableAt(later));
         }
 
+        private bool TryPlacePowerUp(float z, float distance, float speed)
+        {
+            _blockers.Clear();
+            _sink.CollectBlockers(_blockers);
+            LaneOccupancy.BlockedIntervals(_blockers, speed, MaxHorizon, _cfg.playerHalfLength, _intervals);
+            foreach (var b in _blockers)
+                if (b.Jumpable)
+                {
+                    float tj = -b.Z / Math.Max(1f, speed);
+                    _intervals.Add(new LaneInterval { Lane = b.Lane, T0 = tj - 0.4f, T1 = tj + 0.4f });
+                }
+            float t = -z / Math.Max(1f, speed);
+            int start = _rng.Int(0, _cfg.laneCount - 1);
+            for (int i = 0; i < _cfg.laneCount; i++)
+            {
+                int l = (start + i) % _cfg.laneCount;
+                if (!LaneOccupancy.LaneClear(_intervals, l, t - 0.5f, t + 0.5f) || Reserved(l, distance - z, 3)) continue;
+                _sink.SpawnPowerUp(PowerUpState.RandomKind(_rng), l, z);
+                PowerUpsPlaced++;
+                return true;
+            }
+            return false;
+        }
+
         private bool PassableAt(float speed)
         {
             // horizon covers every known blocker: a new row can push the player into a lane an older row closes later
@@ -249,6 +280,11 @@ namespace JeepneyRush.Logic
 
         private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool jumpWall)
         {
+            if (Cursor - gap >= _nextPowerUpAt && TryPlacePowerUp(rowZ - gap * 0.5f, distance, speed))
+            {
+                _nextPowerUpAt = Cursor + _rng.Range(_cfg.powerUpSpacingMin, _cfg.powerUpSpacingMax);
+                return;
+            }
             if (jumpWall && _rng.Chance(0.8))
             {
                 // special formation: an arc over the wall

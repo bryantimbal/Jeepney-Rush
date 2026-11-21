@@ -109,54 +109,89 @@ namespace JeepneyRush.Tests
 
     public class PassengerTests
     {
-        [Test]
-        public void BoardsUpToCapacity()
+        private static PassengerRoute Route(int capacity = 5, int seed = 1)
         {
-            var cfg = new BalanceConfig();
-            var r = new PassengerRoute(cfg, new GameRandom(1));
+            var cfg = new BalanceConfig { passengerCapacity = capacity };
+            return new PassengerRoute(cfg, new GameRandom(seed));
+        }
+
+        [Test]
+        public void BoardsUpToCapacityWithFutureDestinations()
+        {
+            var r = Route();
             var a = r.Plan(100, -1, 0, 4);
-            var b = r.Plan(300, 1, 2, 4);
+            r.Plan(300, 1, 2, 4);
+            r.Plan(500, 1, 2, 4);
             var res = r.Serve(a);
             Assert.AreEqual(4, res.Boarded);
             Assert.AreEqual(4, r.Count);
-            Assert.AreEqual(4 * cfg.pickupCoins, res.Coins);
-            var res2 = r.Serve(b);
-            Assert.LessOrEqual(r.Count, cfg.passengerCapacity);
-            Assert.AreEqual(4 - res2.Alighted + res2.Boarded, r.Count);
+            Assert.AreEqual(0, r.AlightingAt(a.Id));
         }
 
         [Test]
-        public void FullJeepneyLeavesCommutersBehind()
+        public void CapacityIsEnforced()
         {
-            var cfg = new BalanceConfig { minRideStops = 5, maxRideStops = 5 };
-            var r = new PassengerRoute(cfg, new GameRandom(2));
-            r.Serve(r.Plan(100, -1, 0, 4));
-            var res = r.Serve(r.Plan(300, -1, 0, 4));
-            Assert.AreEqual(1, res.Boarded);
-            Assert.AreEqual(3, res.LeftBehind);
+            var r = Route(capacity: 3);
+            var a = r.Plan(100, -1, 0, 4);
+            r.Plan(300, 1, 2, 0);
+            var res = r.Serve(a);
+            Assert.AreEqual(3, res.Boarded);
+            Assert.AreEqual(1, res.LeftBehind);
             Assert.IsTrue(res.Full);
-            Assert.AreEqual(5, r.Count);
         }
 
         [Test]
-        public void RidersAlightAfterTheirStops()
+        public void DeliveringPaysFaresGroupBonusAndStreak()
         {
-            var cfg = new BalanceConfig { minRideStops = 1, maxRideStops = 1 };
-            var r = new PassengerRoute(cfg, new GameRandom(3));
-            r.Serve(r.Plan(100, -1, 0, 3));
-            var res = r.Serve(r.Plan(300, 1, 2, 0));
+            var cfg = new BalanceConfig();
+            var r = new PassengerRoute(cfg, new GameRandom(5));
+            var a = r.Plan(100, -1, 0, 3);
+            var b = r.Plan(300, 1, 2, 0); // the only future stop: everyone rides to b
+            r.Serve(a);
+            var res = r.Serve(b);
             Assert.AreEqual(3, res.Alighted);
+            Assert.AreEqual(3 * cfg.fareCoins + 2 * cfg.groupBonusCoins, res.Coins);
+            Assert.AreEqual(1, res.Streak);
+            Assert.AreEqual(3, r.Delivered);
             Assert.AreEqual(0, r.Count);
-            Assert.AreEqual(3, r.PickedUp);
         }
 
         [Test]
-        public void MissingAStopKeepsRidersAboard()
+        public void PassengerBonusDoublesFares()
         {
-            var r = new PassengerRoute(new BalanceConfig(), new GameRandom(4));
-            r.Serve(r.Plan(100, -1, 0, 2));
-            r.Miss(r.Plan(300, 1, 2, 3));
-            Assert.AreEqual(2, r.Count);
+            var cfg = new BalanceConfig();
+            var r = new PassengerRoute(cfg, new GameRandom(5)) { FareMultiplier = 2f };
+            var a = r.Plan(100, -1, 0, 1);
+            var b = r.Plan(300, 1, 2, 0);
+            r.Serve(a);
+            Assert.AreEqual(cfg.fareCoins * 2, r.Serve(b).Coins);
+        }
+
+        [Test]
+        public void MissingAStopLosesRidersAndResetsStreak()
+        {
+            var r = Route();
+            var a = r.Plan(100, -1, 0, 2);
+            var b = r.Plan(300, 1, 2, 0);
+            r.Serve(a);
+            Assert.AreEqual(2, r.Miss(b));
+            Assert.AreEqual(0, r.Streak);
+            Assert.AreEqual(2, r.Missed);
+            Assert.AreEqual(0, r.Count);
+        }
+
+        [Test]
+        public void StopNamesComeFromTheEnvironment()
+        {
+            var cfg = new BalanceConfig();
+            var r = new PassengerRoute(cfg, new GameRandom(9), StopNames.ForEnvironment(EnvironmentKind.Beach));
+            for (int i = 0; i < 10; i++)
+            {
+                var s = r.Plan(i * 300, 1, 2, 1);
+                Assert.That(s.NameIndex, Is.InRange(26, 31));
+                Assert.AreEqual(StopNames.All[s.NameIndex], s.Name);
+                r.Miss(s);
+            }
         }
     }
 
@@ -189,12 +224,12 @@ namespace JeepneyRush.Tests
         public void RunProgressNeverLowersBests()
         {
             var d = new SaveData();
-            var (s1, d1) = Progress.Apply(d, new RunSummary { Score = 500, Distance = 300, Coins = 10, Passengers = 2, Crashed = true });
-            Assert.IsTrue(s1 && d1);
-            var (s2, _) = Progress.Apply(d, new RunSummary { Score = 100, Distance = 50, Coins = 5 });
-            Assert.IsFalse(s2);
+            var r1 = Progress.Apply(d, new RunSummary { Score = 500, Distance = 300, Coins = 10, Passengers = 2, Crashed = true });
+            Assert.IsTrue(r1.NewBestScore && r1.NewBestDistance);
+            var r2 = Progress.Apply(d, new RunSummary { Score = 100, Distance = 50, Coins = 5 });
+            Assert.IsFalse(r2.NewBestScore);
             Assert.AreEqual(500, d.bestScore);
-            Assert.AreEqual(15, d.coins);
+            Assert.AreEqual(15 + r1.LevelReward + r2.LevelReward, d.coins);
             Assert.AreEqual(2, d.runs);
             Assert.AreEqual(1, d.crashes);
         }

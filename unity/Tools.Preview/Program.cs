@@ -13,7 +13,7 @@ var models = new List<(string name, MeshData mesh)>();
 foreach (var l in JeepneyCatalog.All)
 {
     var full = JeepneyBuilder.Build(l);
-    var wheel = JeepneyBuilder.BuildWheel();
+    var wheel = JeepneyBuilder.BuildWheel(null, l.Chrome);
     foreach (var wp in JeepneyBuilder.WheelPositions) MeshOps.Append(full, wheel, wp);
     models.Add(("jeepney_" + l.Id, full));
 }

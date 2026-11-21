@@ -26,6 +26,9 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("shed", PropBuilder.WaitingShed());
             yield return ("stop_sign", PropBuilder.StopSign(0));
             yield return ("chunk", SceneryBuilder.ManilaChunk(1000, true));
+            yield return ("chunk_provincial", SceneryProvinces.Provincial(2000, true));
+            yield return ("chunk_beach", SceneryProvinces.Beach(3000, true));
+            foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind))) yield return ("pu_" + k, PropBuilder.PowerUp(k));
         }
     }
 }

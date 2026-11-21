@@ -45,10 +45,33 @@ namespace JeepneyRush.Logic
         public float stopSpacingMax = 320f;
         public float stopZoneLength = 16f;
 
-        // --- passengers
+        // --- player controls (Phase 2: hold-to-accelerate / hold-to-brake buttons)
+        public float gasMultiplier = 1.3f;
+        public float gasScoreMultiplier = 1.5f;
+        public float brakeHoldMultiplier = 0.45f;
+
+        // --- passengers (Phase 2: destinations, fares, delivery streaks)
         public int passengerCapacity = 5;
         public int minRideStops = 1;
         public int maxRideStops = 3;
+        public int fareCoins = 5;
+        public int groupBonusCoins = 2;
+        public float streakStep = 0.25f;
+        public float streakMax = 3f;
+        public int scorePerDelivery = 100;
+
+        // --- power-ups
+        public float powerUpSpacingMin = 320f;
+        public float powerUpSpacingMax = 560f;
+        public float magnetDuration = 10f;
+        public float magnetRadius = 9f;
+        public float shieldDuration = 20f;
+        public float turboDuration = 5f;
+        public float turboSpeedMultiplier = 1.6f;
+        public float doubleCoinsDuration = 15f;
+        public float passengerBonusDuration = 20f;
+        public float passengerBonusMultiplier = 2f;
+        public int repairKitFallbackCoins = 25;
 
         // --- rewards & score
         public int coinValue = 1;
@@ -56,6 +79,15 @@ namespace JeepneyRush.Logic
         public float scorePerMetre = 1f;
         public int scorePerCoin = 10;
         public int scorePerPassenger = 50;
+
+        /// <summary>Deep copy (upgrades and jeepney stats are applied to a copy, never the asset).</summary>
+        public BalanceConfig Clone()
+        {
+            var c = (BalanceConfig)MemberwiseClone();
+            c.difficultyDistances = (float[])difficultyDistances?.Clone();
+            c.difficultyValues = (float[])difficultyValues?.Clone();
+            return c;
+        }
 
         public float LaneX(int lane) => (lane - (laneCount - 1) * 0.5f) * laneSpacing;
 

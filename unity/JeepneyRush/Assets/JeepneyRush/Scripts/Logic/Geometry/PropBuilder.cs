@@ -1,4 +1,5 @@
 using System;
+using JeepneyRush.Logic;
 
 namespace JeepneyRush.Logic.Geometry
 {
@@ -93,6 +94,69 @@ namespace JeepneyRush.Logic.Geometry
             var b = new MeshBuilder();
             b.Cylinder("glow", color, 0f, 0.55f, 0.8f, 4, 0, 0, 0, new Rot((float)Math.PI, 0, 0));
             b.Box("glow", color, 0.36f, 0.7f, 0.36f, 0, 0.7f, 0);
+            return b.Data;
+        }
+
+        /// <summary>Floating power-up pickup (rotates in game): glowing ring + an icon shape per kind.</summary>
+        public static MeshData PowerUp(PowerUpKind k)
+        {
+            var b = new MeshBuilder();
+            string ring = k == PowerUpKind.Magnet ? "#FF4D6D" : k == PowerUpKind.Shield ? "#4CC9F0" : k == PowerUpKind.Turbo ? "#FF9F1C"
+                : k == PowerUpKind.DoubleCoins ? "#FFD60A" : k == PowerUpKind.PassengerBonus ? "#2BFF88" : "#FF3B30";
+            // glowing halo ring standing upright, facing the player
+            var halo = new[] { new V2(0.62f, -0.06f), new V2(0.72f, -0.06f), new V2(0.72f, 0.06f), new V2(0.62f, 0.06f), new V2(0.62f, -0.06f) };
+            b.Lathe("glow", ring, halo, 24, 0, 0, 0, new Rot((float)(Math.PI / 2), 0, 0), false);
+            switch (k)
+            {
+                case PowerUpKind.Magnet:
+                    b.Box("paint", "#E63946", 0.16f, 0.5f, 0.16f, -0.22f, 0.05f, 0);
+                    b.Box("paint", "#E63946", 0.16f, 0.5f, 0.16f, 0.22f, 0.05f, 0);
+                    b.Box("paint", "#E63946", 0.6f, 0.16f, 0.16f, 0, -0.2f, 0);
+                    b.Box("chrome", "#E6EBF2", 0.17f, 0.14f, 0.17f, -0.22f, 0.36f, 0);
+                    b.Box("chrome", "#E6EBF2", 0.17f, 0.14f, 0.17f, 0.22f, 0.36f, 0);
+                    break;
+                case PowerUpKind.Shield:
+                    b.Sphere("glass", "#4CC9F0", 0.42f, 0, 0, 0, 12, 1, 1.1f, 0.35f);
+                    b.Box("paint", "#FFFFFF", 0.08f, 0.4f, 0.2f, 0, 0, 0.02f);
+                    b.Box("paint", "#FFFFFF", 0.3f, 0.08f, 0.2f, 0, 0.06f, 0.02f);
+                    break;
+                case PowerUpKind.Turbo:
+                    for (int i = 0; i < 2; i++)
+                    {
+                        b.Box("glow", "#FF9F1C", 0.42f, 0.12f, 0.12f, -0.14f, 0.12f - i * 0.0f + 0.05f, -0.1f + i * 0.2f, new Rot(0, 0, 0.8f));
+                        b.Box("glow", "#FFD166", 0.42f, 0.12f, 0.12f, 0.14f, 0.17f, -0.1f + i * 0.2f, new Rot(0, 0, -0.8f));
+                    }
+                    b.Cylinder("paint", "#FF6B35", 0.0f, 0.22f, 0.45f, 8, 0, -0.18f, 0);
+                    break;
+                case PowerUpKind.DoubleCoins:
+                    foreach (var (x, y) in new[] { (-0.14f, -0.1f), (0.14f, 0.1f) })
+                    {
+                        b.Cylinder("gold", "#FFC928", 0.3f, 0.3f, 0.08f, 18, x, y, 0, new Rot((float)(Math.PI / 2), 0, 0));
+                        b.Cylinder("gold", "#E0A800", 0.2f, 0.2f, 0.1f, 18, x, y, 0, new Rot((float)(Math.PI / 2), 0, 0));
+                    }
+                    break;
+                case PowerUpKind.PassengerBonus:
+                    b.Push(new V3(0, -0.5f, 0), Rot.None, 0.6f);
+                    AddPerson(b, 4, false);
+                    b.Pop();
+                    b.Box("glow", "#2BFF88", 0.12f, 0.34f, 0.12f, 0.36f, 0.2f, 0);
+                    b.Box("glow", "#2BFF88", 0.34f, 0.12f, 0.12f, 0.36f, 0.2f, 0);
+                    break;
+                default: // repair kit
+                    b.Box("paint", "#D62828", 0.6f, 0.42f, 0.32f, 0, 0, 0);
+                    b.Box("paint", "#FFFFFF", 0.14f, 0.3f, 0.34f, 0, 0, 0);
+                    b.Box("paint", "#FFFFFF", 0.3f, 0.14f, 0.34f, 0, 0, 0);
+                    b.Box("paint", "#333333", 0.26f, 0.06f, 0.1f, 0, 0.25f, 0);
+                    break;
+            }
+            return b.Data;
+        }
+
+        /// <summary>Translucent shield bubble around the jeepney (unit sphere scaled in game).</summary>
+        public static MeshData Bubble()
+        {
+            var b = new MeshBuilder();
+            b.Sphere("bubble", "#7FDBFF", 1f, 0, 0, 0, 16);
             return b.Data;
         }
 
