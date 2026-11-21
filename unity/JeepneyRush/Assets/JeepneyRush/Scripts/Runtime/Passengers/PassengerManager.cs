@@ -147,7 +147,7 @@ namespace JeepneyRush
                     lp.y = SceneryBuilder.SidewalkHeight + (s.Done ? 0 : Mathf.Max(0, Mathf.Sin(_time * 6f + w)) * 0.12f); // hop & wave "Para!"
                     t.localPosition = lp;
                 }
-                if (!s.Done && p.z + half < -_cfg.playerHalfLength)
+                if (!s.Done && StopRules.OutOfReach(p.z, _cfg)) // still reachable by reversing until then
                 {
                     s.Done = true;
                     s.Arrow.gameObject.SetActive(false);

@@ -725,7 +725,7 @@ namespace JeepneyRush
             int dist = Mathf.FloorToInt(score.Distance);
             if (dist != _lastDist) { _lastDist = dist; _distance.text = $"{dist:N0} m"; }
             if (score.Coins != _lastCoins) { _lastCoins = score.Coins; _coins.text = score.Coins.ToString("N0"); }
-            int kmh = Mathf.RoundToInt(s.Speed * 3.6f);
+            int kmh = Mathf.RoundToInt(Mathf.Abs(s.Speed) * 3.6f);
             if (kmh != _lastSpeed) { _lastSpeed = kmh; _speed.text = kmh.ToString(); }
             var c = s.Player.Collisions;
             if (c.Health != _lastHealth)

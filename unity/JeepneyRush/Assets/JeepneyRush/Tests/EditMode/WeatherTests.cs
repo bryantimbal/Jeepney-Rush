@@ -87,10 +87,15 @@ namespace JeepneyRush.Tests
             var c = new BalanceConfig();
             Assert.IsTrue(StopRules.Stopped(0f, c));
             Assert.IsFalse(StopRules.Stopped(3f, c));
-            Assert.IsTrue(StopRules.InZone(2f, 1, false, 1, c));
-            Assert.IsFalse(StopRules.InZone(2f, 0, false, 1, c), "wrong lane");
-            Assert.IsFalse(StopRules.InZone(2f, 1, true, 1, c), "still changing lanes");
-            Assert.IsFalse(StopRules.InZone(c.stopZoneLength, 1, false, 1, c), "zone still ahead");
+            float zx = c.LaneX(2);
+            Assert.IsTrue(StopRules.InZone(2f, zx, zx, c), "parked in the box");
+            Assert.IsTrue(StopRules.InZone(0f, (c.LaneX(1) + zx) / 2f, zx, c), "straddling the lane line still counts");
+            Assert.IsTrue(StopRules.InZone(c.stopZoneLength / 2f + c.playerHalfLength, zx, zx, c), "front bumper just on the line");
+            Assert.IsTrue(StopRules.InZone(-(c.stopZoneLength / 2f + c.playerHalfLength), zx, zx, c), "rolled a bit past");
+            Assert.IsFalse(StopRules.InZone(0f, c.LaneX(1), zx, c), "fully in the next lane");
+            Assert.IsFalse(StopRules.InZone(c.stopZoneLength + 6f, zx, zx, c), "zone still well ahead");
+            Assert.IsFalse(StopRules.OutOfReach(-20f, c), "can still reverse back");
+            Assert.IsTrue(StopRules.OutOfReach(-60f, c));
             Assert.Greater(StopRules.LoadTime(new PickupResult { Boarded = 3, Alighted = 2 }, c), StopRules.LoadTime(new PickupResult { Boarded = 1 }, c));
         }
 

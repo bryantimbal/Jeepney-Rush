@@ -211,7 +211,8 @@ namespace JeepneyRush
 
         public void Scroll(float dz)
         {
-            if (dz <= 0) return;
+            if (dz < 0) { ScrollBack(-dz); return; }
+            if (dz == 0) return;
             _scroll += dz;
             Offset(_road, 0, dz / RoadTexMetres);
             Offset(_sidewalk, 0, dz / 2f);
@@ -229,6 +230,30 @@ namespace JeepneyRush
                     farthest += SceneryBuilder.ChunkLength;
                     Place(farthest);
                 }
+            }
+        }
+
+        /// <summary>Reversing: the street moves forward again; recycle the farthest segment to behind.</summary>
+        private void ScrollBack(float dz)
+        {
+            _scroll -= dz;
+            Offset(_road, 0, -dz / RoadTexMetres);
+            Offset(_sidewalk, 0, -dz / 2f);
+            Offset(_curb, -dz / 4f, 0);
+            float nearest = float.MaxValue;
+            RoadSegment far = null;
+            foreach (var s in _active)
+            {
+                s.MoveBy(-dz);
+                float z = s.transform.localPosition.z;
+                nearest = Mathf.Min(nearest, z);
+                if (far == null || z > far.transform.localPosition.z) far = s;
+            }
+            if (far != null && nearest - SceneryBuilder.ChunkLength / 2f > -RoadNear)
+            {
+                var p = far.transform.localPosition;
+                p.z = nearest - SceneryBuilder.ChunkLength;
+                far.transform.localPosition = p;
             }
         }
 

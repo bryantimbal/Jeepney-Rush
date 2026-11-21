@@ -10,6 +10,8 @@ namespace JeepneyRush
         private float _scoreFloat;
 
         public float Distance { get; private set; }
+        /// <summary>Farthest point reached (reversing moves <see cref="Distance"/> back but never this).</summary>
+        public float MaxDistance { get; private set; }
         public int Score => Mathf.FloorToInt(_scoreFloat);
         public int Coins { get; private set; }
         public int Passengers { get; private set; }
@@ -22,7 +24,7 @@ namespace JeepneyRush
 
         public void ResetRun()
         {
-            Distance = 0;
+            Distance = MaxDistance = 0;
             _scoreFloat = 0;
             Coins = 0;
             Passengers = 0;
@@ -31,7 +33,10 @@ namespace JeepneyRush
         public void AddDistance(float metres, float scoreMultiplier = 1f)
         {
             Distance += metres;
-            _scoreFloat += metres * _cfg.scorePerMetre * scoreMultiplier;
+            if (Distance <= MaxDistance) return; // reversing / driving back over ground already scored
+            float fresh = Distance - MaxDistance;
+            MaxDistance = Distance;
+            _scoreFloat += fresh * _cfg.scorePerMetre * scoreMultiplier;
         }
 
         public void AddCoins(int value)

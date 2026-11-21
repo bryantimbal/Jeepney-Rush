@@ -60,7 +60,8 @@ namespace JeepneyRush
                 h.Age += dt;
                 var p = h.transform.localPosition;
                 // traffic behind the jeepney never drives into it (it waits when the jeepney stops)
-                float vs = p.z < 0 ? Mathf.Min(h.Speed, playerSpeed) : h.Speed;
+                // (parked cars and road works stay put – the reversing sensor stops the jeepney before them)
+                float vs = p.z < 0 && h.Speed > 0 ? Mathf.Min(h.Speed, playerSpeed) : h.Speed;
                 p.z -= (playerSpeed - vs) * dt;
                 if (h.KnockVelocity != Vector3.zero || h.KnockSpin != 0)
                 {

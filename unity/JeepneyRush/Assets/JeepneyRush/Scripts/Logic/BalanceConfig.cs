@@ -61,6 +61,13 @@ namespace JeepneyRush.Logic
         public float loadTimePerPassenger = 0.3f;
         /// <summary>Braking while crossing a hump is smooth unless faster than this fraction of base speed.</summary>
         public float humpBrakingFraction = 0.9f;
+        /// <summary>Keep holding BRAKE this long at a standstill and the jeepney starts reversing.</summary>
+        public float reverseDelay = 0.6f;
+        /// <summary>Top reversing speed (m/s) and how far back (m) you may reverse from the farthest point reached.</summary>
+        public float reverseSpeed = 4f;
+        public float reverseLimit = 25f;
+        /// <summary>Extra slack (m) around the painted PARA box that still counts as "in the zone".</summary>
+        public float zoneSlack = 1.5f;
 
         // --- passengers (Phase 2: destinations, fares, delivery streaks)
         public int passengerCapacity = 5;

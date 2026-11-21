@@ -19,6 +19,7 @@ namespace JeepneyRush
         public Vector3 HeadPosition => _root.transform.position + new Vector3(0, 2.6f, 0);
         /// <summary>Raised once when the checkpoint passes the jeepney.</summary>
         public System.Action Passed;
+        private bool _passed;
 
         public void Init()
         {
@@ -43,6 +44,7 @@ namespace JeepneyRush
         /// <param name="side">-1 = left sidewalk, +1 = right sidewalk.</param>
         public void Spawn(int side, float z)
         {
+            _passed = false;
             Active = true;
             _cooldown = EnforcerRules.Cooldown;
             float x = side * (SceneryBuilder.RoadHalfWidth + 0.8f);
@@ -63,7 +65,7 @@ namespace JeepneyRush
             bool phase = Mathf.FloorToInt(_t * 6f) % 2 == 0;
             _red.SetActive(phase);
             _blue.SetActive(!phase);
-            if (before > 0 && p.z <= 0) Passed?.Invoke();
+            if (before > 0 && p.z <= 0 && !_passed) { _passed = true; Passed?.Invoke(); } // once, even if the jeepney reverses
             if (p.z < -25f)
             {
                 Active = false;

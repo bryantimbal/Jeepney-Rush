@@ -39,7 +39,7 @@ namespace JeepneyRush
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
         private bool _gasWas;
-        private float _revCooldown, _dwell, _loadT;
+        private float _revCooldown, _dwell, _loadT, _stillT, _beepT;
         private PassengerStopView _inZone;
         private bool _dying;
 
@@ -186,7 +186,7 @@ namespace JeepneyRush
             _smoothHumps = _hits = 0;
             _wetDistance = 0;
             _gasWas = false;
-            _dwell = _loadT = 0;
+            _dwell = _loadT = _stillT = _beepT = 0;
             _inZone = null;
             _dying = false;
             _camera.Snap(_player.transform.position);
@@ -258,14 +258,30 @@ namespace JeepneyRush
             {
                 // crashing, or passengers getting on/off: the jeepney stays put
                 _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * 2f * dt);
+                _stillT = 0; // after loading, BRAKE must be held again before reversing
             }
             else if (brakeHeld)
             {
-                // real brakes: decelerate all the way to a complete stop
-                _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt);
+                // real brakes: decelerate all the way to a complete stop ...
+                if (_speed > 0.05f || _stillT < _cfg.reverseDelay)
+                {
+                    _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt);
+                    _stillT = _speed <= 0.05f ? _stillT + dt : 0f;
+                }
+                else
+                {
+                    // ... and keep holding to back up (e.g. to a PARA stop you overshot)
+                    // stop reversing at the reverse limit, when back at a PARA zone, or right before
+                    // backing into something (parking sensor)
+                    bool room = _score.Distance > _score.MaxDistance - _cfg.reverseLimit && _inZone == null && ClearanceBehind() > 0.8f;
+                    _speed = Mathf.MoveTowards(_speed, room ? -_cfg.reverseSpeed : 0f, (room ? 3f : 12f) * dt);
+                    if (!room && _speed > -0.05f) _speed = 0;
+                }
             }
             else
             {
+                _stillT = 0;
+                if (_speed < 0) _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt); // stop reversing first
                 float target = _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
                 float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
                 _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
@@ -285,9 +301,20 @@ namespace JeepneyRush
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
-            if (wet > 0.3f) _wetDistance += dz;
+            if (wet > 0.3f && dz > 0) _wetDistance += dz;
             _score.AddDistance(dz, _player.GasHeld ? _cfg.gasScoreMultiplier : 1f);
-            _cleanDistance += dz;
+            if (dz > 0) _cleanDistance += dz;
+            if (_speed < -0.3f)
+            {
+                _beepT -= dt;
+                if (_beepT <= 0)
+                {
+                    float gap = ClearanceBehind();
+                    _beepT = gap < 3f ? 0.18f : gap < 7f ? 0.35f : 0.7f; // beeps faster near an obstacle
+                    Services.Audio.Play(Logic.Audio.Sfx.ReverseBeep, 0.6f);
+                }
+            }
+            else _beepT = 0;
             _bestClean = Mathf.Max(_bestClean, _cleanDistance);
             if (!_dying)
             {
@@ -317,6 +344,10 @@ namespace JeepneyRush
                 Services.UI.SetEnforcerBanner("SAKAY / BABA... HINTAY LANG");
             else if (_inZone != null)
                 Services.UI.SetEnforcerBanner("PARA! HOLD BRAKE · FULL STOP");
+            else if (_speed < -0.3f)
+                Services.UI.SetEnforcerBanner("ATRAS! (REVERSING)");
+            else if (next != null && nextZ < 0 && _route_HasBusiness(next) && _speed < 3f)
+                Services.UI.SetEnforcerBanner("LAGPAS SA PARA! HOLD BRAKE TO REVERSE");
             else if (next != null && nextZ > 0 && nextZ < 70f && _route_HasBusiness(next))
                 Services.UI.SetEnforcerBanner($"PARA ZONE {Mathf.CeilToInt(nextZ)} m · BRAKE TO STOP");
             else if (hump > 0 && hump < 75f)
@@ -334,6 +365,21 @@ namespace JeepneyRush
             _camera.Follow(_player.transform.position, _player.Lanes.VelocityX, s01, dt);
             Services.Audio.UpdateEngine(s01, _player.Braking, _player.GasHeld);
             if (!_dying) Services.UI.UpdateHud(this);
+        }
+
+        /// <summary>Free space (m) behind the jeepney's rear bumper before a solid obstacle in its path.</summary>
+        private float ClearanceBehind()
+        {
+            float best = 999f, x = _player.Lanes.X;
+            foreach (var list in new[] { _obstacles.Active, _traffic.Active })
+                foreach (var h in list)
+                {
+                    if (h.Hit || h.Def.Soft) continue;
+                    var p = h.transform.localPosition;
+                    if (p.z > 0 || Mathf.Abs(p.x - x) > h.Def.HalfWidth + _cfg.playerHalfWidth) continue;
+                    best = Mathf.Min(best, -p.z - h.Def.HalfLength - _cfg.playerHalfLength);
+                }
+            return best;
         }
 
         /// <summary>Distance (m) to the nearest speed hump ahead, or -1.</summary>
@@ -548,8 +594,8 @@ namespace JeepneyRush
             var lanes = _player.Lanes;
             _inZone = null;
             foreach (var s in _passengers.Stops)
-                if (!s.Done && StopRules.InZone(s.transform.localPosition.z, lanes.Lane, lanes.Changing, s.Stop.Lane, _cfg)) { _inZone = s; break; }
-            if (_inZone != null && StopRules.Stopped(_speed, _cfg))
+                if (!s.Done && StopRules.InZone(s.transform.localPosition.z, lanes.X, _cfg.LaneX(s.Stop.Lane), _cfg)) { _inZone = s; break; }
+            if (_inZone != null && Mathf.Abs(_speed) <= _cfg.stopSpeed)
             {
                 _dwell += dt;
                 if (_dwell >= _cfg.stopDwell)
@@ -616,7 +662,7 @@ namespace JeepneyRush
             var route = _passengers.Route;
             var summary = new RunSummary
             {
-                Score = _score.Score, Distance = _score.Distance, Coins = _score.Coins, Passengers = route.PickedUp,
+                Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Passengers = route.PickedUp,
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };
@@ -624,7 +670,7 @@ namespace JeepneyRush
             var d = Services.Save.Data;
             var result = new RunResult
             {
-                Score = _score.Score, Distance = _score.Distance, Coins = _score.Coins, Passengers = route.PickedUp, Deliveries = route.Delivered,
+                Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Passengers = route.PickedUp, Deliveries = route.Delivered,
                 NewBestScore = rewards.NewBestScore, NewBestDistance = rewards.NewBestDistance, BestScore = d.bestScore, BestDistance = d.bestDistance,
                 Rewards = rewards,
             };

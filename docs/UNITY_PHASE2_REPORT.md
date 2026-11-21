@@ -92,3 +92,11 @@ Tests: **65/65 pass**. New tests: weather schedule (starts sunny, smooth, no ear
 | Brake at a hump = smooth, no complaints | Crossing a hump **while braking** now counts as smooth (unless you're still faster than 90% of normal speed), just like crossing already slow. You get "DAHAN-DAHAN! +50" and happy riders. Passengers complain and may walk out **only** if you didn't slow down. |
 
 Tests: **68/68 pass**. New tests: braking-at-hump rules, board only when stopped in the zone's lane, and stopping distance. The compile check has 0 errors.
+
+## Update 5 – reversing back to a PARA stop, forgiving zone lines
+| Request | Change |
+|---|---|
+| Keep holding BRAKE to reverse back to the stop | After a full stop, **keep holding BRAKE for 0.6 s** and the jeepney backs up slowly (up to 4 m/s) with a truck-style **reversing beeper** and an "ATRAS!" banner. If you overshoot a stop, the banner says "LAGPAS SA PARA! HOLD BRAKE TO REVERSE". The jeepney stops on its own as soon as it touches the PARA zone, and the passengers board or get off. You can reverse up to 25 m behind the farthest point reached. A **parking sensor** beeps faster near an obstacle behind you and stops the reverse just before you touch it. Traffic behind gives way. Reversing never takes away score, and the run's distance is the farthest point reached. A stop only counts as missed ("LAGPAS!") once it's beyond reversing reach. |
+| Board even if not exactly inside the lines | The jeepney only has to **touch** the zone. It can stand on the painted lines, straddle the lane line (even mid lane change), or stop up to 1.5 m short of or past the box. |
+
+Tests: **68/68 pass**, and the zone test now covers straddling, bumper-on-the-line, rolling past and the reversing reach. The compile check has 0 errors.

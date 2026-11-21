@@ -103,9 +103,18 @@ namespace JeepneyRush.Logic
     {
         public static bool Stopped(float speed, BalanceConfig cfg) => speed <= cfg.stopSpeed;
 
-        /// <summary>Is the jeepney (centre at 0) inside the zone whose centre is <paramref name="zoneZ"/> ahead, in its lane?</summary>
-        public static bool InZone(float zoneZ, int playerLane, bool changingLane, int zoneLane, BalanceConfig cfg) =>
-            !changingLane && playerLane == zoneLane && Math.Abs(zoneZ) <= cfg.stopZoneLength / 2f;
+        /// <summary>
+        /// Is the jeepney touching the PARA zone? Any overlap counts – it may stand on the
+        /// lines, straddle two lanes or stop a little short / past the box (<see cref="BalanceConfig.zoneSlack"/>).
+        /// <paramref name="zoneZ"/> = zone centre ahead of the jeepney's centre, x = lateral positions.
+        /// </summary>
+        public static bool InZone(float zoneZ, float playerX, float zoneX, BalanceConfig cfg) =>
+            Math.Abs(playerX - zoneX) <= cfg.laneSpacing / 2f + cfg.playerHalfWidth &&
+            Math.Abs(zoneZ) <= cfg.stopZoneLength / 2f + cfg.playerHalfLength + cfg.zoneSlack;
+
+        /// <summary>A stop only counts as missed once it is behind the jeepney and out of reversing reach.</summary>
+        public static bool OutOfReach(float zoneZ, BalanceConfig cfg) =>
+            zoneZ < -(cfg.stopZoneLength / 2f + cfg.playerHalfLength + cfg.zoneSlack + cfg.reverseLimit);
 
         /// <summary>How long the jeepney waits while people get on and off.</summary>
         public static float LoadTime(PickupResult r, BalanceConfig cfg) =>

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -128,6 +128,11 @@ namespace JeepneyRush.Logic.Audio
                     return Synth.Normalize(b, 0.5f);
                 case Sfx.Rev:
                     return Rev();
+                case Sfx.ReverseBeep:
+                    // truck-style reversing alarm "beep"
+                    b = Synth.Buffer(0.4f);
+                    Synth.Tone(b, Synth.Wave.Square, 0, 0.32f, 1050, 1050, 0.5f, 0.004f, 3500);
+                    return Synth.Normalize(b, 0.45f);
                 case Sfx.Bump:
                     // tyres thumping over a speed hump + rattling body panels
                     b = Synth.Buffer(0.55f);
