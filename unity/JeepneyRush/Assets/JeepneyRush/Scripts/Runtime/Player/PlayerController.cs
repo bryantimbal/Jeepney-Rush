@@ -34,6 +34,9 @@ namespace JeepneyRush
         private bool _soundSystem;
         private readonly System.Collections.Generic.List<GameObject> _disco = new System.Collections.Generic.List<GameObject>();
         private int _discoBeat = int.MinValue;
+        // headlights: a soft beam on the road (all phones) + a real spot light on medium/high quality
+        private GameObject _beam;
+        private Light _headlight;
 
         public bool Braking => _brakeT > 0 || BrakeHeld;
         /// <summary>Set every frame by the session from the GAS / BRAKE hold controls.</summary>
@@ -92,6 +95,7 @@ namespace JeepneyRush
             _bodyModel = ModelLibrary.Instantiate(ModelLibrary.Jeepney(liveryId), "Jeepney_" + liveryId, Body);
             BuildBlinkers();
             BuildDisco();
+            BuildHeadlights();
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
@@ -99,6 +103,49 @@ namespace JeepneyRush
                 var w = ModelLibrary.Instantiate(ModelLibrary.WheelFor(liveryId), "Wheel" + i, transform);
                 w.transform.localPosition = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
                 _wheels[i] = w.transform;
+            }
+        }
+
+        private void BuildHeadlights()
+        {
+            if (_beam == null)
+            {
+                var model = ModelLibrary.Get("headlight_beam", () =>
+                {
+                    var b = new MeshBuilder();
+                    // 9 m wide, from 3.5 m to 27 m ahead of the jeepney, just above the road
+                    b.Quad("beam", new V3(-4.5f, 0.06f, 3.5f), new V3(-4.5f, 0.06f, 27f), new V3(4.5f, 0.06f, 27f), new V3(4.5f, 0.06f, 3.5f), V3.Up,
+                        new V2(0, 0), new V2(0, 1), new V2(1, 1), new V2(1, 0));
+                    return b.Data;
+                });
+                _beam = ModelLibrary.Instantiate(model, "HeadlightBeam", transform, castShadows: false);
+            }
+            if (_headlight == null && GraphicsQuality.Level >= 1)
+            {
+                var go = new GameObject("Headlight");
+                go.transform.SetParent(transform, false);
+                go.transform.localPosition = new Vector3(0, 1.3f, 3.2f);
+                go.transform.localRotation = Quaternion.Euler(14f, 0, 0);
+                _headlight = go.AddComponent<Light>();
+                _headlight.type = LightType.Spot;
+                _headlight.spotAngle = 70f;
+                _headlight.range = 34f;
+                _headlight.color = new Color(1f, 0.95f, 0.82f);
+                _headlight.shadows = LightShadows.None;
+                _headlight.intensity = 0;
+                _headlight.enabled = false;
+            }
+        }
+
+        private void UpdateHeadlights()
+        {
+            float n = MaterialLibrary.Night;
+            if (_beam != null && _beam.activeSelf != n > 0.02f) _beam.SetActive(n > 0.02f);
+            if (_headlight != null)
+            {
+                bool on = n > 0.05f;
+                if (_headlight.enabled != on) _headlight.enabled = on;
+                _headlight.intensity = n * 3.2f;
             }
         }
 
@@ -286,6 +333,7 @@ namespace JeepneyRush
             float bass = _soundSystem && Services.Audio != null ? Services.Audio.SoundTripPulse * 0.035f : 0f;
             Body.localPosition = new Vector3(0, shake + bass + Mathf.Max(-0.05f, _bumpY), 0);
             UpdateDisco();
+            UpdateHeadlights();
             // the nose points into the turn (steering), the body leans gently outward
             Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.7f + fishtail, _lean);
             UpdateSignals(dt);

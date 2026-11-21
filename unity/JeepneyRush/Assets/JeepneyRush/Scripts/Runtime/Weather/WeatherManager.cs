@@ -21,6 +21,26 @@ namespace JeepneyRush
         private float _baseSun, _baseShadow, _baseFogStart, _baseFogEnd, _baseExposure = 1f;
         private Color _baseFog, _baseAmbSky, _baseAmbEq, _baseAmbGround, _baseSkyTint;
         private float _lightningTimer, _flashT;
+        private float _night, _dusk, _sunHeight = 1f;
+        private Color _baseSunColor = Color.white;
+        private Quaternion _baseSunRot = Quaternion.Euler(52f, -35f, 0f);
+
+        public float Night => _night;
+
+        private static readonly Color NightFog = new Color(0.07f, 0.09f, 0.16f);
+        private static readonly Color DuskFog = new Color(0.98f, 0.64f, 0.45f);
+        private static readonly Color NightSky = new Color(0.05f, 0.07f, 0.16f);
+        private static readonly Color DuskSky = new Color(1f, 0.55f, 0.35f);
+        private static readonly Color MoonLight = new Color(0.62f, 0.72f, 1f);
+        private static readonly Color DuskLight = new Color(1f, 0.62f, 0.4f);
+
+        /// <summary>Time of day for the lighting (hour 0..24, see <see cref="DayNight"/>).</summary>
+        public void SetTimeOfDay(float hour)
+        {
+            _night = DayNight.Night(hour);
+            _dusk = DayNight.Dusk(hour);
+            _sunHeight = DayNight.SunHeight(hour);
+        }
         private WeatherKind _shownKind = (WeatherKind)(-1);
 
         public float Wetness { get; private set; }
@@ -45,6 +65,8 @@ namespace JeepneyRush
             _sun = RenderSettings.sun;
             _baseSun = _sun != null ? _sun.intensity : 1.6f;
             _baseShadow = _sun != null ? _sun.shadowStrength : 0.75f;
+            if (_sun != null) { _baseSunColor = _sun.color; _baseSunRot = _sun.transform.rotation; }
+            _night = _dusk = 0; _sunHeight = 1f;
             _baseFog = RenderSettings.fogColor;
             _baseFogStart = RenderSettings.fogStartDistance;
             _baseFogEnd = RenderSettings.fogEndDistance;
@@ -73,7 +95,10 @@ namespace JeepneyRush
         public void Stop()
         {
             if (_schedule == null) return;
+            _night = _dusk = 0; _sunHeight = 1f;
             Apply(0, 0);
+            if (_sun != null) { _sun.color = _baseSunColor; _sun.transform.rotation = _baseSunRot; }
+            MaterialLibrary.SetNight(0);
             _schedule = null;
             if (_rain != null) { var em = _rain.emission; em.rateOverTime = 0; _rain.Clear(); }
             Services.Audio?.SetRain(0);
@@ -179,23 +204,34 @@ namespace JeepneyRush
                 vel.x = new ParticleSystem.MinMaxCurve(-9f * wind - 1f, -4f * wind);
             }
             float k = wet; // 0 dry .. 1 typhoon
-            RenderSettings.fogColor = Color.Lerp(_baseFog, StormFog, Mathf.Clamp01(k * 1.1f));
-            RenderSettings.fogStartDistance = Mathf.Lerp(_baseFogStart, 35f, k);
-            RenderSettings.fogEndDistance = Mathf.Lerp(_baseFogEnd, 150f, k);
-            float dark = Mathf.Lerp(1f, 0.55f, k);
-            RenderSettings.ambientSkyColor = Color.Lerp(_baseAmbSky * dark, Color.white, flash);
-            RenderSettings.ambientEquatorColor = Color.Lerp(_baseAmbEq * dark, Color.white, flash);
+            float n = _night, du = _dusk * (1f - k * 0.8f); // no golden hour under storm clouds
+            var fog = Color.Lerp(_baseFog, StormFog, Mathf.Clamp01(k * 1.1f));
+            fog = Color.Lerp(fog, DuskFog, du * 0.5f);
+            RenderSettings.fogColor = Color.Lerp(fog, NightFog, n);
+            RenderSettings.fogStartDistance = Mathf.Lerp(Mathf.Lerp(_baseFogStart, 35f, k), 30f, n * 0.6f);
+            RenderSettings.fogEndDistance = Mathf.Lerp(Mathf.Lerp(_baseFogEnd, 150f, k), 150f, n);
+            float dark = Mathf.Lerp(1f, 0.55f, k) * Mathf.Lerp(1f, 0.3f, n);
+            var nightTint = Color.Lerp(Color.white, new Color(0.62f, 0.72f, 1f), n);
+            RenderSettings.ambientSkyColor = Color.Lerp(_baseAmbSky * dark * nightTint, Color.white, flash);
+            RenderSettings.ambientEquatorColor = Color.Lerp(Color.Lerp(_baseAmbEq, DuskLight, du * 0.35f) * dark * nightTint, Color.white, flash);
             RenderSettings.ambientGroundColor = _baseAmbGround * dark;
             if (_sun != null)
             {
-                _sun.intensity = Mathf.Lerp(_baseSun, _baseSun * 0.35f, k) + flash * 2.5f;
-                _sun.shadowStrength = Mathf.Lerp(_baseShadow, 0.2f, k);
+                // sun sinks for long evening shadows, then becomes soft blue moonlight
+                _sun.intensity = Mathf.Lerp(_baseSun, _baseSun * 0.35f, k) * Mathf.Lerp(1f, 0.16f, n) + flash * 2.5f;
+                _sun.shadowStrength = Mathf.Lerp(Mathf.Lerp(_baseShadow, 0.2f, k), 0.25f, n);
+                _sun.color = Color.Lerp(Color.Lerp(_baseSunColor, DuskLight, du), MoonLight, n);
+                var e = _baseSunRot.eulerAngles;
+                var day = Quaternion.Euler(Mathf.Lerp(14f, e.x, Mathf.Clamp01(_sunHeight * 1.6f)), e.y, 0);
+                _sun.transform.rotation = Quaternion.Slerp(day, Quaternion.Euler(48f, e.y + 140f, 0), n);
             }
             if (_sky != null)
             {
-                if (_sky.HasProperty("_SkyTint")) _sky.SetColor("_SkyTint", Color.Lerp(_baseSkyTint, StormSky, k));
-                if (_sky.HasProperty("_Exposure")) _sky.SetFloat("_Exposure", Mathf.Lerp(_baseExposure, _baseExposure * 0.45f, k) + flash * 1.5f);
+                var tint = Color.Lerp(Color.Lerp(_baseSkyTint, StormSky, k), DuskSky, du * 0.8f);
+                if (_sky.HasProperty("_SkyTint")) _sky.SetColor("_SkyTint", Color.Lerp(tint, NightSky, n));
+                if (_sky.HasProperty("_Exposure")) _sky.SetFloat("_Exposure", Mathf.Lerp(_baseExposure, _baseExposure * 0.45f, k) * Mathf.Lerp(1f, 0.14f, n) + flash * 1.5f);
             }
+            MaterialLibrary.SetNight(n);
             if (_cam != null && _cam.clearFlags == CameraClearFlags.SolidColor)
                 _cam.backgroundColor = RenderSettings.fogColor;
             _road?.SetWetness(Mathf.Clamp01(wet * 1.4f));

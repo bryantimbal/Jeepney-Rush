@@ -56,9 +56,10 @@ namespace JeepneyRush.Tests
             var world = new MockWorld();
             var route = new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env));
             var weather = new WeatherSchedule(seed, env);
-            var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt);
+            var jams = new JamSchedule(seed, env);
+            var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt, jams.At);
             const float dt = 1f / 30f;
-            float distance = 0;
+            float distance = 0, speed = -1;
             int lane = 1, from = 1;
             float laneT = 1, x = cfg.LaneX(1), laneDur = cfg.laneChangeDuration;
             var hits = new List<string>();
@@ -71,10 +72,11 @@ namespace JeepneyRush.Tests
 
             while (distance < metres)
             {
-                float speed = cfg.SpeedAt(distance);
+                float target = cfg.SpeedAt(distance) * JamRules.SpeedCap(jams.At(distance)); // the jeepney crawls in a jam
+                speed = speed < 0 ? target : speed > target ? Math.Max(target, speed - JamRules.CapDecel * dt) : Math.Min(target, speed + JamRules.CapAccel * dt);
                 world.Lanes = laneT < 1 ? new[] { from, lane } : new[] { lane };
                 director.Update(distance, speed);
-                foreach (var o in world.Objs) o.Z += (speed - o.Speed) * dt;
+                foreach (var o in world.Objs) o.Z += (speed - (o.Z > 0 && o.Speed > 0 ? Math.Min(o.Speed, speed) : o.Speed)) * dt; // like the game: traffic behind waits
                 world.Objs.RemoveAll(o => o.Z > cfg.despawnBehind + 6);
                 for (int i = 0; i < world.Stops.Count; i++)
                 {
@@ -132,15 +134,17 @@ namespace JeepneyRush.Tests
                 if (laneT >= 1)
                 {
                     // slippery road: steering takes longer when wet
-                    laneDur = cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, weather.WetnessAt(distance));
+                    laneDur = cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, Math.Max(weather.WetnessAt(distance), weather.WetnessAt(distance + 60))); // plan for the rain that's coming
                     int move = (int)Math.Ceiling(laneDur / step);
                     int best = -1;
-                    foreach (bool cautious in new[] { true, false })
+                    // speeding up after a jam: a sensible driver plans for the speed it's about to have
+                    var plans = target > speed + 0.5f ? new[] { (true, Math.Min(target, speed + 3f)), (true, speed), (false, Math.Min(target, speed + 3f)), (false, speed) } : new[] { (true, speed), (false, speed) };
+                    foreach (var (cautious, pv) in plans)
                     {
                         blockers.Clear();
                         world.CollectBlockers(blockers);
                         if (cautious) for (int i = 0; i < blockers.Count; i++) { var b = blockers[i]; b.Soft = false; blockers[i] = b; }
-                        LaneOccupancy.BlockedIntervals(blockers, speed, 30.5f, cfg.playerHalfLength, ivs);
+                        LaneOccupancy.BlockedIntervals(blockers, pv, 30.5f, cfg.playerHalfLength, ivs);
                         var free = new int[horizonSteps + maxMove + 1];
                         for (int k = 0; k < free.Length; k++) free[k] = 7;
                         foreach (var iv in ivs)
@@ -168,6 +172,11 @@ namespace JeepneyRush.Tests
                                 if (n >= 0 && n <= 2 && Clear(lane, 0, move) && Clear(n, 0, move) && (alive[move] & (1 << n)) != 0) { best = n; break; }
                         if (best >= 0) break;
                     }
+                    if (Environment.GetEnvironmentVariable("DEBUG_FROM") is string df && Environment.GetEnvironmentVariable("DEBUG_SEED") == seed.ToString() && distance > float.Parse(df) && distance < float.Parse(df) + 40)
+                    {
+                        Console.WriteLine($"@{distance:0.0} v={speed:0.0} lane={lane} best={best}");
+                        foreach (var q in world.Objs) if (q.Z > -400 && q.Z < 15) Console.WriteLine($"     {q.Kind} L{q.Lane} z={q.Z:0.0} v={q.Speed:0.0}");
+                    }
                     if (best >= 0 && best != lane) { from = lane; lane = best; laneT = 0; }
                 }
                 if (laneT < 1) laneT = Math.Min(1, laneT + dt / laneDur);
@@ -185,8 +194,8 @@ namespace JeepneyRush.Tests
                         hits.Add($"{o.Kind}@{distance:0}m");
                         if (Environment.GetEnvironmentVariable("DEBUG_SIM") == "1")
                         {
-                            Console.WriteLine($"HIT {o.Kind} L{o.Lane} z={o.Z:0.0} | bot lane={lane} from={from} laneT={laneT:0.00} y={y:0.00} v={speed:0.0}");
-                            foreach (var q in world.Objs) if (q.Z > -60 && q.Z < 12) Console.WriteLine($"   {q.Kind} L{q.Lane} z={q.Z:0.0} v={q.Speed:0.0} solid={q.Solid}");
+                            Console.WriteLine($"HIT {o.Kind} L{o.Lane} z={o.Z:0.0} | bot lane={lane} from={from} laneT={laneT:0.00} y={y:0.00} v={speed:0.0} target={target:0.0} jam={jams.At(distance):0.00} at={distance:0}");
+                            foreach (var q in world.Objs) if (q.Z > -60 && q.Z < 40) Console.WriteLine($"   {q.Kind} L{q.Lane} z={q.Z:0.0} v={q.Speed:0.0} solid={q.Solid}");
                         }
                     }
                 }
@@ -196,6 +205,7 @@ namespace JeepneyRush.Tests
 
         [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
         [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(8)]
+        [TestCase(11)] [TestCase(12)] [TestCase(13)] [TestCase(18)] [TestCase(19)] [TestCase(20)]
         public void SkilledBotSurvivesFourKilometres(int seed)
         {
             var env = (EnvironmentKind)(seed % Environments.All.Length);
@@ -217,13 +227,30 @@ namespace JeepneyRush.Tests
             }
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
-            Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : 4, "too few intersections in 4 km");
+            Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : env == EnvironmentKind.Edsa ? 2 : 4, "too few intersections in 4 km");
             var cfg = new BalanceConfig();
             for (int i = 0; i < world.Stations.Count; i++)
             {
                 float prev = i == 0 ? 0 : world.Stations[i - 1].station.At;
                 Assert.Less(world.Stations[i].station.At - prev, FuelTank.RangeOnGas(cfg) - 100f, "stations too far apart for a full tank");
             }
+        }
+
+        /// <summary>Long sweep over many seeds and every route (run explicitly: JR_SWEEP=1).</summary>
+        [Test]
+        public void SweepManySeeds()
+        {
+            if (Environment.GetEnvironmentVariable("JR_SWEEP") != "1") Assert.Ignore("set JR_SWEEP=1 to run the long sweep");
+            var bad = new List<string>();
+            var only = Environment.GetEnvironmentVariable("JR_SWEEP_SEED");
+            for (int seed = 21; seed <= 160; seed++)
+            {
+                if (only != null && only != seed.ToString()) continue;
+                var env = (EnvironmentKind)(seed % Environments.All.Length);
+                var r = Simulate(seed, 4000, env);
+                if (r.hits.Count > 0 || r.zoneIntrusions.Count > 0) bad.Add($"{seed}/{env}: {string.Join(",", r.hits)} {string.Join(",", r.zoneIntrusions)}");
+            }
+            CollectionAssert.IsEmpty(bad, string.Join("\n", bad));
         }
 
         [Test]

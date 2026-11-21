@@ -15,9 +15,9 @@ namespace JeepneyRush.Logic.Geometry
         public const float SidewalkOuter = 9.0f;   // building line
         public const float SidewalkHeight = 0.2f;
 
-        private static readonly string[] Walls = { "#F6BD60", "#F7EDE2", "#84A59D", "#F28482", "#BDE0FE", "#CDB4DB", "#FFC8DD", "#A3C4BC", "#E9EDC9", "#FFD6A5" };
+        public static readonly string[] Walls = { "#F6BD60", "#F7EDE2", "#84A59D", "#F28482", "#BDE0FE", "#CDB4DB", "#FFC8DD", "#A3C4BC", "#E9EDC9", "#FFD6A5" };
         private static readonly string[] Awnings = { "#E63946", "#2A9D8F", "#F4A261", "#1D3557", "#FFB703", "#8338EC", "#06D6A0" };
-        private static readonly string[] Towers = { "#D6E2E9", "#BCD4E6", "#E2ECE9", "#C9D6DF" };
+        public static readonly string[] Towers = { "#D6E2E9", "#BCD4E6", "#E2ECE9", "#C9D6DF" };
 
         public static IEnumerable<string> FacadeKeys
         {
@@ -25,7 +25,7 @@ namespace JeepneyRush.Logic.Geometry
         }
 
         /// <summary>Box whose faces tile the facade texture every <paramref name="tile"/> metres.</summary>
-        private static void FacadeBox(MeshBuilder b, string key, float w, float h, float d, float x, float y, float z, float tile = 6f)
+        public static void FacadeBox(MeshBuilder b, string key, float w, float h, float d, float x, float y, float z, float tile = 6f)
         {
             float hx = w / 2, hy = h / 2, hz = d / 2;
             V3 P(float sx, float sy, float sz) => new V3(x + sx * hx, y + sy * hy, z + sz * hz);
@@ -69,6 +69,7 @@ namespace JeepneyRush.Logic.Geometry
                     float cx = side * (SidewalkOuter + d / 2 + rng.Range(0, 0.6f));
                     string wall = rng.Pick(Walls);
                     FacadeBox(b, "tex:facade|" + wall, d, h, w - 0.3f, cx, sy + h / 2, cz);
+                    NightKit.Windows(b, rng, cx - side * d / 2, side < 0, cz, w - 0.3f, sy, h);
                     b.Box("paint", Palette.Shade(wall, 0.8f), d + 0.2f, 0.4f, w - 0.1f, cx, sy + h + 0.2f, cz);
                     if (rng.Chance(0.5)) b.Cylinder("paint", rng.Pick(new[] { "#1D4ED8", "#334155", "#E5E7EB" }), 0.7f, 0.7f, 1.4f, 8, cx + rng.Range(-1, 1), sy + h + 1.1f, cz + rng.Range(-1.5f, 1.5f));
                     // ground-floor storefront with goods and a striped awning
@@ -124,6 +125,7 @@ namespace JeepneyRush.Logic.Geometry
                 b.Cylinder("paint", "#495057", 0.07f, 0.09f, 6, 6, side * (RoadHalfWidth + 0.5f), sy + 3, lz);
                 b.Box("paint", "#495057", 1.6f, 0.08f, 0.1f, side * (RoadHalfWidth - 0.2f), sy + 6, lz);
                 b.Box("glow", "#FFF1C1", 0.5f, 0.1f, 0.3f, side * (RoadHalfWidth - 0.8f), sy + 5.93f, lz);
+                NightKit.Pool(b, side * (RoadHalfWidth - 1.2f), 0.035f, lz, 3.6f);
                 // ---- tropical trees
                 if (rng.Chance(0.6))
                 {

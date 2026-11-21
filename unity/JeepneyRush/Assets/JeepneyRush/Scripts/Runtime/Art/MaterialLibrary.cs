@@ -129,8 +129,16 @@ namespace JeepneyRush
                 case "glow": m = Unlit(pal, Color.white); break;
                 case "bubble": m = Unlit(pal, new Color(1f, 1f, 1f, 0.28f), true); break;
                 case "water": m = Lit(pal, Color.white, 0.35f, 0.97f); break;
+                // night lighting: invisible by day, fade in after sunset (see SetNight)
+                case "nightglow": m = Unlit(pal, new Color(1f, 1f, 1f, _night), true); break;      // lit windows, lamp glow
+                case "lightpool": m = Unlit(LoadTexture("light_pool"), new Color(1f, 0.86f, 0.6f, _night * 0.55f), true); break; // pools of street light
+                case "beam": m = Unlit(LoadTexture("light_beam"), new Color(1f, 0.95f, 0.8f, _night * 0.6f), true); break;     // headlight beam
                 default:
-                    if (key.StartsWith("tex:"))
+                    if (key.StartsWith("utex:")) // self-lit texture (billboards, LED signs): bright day and night
+                    {
+                        m = Unlit(LoadTexture(key.Substring(5)), Color.white);
+                    }
+                    else if (key.StartsWith("tex:"))
                     {
                         var parts = key.Substring(4).Split('|');
                         var tex = LoadTexture(parts[0]);
@@ -144,6 +152,29 @@ namespace JeepneyRush
             m.name = "JR_" + key;
             Cache[key] = m;
             return m;
+        }
+
+        private static float _night;
+
+        /// <summary>
+        /// 0 = day, 1 = night: fades in lit windows, street-light pools and headlight beams.
+        /// Cheap on any phone (a few transparent quads, no real-time lights).
+        /// </summary>
+        public static void SetNight(float night)
+        {
+            night = Mathf.Clamp01(night);
+            if (Mathf.Abs(night - _night) < 0.004f && night > 0.001f && night < 0.999f) return;
+            _night = night;
+            SetAlpha("nightglow", new Color(1f, 1f, 1f, night));
+            SetAlpha("lightpool", new Color(1f, 0.86f, 0.6f, night * 0.55f));
+            SetAlpha("beam", new Color(1f, 0.95f, 0.8f, night * 0.6f));
+        }
+
+        public static float Night => _night;
+
+        private static void SetAlpha(string key, Color c)
+        {
+            if (Cache.TryGetValue(key, out var m) && m != null) SetColor(m, c);
         }
 
         /// <summary>Material for scrolling ground surfaces (road, sidewalk, curb).</summary>

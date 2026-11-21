@@ -28,7 +28,7 @@ namespace JeepneyRush.Logic
     /// </summary>
     public sealed class SpawnDirector
     {
-        private enum Pattern { Breather, Single, Vehicle, Double, HumpRow, Convoy, Roadwork, Parked, Weaver, Flood, Mud }
+        private enum Pattern { Breather, Single, Vehicle, Double, HumpRow, Convoy, Roadwork, Parked, Weaver, Flood, Mud, Jam }
 
         private struct Candidate
         {
@@ -63,6 +63,9 @@ namespace JeepneyRush.Logic
         private float _nextPowerUpAt;
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
+        private readonly Func<float, float> _jam;
+        private float _rowJam, _trafficRef;
+        private readonly bool _jamAware;
         private readonly EnvironmentKind _env;
         private readonly float _density;
         private float _planWet;
@@ -76,10 +79,13 @@ namespace JeepneyRush.Logic
         public int PowerUpsPlaced { get; private set; }
 
         /// <param name="wetness">Weather wetness (0..1) at a world distance; floods only appear on wet roads.</param>
-        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila, Func<float, float> wetness = null)
+        /// <param name="jam">Traffic-jam strength (0..1) at a world distance (EDSA rush hour).</param>
+        public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila, Func<float, float> wetness = null, Func<float, float> jam = null)
         {
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
             _wetness = wetness ?? (_ => 0f);
+            _jam = jam ?? (_ => 0f);
+            _jamAware = jam != null && Environments.JamIntensity(environment) > 0;
             _traffic = Environments.TrafficWeights(environment);
             _env = environment;
             _density = Environments.TrafficDensity(environment);
@@ -228,8 +234,14 @@ namespace JeepneyRush.Logic
             float d = _cfg.DifficultyAt(Cursor);
             float rowAt = Cursor;
             float z = -(rowAt - distance);
+            _rowJam = _jam(rowAt);
+            // traffic must stay clearly slower than the jeepney even after it slows for a jam
+            _trafficRef = speed;
+            if (_jamAware)
+                for (float w = distance; w <= rowAt + 700f; w += 25f)
+                    _trafficRef = Math.Min(_trafficRef, _cfg.SpeedAt(w) * JamRules.SpeedCap(_jam(w)));
             float gap = Math.Max(speed * _cfg.minReactionTime + _cfg.playerHalfLength * 2,
-                (_cfg.maxRowGap + (_cfg.minRowGap - _cfg.maxRowGap) * d) * _rng.Range(0.85f, 1.2f));
+                (_cfg.maxRowGap + (_cfg.minRowGap - _cfg.maxRowGap) * d) * _rng.Range(0.85f, 1.2f) * JamRules.RowGapScale(_rowJam));
             Cursor += gap;
 
             bool placed = false;
@@ -259,8 +271,11 @@ namespace JeepneyRush.Logic
             bool mountain = _env == EnvironmentKind.Mountain;
             float k = _density;
             float wet = _wetness(at);
+            float jam = _rowJam;
+            if (jam > 0.15f) k *= 1f - 0.5f * jam; // the jam pattern takes over
             return _rng.Weighted(new (Pattern, float)[]
             {
+                (Pattern.Jam, jam > 0.15f ? 9f * jam : 0f),
                 (Pattern.Breather, (0.9f - d * 0.6f) * (mountain ? 1.8f : 1f)),
                 (Pattern.Single, mountain ? 2.6f : 2.2f),
                 (Pattern.Vehicle, 2.6f * k),
@@ -278,6 +293,9 @@ namespace JeepneyRush.Logic
         private float TrafficSpeed(HazardKind k, float playerSpeed)
         {
             var def = HazardCatalog.Get(k);
+            // in a jam everything crawls
+            if (_rowJam > 0.15f && k != HazardKind.Motorcycle)
+                return Math.Min(_rng.Range(JamRules.CrawlMin, JamRules.CrawlMax), Math.Max(1.2f, playerSpeed * 0.55f));
             // traffic is always clearly slower than the jeepney so it can be overtaken
             return Math.Max(1.5f, Math.Min(_rng.Range(def.MinSpeed, def.MaxSpeed), playerSpeed * 0.55f));
         }
@@ -305,7 +323,7 @@ namespace JeepneyRush.Logic
             int lanes = _cfg.laneCount;
             int lane = _rng.Int(0, lanes - 1);
             int Other(int l) => (l + _rng.Int(1, lanes - 1)) % lanes;
-            void Veh(HazardKind k, int l, float dz = 0) => _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Speed = TrafficSpeed(k, speed) });
+            void Veh(HazardKind k, int l, float dz = 0) => _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Speed = TrafficSpeed(k, _jamAware ? _trafficRef : speed) });
             void Stat(HazardKind k, int l, float dz = 0, bool solid = false) => _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Solid = solid });
             switch (p)
             {
@@ -347,6 +365,21 @@ namespace JeepneyRush.Logic
                 case Pattern.Parked:
                     Stat(_rng.Chance(0.5) ? HazardKind.ParkedSedan : HazardKind.ParkedJeepney, _rng.Chance(0.5) ? 0 : lanes - 1);
                     break;
+                case Pattern.Jam:
+                {
+                    // bumper-to-bumper: two lanes packed, the third sometimes filled a little further on
+                    int l2 = Other(lane);
+                    Veh(RandomVehicle(d), lane);
+                    Veh(RandomVehicle(d), l2, -_rng.Range(0, 4));
+                    if (_rng.Chance(0.5)) Veh(RandomVehicle(d), lane, -_rng.Range(9, 13));
+                    if (_rng.Chance(0.2))
+                    {
+                        int l3 = 3 - lane - l2; // the remaining lane (3-lane road)
+                        if (l3 >= 0 && l3 < lanes) Veh(RandomVehicle(d), l3, -_rng.Range(14, 22));
+                    }
+                    if (_rng.Chance(0.25)) Veh(HazardKind.Motorcycle, _rng.Int(0, lanes - 1), -_rng.Range(5, 18)); // motorbikes squeezing through
+                    break;
+                }
                 case Pattern.Weaver:
                     Veh(HazardKind.Motorcycle, lane);
                     Veh(HazardKind.Motorcycle, Other(lane), -_rng.Range(6, 14));
@@ -356,19 +389,27 @@ namespace JeepneyRush.Logic
 
         private bool Validate(float rowZ, float distance, float speed)
         {
+            // slowest speed the jeepney will have before it reaches this row (jams): traffic then
+            // has longer to drive on, so zone checks must also hold at that speed
+            float slow = speed;
+            if (_jamAware)
+                for (int i = 1; i <= 8; i++) { float w = distance + (-rowZ + 300f) * i / 8f; slow = Math.Min(slow, _cfg.SpeedAt(w) * JamRules.SpeedCap(_jam(w))); }
             foreach (var c in _cands)
             {
                 var def = HazardCatalog.Get(c.Kind);
-                float closing = Math.Max(0.5f, speed - c.Speed);
-                float t = -(rowZ + c.Dz) / closing;
-                float meetAt = distance + speed * t;
                 bool fullWidth = def.HalfWidth >= HazardCatalog.FullRoadHalfWidth - 0.01f;
-                for (int l = 0; l < _cfg.laneCount; l++)
+                foreach (float v in slow < speed - 0.25f ? new[] { speed, slow } : new[] { speed })
                 {
-                    if (!fullWidth && l != c.Lane) continue;
-                    if (Reserved(l, meetAt, def.HalfLength + _cfg.playerHalfLength)) return false;
-                    // moving traffic must not even drive THROUGH a PARA zone before the jeepney passes it
-                    if (c.Speed > 0 && CrossesReservation(l, distance - (rowZ + c.Dz), c.Speed, def.HalfLength, t)) return false;
+                    float closing = Math.Max(0.5f, v - c.Speed);
+                    float t = -(rowZ + c.Dz) / closing;
+                    float meetAt = distance + v * t;
+                    for (int l = 0; l < _cfg.laneCount; l++)
+                    {
+                        if (!fullWidth && l != c.Lane) continue;
+                        if (Reserved(l, meetAt, def.HalfLength + _cfg.playerHalfLength)) return false;
+                        // moving traffic must not even drive THROUGH a PARA zone before the jeepney passes it
+                        if (c.Speed > 0 && CrossesReservation(l, distance - (rowZ + c.Dz), c.Speed, def.HalfLength, t)) return false;
+                    }
                 }
             }
             _blockers.Clear();
@@ -381,8 +422,26 @@ namespace JeepneyRush.Logic
             // The player keeps accelerating, which changes when slow traffic arrives relative to
             // static obstacles. Validate at the current speed and at the speed reached by the
             // time the row arrives; both must be survivable.
-            float later = Math.Max(speed, _cfg.SpeedAt(distance - rowZ + _cfg.spawnAhead * 0.5f));
-            return PassableAt(speed) && (later - speed < 0.25f || PassableAt(later));
+            float arriveAt = distance - rowZ;
+            float later = Math.Max(speed, _cfg.SpeedAt(arriveAt + _cfg.spawnAhead * 0.5f) * JamRules.SpeedCap(_jam(arriveAt + _cfg.spawnAhead * 0.5f)));
+            if (!PassableAt(speed) || (later - speed >= 0.25f && !PassableAt(later))) return false;
+            // entering or leaving a jam changes the jeepney's speed a lot: the row must also be
+            // survivable at the speeds it will have on the way there
+            if (_jamAware)
+            {
+                float lo = speed, hi = speed;
+                for (int i = 0; i <= 4; i++)
+                {
+                    float w = distance + (arriveAt - distance + _cfg.spawnAhead * 0.5f) * i / 4f;
+                    float v = _cfg.SpeedAt(w) * JamRules.SpeedCap(_jam(w));
+                    lo = Math.Min(lo, v); hi = Math.Max(hi, v);
+                }
+                if (speed - lo >= 0.25f && !PassableAt(lo)) return false;
+                if (hi - Math.Max(speed, later) >= 0.25f && !PassableAt(hi)) return false;
+                float mid = (lo + hi) / 2;
+                if (hi - lo >= 1f && !PassableAt(mid)) return false;
+            }
+            return true;
         }
 
         private bool TryPlacePowerUp(float z, float distance, float speed)

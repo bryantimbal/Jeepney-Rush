@@ -53,6 +53,11 @@ namespace JeepneyRush
         private GameRandom _rng;
 
         private WeatherManager _weather;
+        // EDSA rush hour + day/night
+        private JamSchedule _jams;
+        private float _jamCap = 1f, _jam, _stuckT, _complainT, _hour;
+        private int _jamComplaints, _dayPhase = -1;
+        private bool _inJam;
         private RoadBender _bender;
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
@@ -227,7 +232,10 @@ namespace JeepneyRush
             RoadCurve.Shape = new RoadShape(seed, _env);
             RoadCurve.Distance = 0;
             _weather.ResetRun(seed, _env);
-            _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt);
+            _jams = new JamSchedule(seed, _env);
+            _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
+            _jamCap = 1f; _jam = _stuckT = _complainT = 0; _jamComplaints = 0; _inJam = false; _dayPhase = -1;
+            Services.UI.SetJam("");
             _enforcer.ResetRun();
             _combo.Reset();
             _input.Sensitivity = save.swipeSensitivity;
@@ -378,10 +386,21 @@ namespace JeepneyRush
             else
             {
                 if (_speed < 0) _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt); // stop reversing first
-                float target = _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
+                float target = _difficulty.BaseSpeed * _jamCap * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
                 float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
                 _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
             }
+
+            // ---- traffic jam (EDSA rush hour): the road ahead crawls, the top speed eases down
+            _jam = _jams.At(_score.Distance);
+            float cap = JamRules.SpeedCap(_jam), baseV = Mathf.Max(1f, _difficulty.BaseSpeed);
+            _jamCap = Mathf.MoveTowards(_jamCap, cap, (cap < _jamCap ? JamRules.CapDecel : JamRules.CapAccel) / baseV * dt);
+            UpdateJam(dt);
+
+            // ---- time of day: the run starts in the late afternoon and drives into the night
+            _hour = DayNight.HourAt(_runTime);
+            _weather.SetTimeOfDay(_hour);
+            UpdateDayPhase();
 
             // ---- weather + road shape
             _weather.Tick(_score.Distance, dt);
@@ -431,7 +450,7 @@ namespace JeepneyRush
             {
                 var lanes = _player.Lanes;
                 _spawner.SetPlayerLanes(lanes.Lane, lanes.Changing ? lanes.FromLane : -1);
-                _director.Update(_score.Distance, Mathf.Max(_speed, _difficulty.BaseSpeed * 0.6f));
+                _director.Update(_score.Distance, Mathf.Max(_speed, _difficulty.BaseSpeed * 0.6f * _jamCap));
             }
 
             // ---- world + power-up effects
@@ -592,6 +611,72 @@ namespace JeepneyRush
                     Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
                 }
             }
+        }
+
+        private bool RushHour => (_hour >= 16f && _hour < 20.5f) || (_hour >= 6f && _hour < 9.5f);
+
+        /// <summary>
+        /// Jam entry/exit messages, the "traffic ahead" warning, and riders complaining while
+        /// stuck: late for work in the morning, tired and hungry going home at night. If you
+        /// stay stuck too long, a fed-up rider gets off and walks.
+        /// </summary>
+        private void UpdateJam(float dt)
+        {
+            var ui = Services.UI;
+            bool jammed = _jam > 0.3f;
+            if (jammed != _inJam)
+            {
+                _inJam = jammed;
+                if (jammed)
+                {
+                    ui.Float(_env == EnvironmentKind.Edsa ? (RushHour ? "RUSH HOUR SA EDSA!" : "TRAFFIC SA EDSA!") : "TRAFFIC JAM!", UIManager.FloatKind.Bad);
+                    _jamComplaints = 0;
+                    _complainT = 2.5f;
+                }
+                else
+                {
+                    ui.Float("LUMUWAG NA ANG DAAN!", UIManager.FloatKind.Good);
+                    if (_passengers.Route.Count > 0 && !_dying) ui.Say(Lines.Pick(Lines.JamClear, _rng), _passengers.RandomRiderHead);
+                }
+            }
+            if (jammed) ui.SetJam(RushHour ? "RUSH HOUR · MABAGAL" : "TRAFFIC · MABAGAL");
+            else
+            {
+                float next = _jams.NextJamFrom(_score.Distance) - _score.Distance;
+                ui.SetJam(next < 150f ? $"TRAFFIC AHEAD · {Mathf.CeilToInt(next)} m" : "");
+            }
+            bool stuck = jammed && !_dying && _passengers.Route.Count > 0 && Mathf.Abs(_speed) < JamRules.StuckSpeed
+                && _loadT <= 0 && _inZone == null && !_refuelling;
+            if (!stuck) { _stuckT = Mathf.Max(0, _stuckT - dt * 0.5f); return; }
+            _stuckT += dt;
+            _complainT -= dt;
+            if (_complainT > 0) return;
+            _complainT = JamRules.ComplaintInterval(_stuckT) * Random.Range(0.85f, 1.2f);
+            _jamComplaints++;
+            ui.Say(Lines.Stuck(_hour, _env, _rng), _passengers.RandomRiderHead, _jamComplaints > 2);
+            Services.Audio.Play(Logic.Audio.Sfx.Complain, 0.8f);
+            if (_jamComplaints > JamRules.PatienceComplaints && _rng.Chance(JamRules.WalkOffChance) && _passengers.Route.EjectAngry() > 0)
+            {
+                _passengers.AngryHopOut();
+                ui.Say(_rng.Chance(0.5) ? "MAGLALAKAD NA LANG AKO!" : "MAS MABILIS PA MAGLAKAD!", () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
+                ui.Float("-1 PASAHERO · NAINIP", UIManager.FloatKind.Bad);
+            }
+        }
+
+        /// <summary>HUD clock and sunset / night / sunrise announcements.</summary>
+        private void UpdateDayPhase()
+        {
+            float n = DayNight.Night(_hour);
+            Services.UI.SetClock(DayNight.Clock(_hour), n > 0.5f);
+            int phase = n >= 0.99f ? 2 : n > 0.01f || DayNight.Dusk(_hour) > 0.5f ? 1 : 0;
+            if (phase == _dayPhase) return;
+            bool first = _dayPhase < 0;
+            bool evening = _hour > 12f;
+            _dayPhase = phase;
+            if (first) return;
+            if (phase == 1) Services.UI.Float(evening ? "PALUBOG NA ANG ARAW..." : "MAGUUMAGA NA...", UIManager.FloatKind.Info);
+            else if (phase == 2) Services.UI.Float("GABI NA! · BUKAS ANG ILAW", UIManager.FloatKind.Info);
+            else Services.UI.Float("UMAGA NA!", UIManager.FloatKind.Good);
         }
 
         private void OnHazardHit(Hazard h)

@@ -588,6 +588,14 @@ namespace JeepneyRush
             _weather.style.unityTextAlign = TextAnchor.MiddleLeft;
             _weather.style.marginTop = 4;
             scoreCol.Add(_weather);
+            _clock = UiKit.Text("", 28, new Color(1f, 1f, 1f, 0.92f), true, 2f);
+            _clock.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _clock.style.marginTop = 2;
+            scoreCol.Add(_clock);
+            _jamLabel = UiKit.Text("", 28, new Color(1f, 0.55f, 0.45f), true, 2f);
+            _jamLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _jamLabel.style.marginTop = 2;
+            scoreCol.Add(_jamLabel);
             top.Add(scoreCol);
             var right = UiKit.Box();
             right.style.alignItems = Align.FlexEnd;

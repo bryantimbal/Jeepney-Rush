@@ -10,7 +10,7 @@ namespace JeepneyRush.Logic.Geometry
     /// </summary>
     public sealed class Palette
     {
-        public const int Size = 16; // 16x16 = 256 colours
+        public const int Size = 32; // 32x32 = 1024 colours (the city routes pushed past 256)
         private readonly Dictionary<uint, int> _index = new Dictionary<uint, int>();
         public readonly List<(byte r, byte g, byte b)> Colors = new List<(byte, byte, byte)>();
         public bool Dirty { get; set; }

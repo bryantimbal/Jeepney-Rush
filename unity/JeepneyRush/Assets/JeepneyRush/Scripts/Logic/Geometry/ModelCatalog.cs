@@ -37,6 +37,12 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("chunk_beach", SceneryProvinces.Beach(3000, true));
             yield return ("chunk_mountain", SceneryProvinces.MountainProvince(4000, false));
             yield return ("chunk_mountain_falls", SceneryProvinces.MountainProvince(4001, true));
+            yield return ("chunk_edsa", SceneryCities.Edsa(5000, false));
+            yield return ("chunk_edsa_station", SceneryCities.Edsa(5001, true));
+            yield return ("chunk_cebu", SceneryCities.Cebu(6001, false));
+            yield return ("chunk_cebu_sea", SceneryCities.Cebu(6000, true));
+            yield return ("chunk_baguio", SceneryCities.Baguio(7000, false));
+            yield return ("chunk_baguio_lake", SceneryCities.Baguio(7001, true));
             yield return ("mud_patch", VehicleBuilder.MudPatch(1));
             yield return ("rocks", VehicleBuilder.Rocks(2));
             foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind))) yield return ("pu_" + k, PropBuilder.PowerUp(k));

@@ -140,8 +140,10 @@ namespace JeepneyRush.Logic
             // hill height (m) and bend amplitude (m) per route: Manila has flyovers and gentle
             // street bends, the province rolls, the coastal road winds along the shore
             // the mountain road climbs and winds the most (still ≤ 12% grade, checked by tests)
-            float hills = env == EnvironmentKind.Mountain ? 5f : env == EnvironmentKind.Provincial ? 6f : env == EnvironmentKind.Beach ? 4f : 3f;
-            float bends = env == EnvironmentKind.Manila ? 22f : env == EnvironmentKind.Provincial ? 34f : env == EnvironmentKind.Mountain ? 48f : 40f;
+            float hills = env == EnvironmentKind.Mountain ? 5f : env == EnvironmentKind.Provincial ? 6f : env == EnvironmentKind.Beach ? 4f
+                : env == EnvironmentKind.Baguio ? 6f : env == EnvironmentKind.Cebu ? 4f : env == EnvironmentKind.Edsa ? 2.5f : 3f; // Baguio: steep city hills; EDSA: flyovers
+            float bends = env == EnvironmentKind.Manila ? 22f : env == EnvironmentKind.Provincial ? 34f : env == EnvironmentKind.Mountain ? 48f
+                : env == EnvironmentKind.Edsa ? 14f : env == EnvironmentKind.Cebu ? 26f : env == EnvironmentKind.Baguio ? 44f : 40f;
             _h1 = hills * rng.Range(0.7f, 1f);
             _h2 = hills * rng.Range(0.3f, 0.5f);
             _l1 = bends * rng.Range(0.7f, 1f);

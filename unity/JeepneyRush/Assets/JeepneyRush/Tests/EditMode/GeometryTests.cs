@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using JeepneyRush.Logic;
 using JeepneyRush.Logic.Geometry;
@@ -35,6 +36,21 @@ namespace JeepneyRush.Tests
                 foreach (var n in m.Normals) Assert.That(n.Length, Is.InRange(0.98f, 1.02f), $"{name} has a bad normal");
             }
             Assert.LessOrEqual(Palette.Shared.Colors.Count, Palette.Size * Palette.Size);
+        }
+
+        [Test]
+        public void EveryRouteChunkFitsThePaletteWithRoomToSpare()
+        {
+            // a full palette silently paints new colours with colour #0 (dark): keep headroom
+            foreach (EnvironmentKind env in Enum.GetValues(typeof(EnvironmentKind)))
+                for (int i = 0; i < 8; i++)
+                {
+                    var m = SceneryProvinces.Chunk(env, (int)env * 100000 + 1000 + i * 7919, i == 2 || i == 6);
+                    Assert.Less(m.Positions.Count, 65535, $"{env} chunk {i} exceeds 16-bit indices");
+                }
+            foreach (var l in JeepneyCatalog.All) JeepneyBuilder.Build(l);
+            foreach (var (_, _) in ModelCatalog.Preview()) { }
+            Assert.Less(Palette.Shared.Colors.Count, Palette.Size * Palette.Size * 3 / 4, "palette nearly full: raise Palette.Size");
         }
 
         [Test]

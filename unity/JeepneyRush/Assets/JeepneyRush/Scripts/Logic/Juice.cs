@@ -85,6 +85,22 @@ namespace JeepneyRush.Logic
         public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };
         public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!" };
 
+        // stuck in traffic -------------------------------------------------------------
+        public static readonly string[] LateForWork = { "MALE-LATE NA AKO SA TRABAHO!", "KUYA, MAY MEETING AKO!", "PAPAGALITAN AKO NG BOSS KO!", "LATE NA NAMAN AKO!", "MAKAKALTASAN NA NAMAN AKO!", "MAY EXAM PA AKO, KUYA!" };
+        public static readonly string[] GoingHome = { "GUSTO KO NANG UMUWI!", "GUTOM NA AKO, KUYA!", "NAGHIHINTAY ANG MGA ANAK KO!", "ANONG ORAS NA KAMI MAKAKAUWI?", "PAGOD NA AKO SA TRABAHO!", "LUMALAMIG NA ANG ULAM SA BAHAY!" };
+        public static readonly string[] Traffic = { "GRABE ANG TRAFFIC!", "WALANG GALAWAN!", "PARKING LOT NA 'TO!", "KUYA, SINGIT KA DOON!", "LALAKARIN KO NA LANG KAYA?", "BUONG ARAW NA TAYO DITO!" };
+        public static readonly string[] Edsa = { "GRABE ANG EDSA!", "EDSA NA NAMAN!", "SANA NAG-MRT NA LANG AKO!", "ISANG ORAS NA TAYO SA CUBAO!" };
+        public static readonly string[] JamClear = { "SA WAKAS!", "LUMUWAG NA!", "BILIS NA, KUYA!", "SALAMAT, UMANDAR NA!" };
+
+        /// <summary>A commuter's complaint while stuck: late for work in the morning, tired and hungry going home at night.</summary>
+        public static string Stuck(float hour, EnvironmentKind env, GameRandom rng)
+        {
+            double r = rng.Next();
+            if (env == EnvironmentKind.Edsa && r < 0.22) return Pick(Edsa, rng);
+            if (r < 0.62) return Pick(DayNight.GoingToWork(hour) ? LateForWork : GoingHome, rng);
+            return Pick(Traffic, rng);
+        }
+
         public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
     }
 }

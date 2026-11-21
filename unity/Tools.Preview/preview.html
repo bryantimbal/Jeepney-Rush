@@ -20,12 +20,14 @@ scene.background = new THREE.Color(q.get('bg') || '#2b2d33');
 const pm = new THREE.PMREMGenerator(renderer);
 const env = pm.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environment = env;
-scene.add(new THREE.HemisphereLight('#ffffff', '#555', 1.2));
-const sun = new THREE.DirectionalLight('#fff4e0', 2.5); sun.position.set(-6, 10, 6); sun.castShadow = true; scene.add(sun);
+const nightQ = Number(q.get('night') || 0);
+scene.add(new THREE.HemisphereLight(nightQ ? '#8aa0ff' : '#ffffff', '#555', nightQ ? 0.25 : 1.2));
+if (nightQ) scene.environment = null;
+const sun = new THREE.DirectionalLight(nightQ ? '#9fb2ff' : '#fff4e0', nightQ ? 0.35 : 2.5); sun.position.set(-6, 10, 6); sun.castShadow = true; scene.add(sun);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: q.get('ground') || '#3a3c42' }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 // palette texture
-const P = 16, pal = new Uint8Array(P * P * 4);
+const P = 32, pal = new Uint8Array(P * P * 4); // must match Palette.Size
 data.palette.forEach((c, i) => { pal.set([c[0], c[1], c[2], 255], i * 4); });
 const palTex = new THREE.DataTexture(pal, P, P); palTex.magFilter = palTex.minFilter = THREE.NearestFilter; palTex.colorSpace = THREE.SRGBColorSpace; palTex.needsUpdate = true;
 const loader = new THREE.TextureLoader();
@@ -36,8 +38,16 @@ const mats = {
   glow: new THREE.MeshBasicMaterial({ map: palTex }),
   water: new THREE.MeshStandardMaterial({ map: palTex, roughness: 0.03, metalness: 0.35 }),
 };
+const night = Number(q.get('night') || 0);
 function mat(key) {
   if (mats[key]) return mats[key];
+  // night lighting (see MaterialLibrary.SetNight): invisible by day
+  if (key === 'nightglow') return (mats[key] = new THREE.MeshBasicMaterial({ map: palTex, transparent: true, opacity: night, depthWrite: false }));
+  if (key === 'lightpool' || key === 'beam') {
+    const t = loader.load(texDir + (key === 'beam' ? 'light_beam' : 'light_pool') + '.png');
+    return (mats[key] = new THREE.MeshBasicMaterial({ map: t, color: '#ffdb99', transparent: true, opacity: night * 0.55, depthWrite: false }));
+  }
+  if (key.startsWith('utex:')) { const t = loader.load(texDir + key.slice(5) + '.png'); t.colorSpace = THREE.SRGBColorSpace; return (mats[key] = new THREE.MeshBasicMaterial({ map: t })); }
   if (key === 'gold') return (mats[key] = new THREE.MeshStandardMaterial({ map: palTex, roughness: 0.2, metalness: 1 }));
   const [name, tint] = key.slice(4).split('|');
   const t = loader.load(texDir + name + '.png', undefined, undefined, () => {});
@@ -75,5 +85,5 @@ const cam = new THREE.PerspectiveCamera(Number(q.get('fov') || 40), innerWidth /
 cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, ty + Math.sin(pitch) * dist, -Math.cos(yaw) * Math.cos(pitch) * dist);
 cam.lookAt(0, ty, 0);
 const done = () => setTimeout(() => { renderer.render(scene, cam); document.title = 'ready'; }, 100);
-if (Object.keys(mats).some((k) => k.startsWith('tex:'))) { THREE.DefaultLoadingManager.onLoad = done; THREE.DefaultLoadingManager.onError = done; setTimeout(done, 4000); } else done();
+if (Object.keys(mats).some((k) => k.startsWith('tex:') || k.startsWith('utex:') || k === 'lightpool')) { THREE.DefaultLoadingManager.onLoad = done; THREE.DefaultLoadingManager.onError = done; setTimeout(done, 4000); } else done();
 </script></body></html>

@@ -305,6 +305,23 @@ namespace JeepneyRush
         private VisualElement _lightning;
 
         /// <summary>Weather readout under the distance ("UMUULAN · madulas").</summary>
+        private Label _clock, _jamLabel;
+
+        /// <summary>In-game clock under the weather ("🌙 9:15 PM" style, text only).</summary>
+        public void SetClock(string text, bool night)
+        {
+            if (_clock == null) return;
+            _clock.text = text ?? "";
+            _clock.style.color = night ? new Color(0.75f, 0.85f, 1f) : new Color(1f, 0.95f, 0.8f);
+        }
+
+        /// <summary>"TRAFFIC JAM" / "RUSH HOUR" indicator while you're in a jam (empty hides it).</summary>
+        public void SetJam(string text)
+        {
+            if (_jamLabel == null) return;
+            _jamLabel.text = text ?? "";
+        }
+
         public void SetWeather(string text, Color color)
         {
             if (_weather == null) return;

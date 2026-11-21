@@ -60,13 +60,18 @@ namespace JeepneyRush
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             var fog = env == JeepneyRush.Logic.EnvironmentKind.Provincial ? new Color(0.78f, 0.9f, 0.95f)
-                : env == JeepneyRush.Logic.EnvironmentKind.Beach ? new Color(0.72f, 0.9f, 0.98f)
-                : env == JeepneyRush.Logic.EnvironmentKind.Mountain ? new Color(0.76f, 0.82f, 0.82f) : Fog; // cool highland mist
+                : env == JeepneyRush.Logic.EnvironmentKind.Beach || env == JeepneyRush.Logic.EnvironmentKind.Cebu ? new Color(0.72f, 0.9f, 0.98f)
+                : env == JeepneyRush.Logic.EnvironmentKind.Mountain ? new Color(0.76f, 0.82f, 0.82f)  // cool highland mist
+                : env == JeepneyRush.Logic.EnvironmentKind.Baguio ? new Color(0.8f, 0.84f, 0.86f)     // Baguio fog
+                : env == JeepneyRush.Logic.EnvironmentKind.Edsa ? new Color(0.93f, 0.84f, 0.76f)      // smoggy city haze
+                : Fog;
             RenderSettings.fogColor = fog;
-            if (env != JeepneyRush.Logic.EnvironmentKind.Manila) RenderSettings.ambientEquatorColor = new Color(0.8f, 0.86f, 0.88f);
+            if (env != JeepneyRush.Logic.EnvironmentKind.Manila && env != JeepneyRush.Logic.EnvironmentKind.Edsa) RenderSettings.ambientEquatorColor = new Color(0.8f, 0.86f, 0.88f);
             bool mountain = env == JeepneyRush.Logic.EnvironmentKind.Mountain;
-            RenderSettings.fogStartDistance = mountain ? 45f : 70f;   // mist rolling through the pines
-            RenderSettings.fogEndDistance = mountain ? 185f : 210f;
+            bool baguio = env == JeepneyRush.Logic.EnvironmentKind.Baguio;
+            RenderSettings.fogStartDistance = baguio ? 32f : mountain ? 45f : 70f;   // mist rolling through the pines
+            RenderSettings.fogEndDistance = baguio ? 160f : mountain ? 185f : 210f;
+            if (baguio) { RenderSettings.ambientSkyColor = new Color(0.74f, 0.8f, 0.86f); RenderSettings.ambientEquatorColor = new Color(0.7f, 0.76f, 0.74f); }
             if (mountain) { RenderSettings.ambientSkyColor = new Color(0.72f, 0.8f, 0.86f); RenderSettings.ambientEquatorColor = new Color(0.68f, 0.74f, 0.7f); }
             var sky = Resources.Load<Material>("Materials/JR_Skybox");
             if (sky == null)

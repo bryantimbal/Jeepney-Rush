@@ -169,8 +169,10 @@ namespace JeepneyRush
         private void BuildRoutes()
         {
             _routes = ModalShell("routes", "ROUTES", out var card);
-            _routeList = UiKit.Box();
-            card.Add(_routeList);
+            var scroll = UiKit.Scroll(1350); // seven routes: the list scrolls on small screens
+            _routeList = UiKit.Stack();
+            scroll.Add(_routeList);
+            card.Add(scroll);
             card.Add(UiKit.Button("BACK", () => { CloseModal(); ShowMainMenu(); }, Color.white, UiKit.Ink, 44, 110));
         }
 
@@ -197,6 +199,7 @@ namespace JeepneyRush
                 UiKit.Border(row.style, 5, selected ? UiKit.Yellow : UiKit.Hex("#E2DBC6"), 26);
                 UiKit.Pad(row.style, 10, 12);
                 row.style.marginBottom = 12;
+                row.style.flexShrink = 0;
                 var thumb = UiKit.Icon("ui_route_" + e.Kind.ToString().ToLowerInvariant(), 250);
                 thumb.style.height = 140;
                 UiKit.Border(thumb.style, 4, UiKit.Ink, 18);

@@ -16,6 +16,9 @@ namespace JeepneyRush.Logic.Geometry
                 case EnvironmentKind.Provincial: return Provincial(seed, special);
                 case EnvironmentKind.Beach: return Beach(seed, special);
                 case EnvironmentKind.Mountain: return MountainProvince(seed, special);
+                case EnvironmentKind.Edsa: return SceneryCities.Edsa(seed, special);
+                case EnvironmentKind.Cebu: return SceneryCities.Cebu(seed, special);
+                case EnvironmentKind.Baguio: return SceneryCities.Baguio(seed, special);
                 default: return SceneryBuilder.ManilaChunk(seed, special);
             }
         }
@@ -46,7 +49,7 @@ namespace JeepneyRush.Logic.Geometry
             for (int i = 0; i < 3; i++) b.Sphere("paint", "#5C4033", 0.16f, px + (i - 1) * 0.2f, py - 0.25f, z + (i % 2) * 0.15f, 6);
         }
 
-        private static void Mountain(MeshBuilder b, float x, float z, float h, float r, string color)
+        public static void Mountain(MeshBuilder b, float x, float z, float h, float r, string color)
         {
             b.Cylinder("paint", color, 0f, r, h, 7, x, h / 2 - 1f, z);
             b.Cylinder("paint", Palette.Shade(color, 1.25f), 0f, r * 0.35f, h * 0.35f, 7, x, h - 1f - h * 0.17f + 0.02f, z);
@@ -162,11 +165,12 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("paint", "#FFD166", 0.7f, 0.15f, 0.15f, cx, SY + 8.8f, -4.5f);
                 b.Box("glass", "#5A3E2B", 1.6f, 2.4f, 0.05f, cx - 3.01f, SY + 1.2f, 0, new Rot(0, (float)(Math.PI / 2), 0));
             }
+            NightKit.StreetLamp(b, rng.Chance(0.5) ? -1f : 1f, R, rng.Range(-L / 2 + 6, L / 2 - 6), 5.5f, "#6D6875"); // one lamp per 40 m
             return b.Data;
         }
 
         // ------------------------------------------------------------------ beach
-        private static void Bangka(MeshBuilder b, GameRandom rng, float x, float z, float yaw)
+        public static void Bangka(MeshBuilder b, GameRandom rng, float x, float z, float yaw)
         {
             b.Push(new V3(x, 0.15f, z), new Rot(0, yaw, 0));
             string hull = rng.Pick(new[] { "#F8F9FA", "#4CC9F0", "#FFD166", "#EF476F" });
@@ -239,6 +243,7 @@ namespace JeepneyRush.Logic.Geometry
                 PropBuilder.AddPerson(b, rng.Int(0, 7), false);
                 b.Pop();
             }
+            NightKit.StreetLamp(b, rng.Chance(0.5) ? -1f : 1f, R, rng.Range(-L / 2 + 6, L / 2 - 6), 5.5f, "#6D6875"); // one lamp per 40 m
             return b.Data;
         }
 

@@ -196,7 +196,7 @@ namespace JeepneyRush.Tests
             var d = SaveValidation.Sanitize(new SaveData());
             Assert.IsFalse(Environments.IsUnlocked(EnvironmentKind.Provincial, d.bestDistance));
             var r = Progress.Apply(d, new RunSummary { Distance = 2600 });
-            CollectionAssert.AreEquivalent(new[] { EnvironmentKind.Provincial, EnvironmentKind.Beach }, r.RoutesUnlocked);
+            CollectionAssert.AreEquivalent(new[] { EnvironmentKind.Provincial, EnvironmentKind.Beach, EnvironmentKind.Edsa }, r.RoutesUnlocked);
         }
     }
 
