@@ -91,3 +91,18 @@ The engine is no longer a pitched loop. It's **synthesised live** (`DieselEngine
 Tests check the firing frequency at 750 and 1,500 rpm, louder sound on GAS, no clipping or DC offset, upshifts with audible rev drops, and idle / free-rev behaviour.
 
 **Use a real recording instead (optional):** record a real jeepney idling steadily (about 800 rpm, 3–10 s, seamless loop, no talking) and save it as `Assets/JeepneyRush/Resources/Audio/jeepney_engine.wav` (or `.ogg`). The game then pitches that recording with the revs instead of using the synthesiser. You can also add `Resources/Audio/jeepney_rev.wav`, which plays when you press GAS. Only use recordings you made yourself or have a licence for.
+
+## Update – new route: Mountain Province, and easier controls
+**Controls**: the bottom row is now **BRAKE** (left), **BUSINA** (centre, reachable with either thumb) and **GAS** (right). The **D/R gear** sits where the horn used to be, above GAS. The pedals are bigger (245 px), with stronger colours and thicker outlines, and the gear letters are larger.
+
+**Mountain Province** (unlocks at 4,000 m in one run). It's the 4th route and plays differently:
+* **Unpaved road**: a muddy dirt surface with wandering wheel ruts and puddles, no lane paint, a dirt shoulder and rocky edges.
+* **Rugged**: the road climbs and winds more than any other route, still at most a 12% grade (tested). Small jolts keep shaking the jeepney, and loose ground makes steering a little slippery all the time.
+* **Mud patches** ("PUTIK!") are soft obstacles: they slow you down, throw brown mud and get complaints from passengers. **Fallen rocks** from small landslides are solid obstacles. There are no painted speed humps on a dirt road.
+* **Scenery**: cut rock walls with moss and boulders, stone rice terraces, Benguet pine forests, fence posts, highland huts, vegetable stands, misty peaks, and sometimes a **waterfall**. Cooler, mistier light and fog.
+* **Less traffic**: about 35% of the usual vehicle patterns, mostly vegetable trucks and motorcycles (tested to be under 60% of Manila).
+* **Longer distances**: PARA stops are 1.75× farther apart, gas stations 1.12× (a full tank still reaches the next one), and traffic lights are rare (3.2× spacing).
+* Stop names: Bontoc, Sagada, Besao, Sabangan, Tadian, Bauko, Sadanga, Barlig, Natonin, Echo Valley, Rice Terraces and Viewdeck. There's also its own slower, lower music variant and a new route picture.
+* Daily challenges can now land on any of the 4 routes. The server catalog was updated with a **new** migration (`*_jr_catalog.sql`); Supabase applies it on the next deploy.
+
+Tests: 111 .NET tests pass. The fairness bot drives Mountain Province without crashing and finds mud and rocks; mountain traffic is checked to be much lower; the daily challenge covers all 4 routes. Supabase tests pass, with vectors regenerated for 4 routes.

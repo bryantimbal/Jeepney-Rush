@@ -46,7 +46,7 @@ namespace JeepneyRush
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
         private bool _gasWas;
-        private float _revCooldown, _dwell, _loadT, _beepT;
+        private float _revCooldown, _dwell, _loadT, _beepT, _roughT;
         /// <summary>Gear shift: false = D (drive), true = R (reverse).</summary>
         private bool _reverseGear;
         public bool ReverseGear => _reverseGear;
@@ -372,7 +372,21 @@ namespace JeepneyRush
             // ---- weather + road shape
             _weather.Tick(_score.Distance, dt);
             float wet = _weather.Wetness;
-            _player.SetWetness(wet);
+            // unpaved mountain road: loose, slippery ground and constant small jolts
+            float rough = Environments.Roughness(_env);
+            _player.SetWetness(Mathf.Max(wet, 0.35f * rough));
+            if (rough > 0 && Mathf.Abs(_speed) > 2f && !_dying)
+            {
+                _roughT -= dt;
+                if (_roughT <= 0)
+                {
+                    float k = Mathf.Clamp01(Mathf.Abs(_speed) / 18f);
+                    _roughT = Random.Range(0.12f, 0.4f) / Mathf.Max(0.4f, k);
+                    _player.Bump(Random.Range(0.015f, 0.05f) * rough * (0.4f + k));
+                    _camera.AddShake(0.025f * k);
+                    if (Random.value < 0.25f * k) _fx.Dust(_player.transform.position + new Vector3(Random.Range(-1f, 1f), 0.1f, -2.6f));
+                }
+            }
             RoadCurve.Distance = _score.Distance;
             _player.SlopePitch = RoadCurve.PlayerPitch;
 
@@ -504,6 +518,19 @@ namespace JeepneyRush
         {
             h.Hit = true;
             var pos = _player.transform.position;
+            if (HazardCatalog.IsMud(h.Kind))
+            {
+                // thick mud: the wheels dig in and slow the jeepney, mud flies everywhere
+                _player.Flooded();
+                _player.Bump(0.12f);
+                _fx.MudSplash(pos, _speed);
+                _camera.AddShake(0.12f);
+                Services.Audio.Play(Logic.Audio.Sfx.Splash, 0.7f, 0.7f);
+                Haptics.Pulse(12);
+                Services.UI.Float("PUTIK!", UIManager.FloatKind.Info);
+                if (_passengers.Route.Count > 0 && _rng.Chance(0.4)) Services.UI.Say(_rng.Chance(0.5) ? "NAPUTIKAN AKO!" : "DAHAN-DAHAN, MAPUTIK!", _passengers.RandomRiderHead);
+                return;
+            }
             if (HazardCatalog.IsFlood(h.Kind))
             {
                 bool big = h.Kind == HazardKind.FloodWide;

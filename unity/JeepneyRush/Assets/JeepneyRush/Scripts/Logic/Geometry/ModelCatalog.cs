@@ -35,6 +35,10 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("siren_red", PropBuilder.Siren(true));
             yield return ("chunk_provincial", SceneryProvinces.Provincial(2000, true));
             yield return ("chunk_beach", SceneryProvinces.Beach(3000, true));
+            yield return ("chunk_mountain", SceneryProvinces.MountainProvince(4000, false));
+            yield return ("chunk_mountain_falls", SceneryProvinces.MountainProvince(4001, true));
+            yield return ("mud_patch", VehicleBuilder.MudPatch(1));
+            yield return ("rocks", VehicleBuilder.Rocks(2));
             foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind))) yield return ("pu_" + k, PropBuilder.PowerUp(k));
         }
     }

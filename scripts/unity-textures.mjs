@@ -202,16 +202,17 @@ const textures = await page.evaluate(() => {
     });
     save('shop_signs', c);
   }
-  // -------------------------------------------------- stop name signs (4 x 11 cells of 256 x 128)
+  // -------------------------------------------------- stop name signs (4 x 14 cells of 256 x 128)
   {
-    // must match StopNames.All in Environments.cs (Manila 0-19, Provincial 20-31, Beach 32-43)
+    // must match StopNames.All in Environments.cs (Manila 0-19, Provincial 20-31, Beach 32-43, Mountain 44-55)
     const names = ['QUIAPO', 'CUBAO', 'DIVISORIA', 'RECTO', 'LAWTON', 'ESPANA', 'TAFT', 'MONUMENTO', 'BACLARAN', 'BLUMENTRITT', 'KALAW', 'PACO', 'STA. MESA', 'PEDRO GIL', 'VITO CRUZ', 'LIBERTAD', 'SAMPALOC', 'ERMITA', 'MALATE', 'TONDO',
       'POBLACION', 'SAN ISIDRO', 'PALENGKE', 'SIMBAHAN', 'MUNISIPYO', 'BRGY. MALIGAYA', 'BAYAN', 'PLAZA', 'CROSSING', 'SAN ROQUE', 'KAPITOLYO', 'TERMINAL',
-      'WHITE BEACH', 'PUERTO', 'BAYBAYIN', 'PIER', 'LIGHTHOUSE', 'RESORT', 'DAUNGAN', 'FISHPORT', 'BOULEVARD', 'COVE', 'LAGUNDI', 'DIVE SHOP'];
-    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 11);
+      'WHITE BEACH', 'PUERTO', 'BAYBAYIN', 'PIER', 'LIGHTHOUSE', 'RESORT', 'DAUNGAN', 'FISHPORT', 'BOULEVARD', 'COVE', 'LAGUNDI', 'DIVE SHOP',
+      'BONTOC', 'SAGADA', 'BESAO', 'SABANGAN', 'TADIAN', 'BAUKO', 'SADANGA', 'BARLIG', 'NATONIN', 'ECHO VALLEY', 'RICE TERRACES', 'VIEWDECK'];
+    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 14);
     names.forEach((n, i) => {
       const ox = (i % 4) * CW, oy = Math.floor(i / 4) * CH;
-      x.fillStyle = i < 20 ? '#0b6e4f' : i < 32 ? '#7a4e2d' : '#0077b6'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
+      x.fillStyle = i < 20 ? '#0b6e4f' : i < 32 ? '#7a4e2d' : i < 44 ? '#0077b6' : '#3f3326'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
       x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillStyle = '#ffd100'; fit(x, 'SAKAYAN', 0, 0, CW - 30, 24, (z) => `900 ${z}px ${B}`); x.fillText('SAKAYAN', ox + CW / 2, oy + CH * 0.27);
       x.fillStyle = '#fff'; fit(x, n, 0, 0, CW - 30, 52, (z) => `${z}px ${D}`); x.fillText(n, ox + CW / 2, oy + CH * 0.65);
@@ -389,6 +390,42 @@ const textures = await page.evaluate(() => {
     for (let i = 0; i < 14; i++) { x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.arc(Math.random() * 256, Math.random() * 256, 2, 0, Math.PI * 2); x.fill(); }
     save('sand', c);
   }
+  // -------------------------------------------------- Mountain Province: unpaved, muddy, rutted road
+  {
+    const W = 512, H = 512, roadW = 11.2;
+    let [c, x] = cv(W, H);
+    const px = (m) => W / 2 + (m / roadW) * W;
+    x.fillStyle = '#7A5A3A'; x.fillRect(0, 0, W, H);
+    noise(x, W, H, 5000, 0.22); noise(x, W, H, 1600, 0.12, true);
+    // darker damp patches and dried lighter crust
+    for (let i = 0; i < 26; i++) { x.fillStyle = Math.random() < 0.6 ? 'rgba(60,40,24,0.35)' : 'rgba(160,130,95,0.25)'; x.beginPath(); x.ellipse(Math.random() * W, Math.random() * H, 14 + Math.random() * 46, 20 + Math.random() * 70, Math.random() * 3, 0, Math.PI * 2); x.fill(); }
+    // wheel ruts: two per lane, wet and dark, slightly wavy
+    for (const lx of [-3.2, 0, 3.2]) for (const off of [-0.85, 0.85]) {
+      x.beginPath();
+      for (let y = 0; y <= H; y += 8) { const wob = Math.sin((y / H) * Math.PI * 2 + lx * 3 + off) * 7 + Math.sin((y / H) * Math.PI * 6 + off) * 2; y === 0 ? x.moveTo(px(lx + off) + wob, y) : x.lineTo(px(lx + off) + wob, y); }
+      x.strokeStyle = 'rgba(70,48,28,0.28)'; x.lineWidth = 30; x.stroke();   // soft trough
+      x.strokeStyle = 'rgba(45,30,16,0.35)'; x.lineWidth = 12; x.stroke();   // packed wheel track
+      x.strokeStyle = 'rgba(120,140,150,0.10)'; x.lineWidth = 4; x.stroke(); // damp glint
+    }
+    // muddy puddles
+    for (let i = 0; i < 5; i++) { const cx = px(-4.5 + Math.random() * 9), cy = Math.random() * H; x.fillStyle = 'rgba(52,40,30,0.75)'; x.beginPath(); x.ellipse(cx, cy, 16 + Math.random() * 22, 26 + Math.random() * 34, Math.random(), 0, Math.PI * 2); x.fill(); x.fillStyle = 'rgba(150,170,180,0.25)'; x.beginPath(); x.ellipse(cx - 4, cy - 6, 8, 12, 0.3, 0, Math.PI * 2); x.fill(); }
+    // gravel and stones
+    for (let i = 0; i < 700; i++) { const g = 95 + Math.random() * 45 | 0; x.fillStyle = `rgb(${g},${g - 14},${g - 32})`; x.fillRect(Math.random() * W, Math.random() * H, 2 + Math.random() * 3, 2 + Math.random() * 3); }
+    // grassy edges
+    for (const side of [-1, 1]) for (let i = 0; i < 260; i++) { x.fillStyle = ['#5A7F3A', '#4F7334', '#6B8F45'][i % 3]; x.fillRect(px(side * (5.0 + Math.random() * 0.6)), Math.random() * H, 2, 5 + Math.random() * 7); }
+    save('road_dirt', c);
+    // shoulder: red-brown soil with grass tufts and stones
+    [c, x] = cv(256, 256);
+    x.fillStyle = '#6E5236'; x.fillRect(0, 0, 256, 256); noise(x, 256, 256, 2400, 0.18);
+    for (let i = 0; i < 900; i++) { x.fillStyle = ['#557A35', '#4A6B2E', '#6A8F43'][i % 3]; x.fillRect(Math.random() * 256, Math.random() * 256, 2, 4 + Math.random() * 6); }
+    for (let i = 0; i < 40; i++) { const g = 110 + Math.random() * 60 | 0; x.fillStyle = `rgb(${g},${g - 6},${g - 18})`; x.beginPath(); x.ellipse(Math.random() * 256, Math.random() * 256, 3 + Math.random() * 5, 2 + Math.random() * 4, Math.random() * 3, 0, Math.PI * 2); x.fill(); }
+    save('dirt', c);
+    // edge: rough earth bank with rocks (replaces the painted curb)
+    [c, x] = cv(256, 32);
+    x.fillStyle = '#5E4430'; x.fillRect(0, 0, 256, 32); noise(x, 256, 32, 500, 0.3);
+    for (let i = 0; i < 24; i++) { const g = 100 + Math.random() * 70 | 0; x.fillStyle = `rgb(${g},${g - 8},${g - 20})`; x.beginPath(); x.ellipse(Math.random() * 256, 8 + Math.random() * 18, 4 + Math.random() * 7, 3 + Math.random() * 5, 0, 0, Math.PI * 2); x.fill(); }
+    save('curb_dirt', c);
+  }
   // -------------------------------------------------- Phase 2 UI icons
   {
     const icon = (name, w, h, draw) => { const [c, x] = cv(w, h); draw(x, w, h); save(name, c); };
@@ -408,6 +445,7 @@ const textures = await page.evaluate(() => {
     // route thumbnails 360x200
     icon('ui_route_manila', 360, 200, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9fd3f7'); g.addColorStop(1, '#ffe3b8'); x.fillStyle = g; x.fillRect(0, 0, w, h); const cols = ['#F6BD60', '#F28482', '#BDE0FE', '#CDB4DB', '#84A59D']; for (let i = 0; i < 9; i++) { x.fillStyle = cols[i % 5]; const bh = 60 + (i * 37) % 90; x.fillRect(i * 40, h - 40 - bh, 38, bh); x.fillStyle = 'rgba(30,50,80,0.6)'; for (let r = 0; r < bh / 22 - 1; r++) x.fillRect(i * 40 + 8, h - 40 - bh + 10 + r * 22, 22, 10); } x.fillStyle = '#45474e'; x.fillRect(0, h - 40, w, 40); x.fillStyle = '#fff'; for (let i = 0; i < 9; i++) x.fillRect(i * 44 + 10, h - 22, 22, 4); });
     icon('ui_route_provincial', 360, 200, (x, w, h) => { x.fillStyle = '#b8e0f6'; x.fillRect(0, 0, w, h); x.fillStyle = '#6C9A8B'; for (const [mx, mh] of [[60, 90], [170, 120], [290, 80]]) { x.beginPath(); x.moveTo(mx - 90, 130); x.lineTo(mx, 130 - mh); x.lineTo(mx + 90, 130); x.fill(); } x.fillStyle = '#7CB518'; x.fillRect(0, 120, w, 80); x.strokeStyle = '#5C9E1F'; x.lineWidth = 3; for (let i = 0; i < 12; i++) { x.beginPath(); x.moveTo(0, 130 + i * 6); x.lineTo(w, 126 + i * 6); x.stroke(); } x.fillStyle = '#8D6E4F'; x.fillRect(270, 70, 8, 70); x.fillStyle = '#2D6A4F'; for (let i = 0; i < 6; i++) { x.save(); x.translate(274, 70); x.rotate(i * 1.05); x.fillRect(0, -4, 40, 8); x.restore(); } x.fillStyle = '#D4A373'; x.fillRect(60, 100, 50, 30); x.fillStyle = '#9C7A3C'; x.beginPath(); x.moveTo(50, 102); x.lineTo(85, 75); x.lineTo(120, 102); x.fill(); });
+    icon('ui_route_mountain', 360, 200, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9bb7c9'); g.addColorStop(1, '#dfe8e4'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.fillStyle = '#5E7F74'; for (const [mx, mh] of [[40, 110], [150, 150], [270, 125], [350, 95]]) { x.beginPath(); x.moveTo(mx - 110, 150); x.lineTo(mx, 150 - mh); x.lineTo(mx + 110, 150); x.fill(); } x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(0, 95, w, 18); x.fillStyle = '#4F7A3A'; x.fillRect(0, 115, w, h - 115); x.fillStyle = '#6A994E'; for (let i = 0; i < 5; i++) x.fillRect(0, 118 + i * 8, w, 6); x.fillStyle = '#7A5A3A'; x.beginPath(); x.moveTo(140, h); x.lineTo(175, 150); x.lineTo(195, 150); x.lineTo(240, h); x.fill(); x.strokeStyle = '#4A3420'; x.lineWidth = 3; x.beginPath(); x.moveTo(160, h); x.lineTo(181, 150); x.moveTo(220, h); x.lineTo(190, 150); x.stroke(); x.fillStyle = '#1F4D3A'; for (const [tx, th] of [[40, 70], [70, 55], [300, 75], [330, 58], [110, 45], [265, 50]]) { x.beginPath(); x.moveTo(tx - 14, h - 10); x.lineTo(tx, h - 10 - th); x.lineTo(tx + 14, h - 10); x.fill(); } });
     icon('ui_route_beach', 360, 200, (x, w, h) => { x.fillStyle = '#7fd6f7'; x.fillRect(0, 0, w, h); x.fillStyle = '#FFF3B0'; x.beginPath(); x.arc(290, 50, 26, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1F7EA1'; x.fillRect(0, 100, w, 60); x.fillStyle = '#4CC9F0'; x.fillRect(0, 140, w, 20); x.fillStyle = '#E9D8A6'; x.fillRect(0, 160, w, 40); x.fillStyle = '#fff'; x.fillRect(90, 120, 60, 10); x.fillStyle = '#EF476F'; x.fillRect(95, 112, 50, 10); x.fillStyle = '#8D6E4F'; x.fillRect(40, 90, 8, 80); x.fillStyle = '#40916C'; for (let i = 0; i < 6; i++) { x.save(); x.translate(44, 90); x.rotate(i * 1.05); x.fillRect(0, -4, 38, 8); x.restore(); } });
   }
   // -------------------------------------------------- soft particle dot + MMDA sign + speech bubble

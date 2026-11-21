@@ -142,7 +142,7 @@ namespace JeepneyRush.EditorTools
         [MenuItem("Jeepney Rush/Setup/Texture Import Settings")]
         public static void ConfigureTextures()
         {
-            var tiled = new[] { "road", "sidewalk", "curb", "facade", "grass", "sand" };
+            var tiled = new[] { "road", "sidewalk", "curb", "facade", "grass", "sand", "road_dirt", "dirt", "curb_dirt" };
             foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { Res + "/Textures" }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);

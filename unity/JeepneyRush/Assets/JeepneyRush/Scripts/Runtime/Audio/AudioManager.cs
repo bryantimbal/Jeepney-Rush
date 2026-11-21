@@ -15,8 +15,8 @@ namespace JeepneyRush
     {
         private readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
         private AudioClip _menuMusic, _engine, _rain;
-        private readonly AudioClip[] _runMusicByRoute = new AudioClip[3];
-        private AudioClip _runMusic => _runMusicByRoute[Mathf.Clamp(_route, 0, 2)];
+        private readonly AudioClip[] _runMusicByRoute = new AudioClip[JeepneyRush.Logic.Environments.All.Length];
+        private AudioClip _runMusic => _runMusicByRoute[Mathf.Clamp(_route, 0, _runMusicByRoute.Length - 1)];
         private int _route;
         private AudioSource _musicA, _musicB, _engineSrc, _rainSrc;
         private EngineAudio _engineAudio;
@@ -96,7 +96,7 @@ namespace JeepneyRush
             _menuMusic = Clip("MenuMusic", MusicComposer.RenderMenu(), true);
             progress?.Invoke(++done / (float)total);
             yield return null;
-            for (int e = 0; e < 3; e++)
+            for (int e = 0; e < _runMusicByRoute.Length; e++)
             {
                 _runMusicByRoute[e] = Clip("RunMusic" + e, MusicComposer.RenderRun((JeepneyRush.Logic.EnvironmentKind)e), true);
                 progress?.Invoke(++done / (float)total);

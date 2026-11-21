@@ -8,6 +8,8 @@ namespace JeepneyRush.Logic
         Cone, Barrier, ConstructionSign, Roadblock, ParkedSedan, ParkedJeepney,
         // soft road features: drivable, but jolt / slow / soak the jeepney
         Pothole, SpeedHump, FloodPuddle, FloodWide,
+        // Mountain Province: mud (soft, slows you down) and fallen rocks (solid)
+        MudPatch, Rocks,
     }
 
     public readonly struct HazardDef
@@ -63,6 +65,8 @@ namespace JeepneyRush.Logic
                 case HazardKind.SpeedHump: return new HazardDef(FullRoadHalfWidth, 0.45f, 0.3f, true);
                 case HazardKind.FloodPuddle: return new HazardDef(1.35f, 3.2f, 0.3f, true);
                 case HazardKind.FloodWide: return new HazardDef(FullRoadHalfWidth, 5.5f, 0.3f, true);
+                case HazardKind.MudPatch: return new HazardDef(1.35f, 3.0f, 0.3f, true);
+                case HazardKind.Rocks: return new HazardDef(1.05f, 0.95f, 1.1f, false);
                 default: return new HazardDef(1, 1, 1, false);
             }
         }
@@ -70,5 +74,6 @@ namespace JeepneyRush.Logic
         public static bool IsMoving(HazardKind k) => Get(k).IsMoving;
         public static bool IsSoft(HazardKind k) => Get(k).Soft;
         public static bool IsFlood(HazardKind k) => k == HazardKind.FloodPuddle || k == HazardKind.FloodWide;
+        public static bool IsMud(HazardKind k) => k == HazardKind.MudPatch;
     }
 }

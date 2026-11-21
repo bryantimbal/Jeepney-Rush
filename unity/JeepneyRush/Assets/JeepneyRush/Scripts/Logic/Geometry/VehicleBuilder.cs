@@ -302,6 +302,35 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Thick mud patch on the dirt road ("putik"): wet brown sludge with tyre tracks.</summary>
+        public static MeshData MudPatch(int seed)
+        {
+            var b = new MeshBuilder();
+            var rng = new GameRandom(seed);
+            b.FlatEllipse("paint", "#3E2C1C", 0, 0.008f, 0, 1.45f, 3.15f, 18, 0.12f, seed);
+            b.FlatEllipse("water", "#5A4128", 0, 0.016f, 0, 1.3f, 2.9f, 18, 0.12f, seed + 1);
+            for (int i = 0; i < 3; i++)
+                b.FlatEllipse("water", "#6B4E30", rng.Range(-0.6f, 0.6f), 0.02f + i * 0.002f, rng.Range(-1.8f, 1.8f), rng.Range(0.3f, 0.6f), rng.Range(0.5f, 0.9f), 12, 0.2f, seed + 5 + i);
+            foreach (float tx in new[] { -0.85f, 0.85f })
+                b.Box("paint", "#2E2013", 0.32f, 0.01f, 5.4f, tx, 0.024f, 0);   // tyre ruts
+            return b.Data;
+        }
+
+        /// <summary>Fallen rocks from a small landslide: a cluster of boulders blocking the lane.</summary>
+        public static MeshData Rocks(int seed)
+        {
+            var b = new MeshBuilder();
+            var rng = new GameRandom(seed);
+            b.FlatEllipse("paint", "#5E4A36", 0, 0.01f, 0, 1.3f, 1.2f, 14, 0.2f, seed); // spilled soil
+            for (int i = 0; i < 5; i++)
+            {
+                float s = i == 0 ? 0.65f : rng.Range(0.25f, 0.45f);
+                float x = i == 0 ? 0 : rng.Range(-0.8f, 0.8f), z = i == 0 ? 0 : rng.Range(-0.7f, 0.7f);
+                b.Sphere("paint", rng.Pick(new[] { "#7D7A73", "#6B6860", "#8A857B", "#726C62" }), s, x, s * 0.55f, z, 7, rng.Range(1f, 1.3f), rng.Range(0.75f, 0.95f), rng.Range(0.9f, 1.2f));
+            }
+            return b.Data;
+        }
+
         /// <summary>Flood water: muddy, glossy water with lighter ripple rings ("baha").</summary>
         public static MeshData Flood(float halfWidth, float halfLength, int seed)
         {

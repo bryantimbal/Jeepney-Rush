@@ -24,7 +24,7 @@ namespace JeepneyRush.Tests
                 envs.Add(c.Environment);
             }
             Assert.AreEqual(28, seeds.Count);
-            Assert.AreEqual(3, envs.Count, "every route shows up as a daily challenge");
+            Assert.AreEqual(Environments.All.Length, envs.Count, "every route shows up as a daily challenge");
         }
 
         [Test]

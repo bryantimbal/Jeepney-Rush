@@ -34,7 +34,7 @@ namespace JeepneyRush.Logic
             {
                 var prev = _spells[_spells.Count - 1].Kind;
                 // typhoons are likelier by the sea, and never right after the start
-                float typhoon = _plannedTo < 900 ? 0 : _env == EnvironmentKind.Beach ? 1.3f : 0.8f;
+                float typhoon = _plannedTo < 900 ? 0 : _env == EnvironmentKind.Beach ? 1.3f : _env == EnvironmentKind.Mountain ? 1.0f : 0.8f;
                 WeatherKind k;
                 int guard = 0;
                 do k = _rng.Weighted(new (WeatherKind, float)[] { (WeatherKind.Clear, 2.2f), (WeatherKind.Rain, 1.8f), (WeatherKind.Typhoon, typhoon) });
@@ -139,8 +139,9 @@ namespace JeepneyRush.Logic
             var rng = new GameRandom(seed ^ 0x7A11);
             // hill height (m) and bend amplitude (m) per route: Manila has flyovers and gentle
             // street bends, the province rolls, the coastal road winds along the shore
-            float hills = env == EnvironmentKind.Provincial ? 6f : env == EnvironmentKind.Beach ? 4f : 3f;
-            float bends = env == EnvironmentKind.Manila ? 22f : env == EnvironmentKind.Provincial ? 34f : 40f;
+            // the mountain road climbs and winds the most (still ≤ 12% grade, checked by tests)
+            float hills = env == EnvironmentKind.Mountain ? 5f : env == EnvironmentKind.Provincial ? 6f : env == EnvironmentKind.Beach ? 4f : 3f;
+            float bends = env == EnvironmentKind.Manila ? 22f : env == EnvironmentKind.Provincial ? 34f : env == EnvironmentKind.Mountain ? 48f : 40f;
             _h1 = hills * rng.Range(0.7f, 1f);
             _h2 = hills * rng.Range(0.3f, 0.5f);
             _l1 = bends * rng.Range(0.7f, 1f);

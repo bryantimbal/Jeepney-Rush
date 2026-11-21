@@ -60,11 +60,14 @@ namespace JeepneyRush
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             var fog = env == JeepneyRush.Logic.EnvironmentKind.Provincial ? new Color(0.78f, 0.9f, 0.95f)
-                : env == JeepneyRush.Logic.EnvironmentKind.Beach ? new Color(0.72f, 0.9f, 0.98f) : Fog;
+                : env == JeepneyRush.Logic.EnvironmentKind.Beach ? new Color(0.72f, 0.9f, 0.98f)
+                : env == JeepneyRush.Logic.EnvironmentKind.Mountain ? new Color(0.76f, 0.82f, 0.82f) : Fog; // cool highland mist
             RenderSettings.fogColor = fog;
             if (env != JeepneyRush.Logic.EnvironmentKind.Manila) RenderSettings.ambientEquatorColor = new Color(0.8f, 0.86f, 0.88f);
-            RenderSettings.fogStartDistance = 70f;
-            RenderSettings.fogEndDistance = 210f;
+            bool mountain = env == JeepneyRush.Logic.EnvironmentKind.Mountain;
+            RenderSettings.fogStartDistance = mountain ? 45f : 70f;   // mist rolling through the pines
+            RenderSettings.fogEndDistance = mountain ? 185f : 210f;
+            if (mountain) { RenderSettings.ambientSkyColor = new Color(0.72f, 0.8f, 0.86f); RenderSettings.ambientEquatorColor = new Color(0.68f, 0.74f, 0.7f); }
             var sky = Resources.Load<Material>("Materials/JR_Skybox");
             if (sky == null)
             {

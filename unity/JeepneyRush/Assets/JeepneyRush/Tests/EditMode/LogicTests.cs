@@ -74,7 +74,7 @@ namespace JeepneyRush.Tests
         {
             foreach (HazardKind k in System.Enum.GetValues(typeof(HazardKind)))
             {
-                bool expected = k == HazardKind.Pothole || k == HazardKind.SpeedHump || k == HazardKind.FloodPuddle || k == HazardKind.FloodWide;
+                bool expected = k == HazardKind.Pothole || k == HazardKind.SpeedHump || k == HazardKind.FloodPuddle || k == HazardKind.FloodWide || k == HazardKind.MudPatch;
                 Assert.AreEqual(expected, HazardCatalog.Get(k).Soft, k.ToString());
             }
             Assert.IsTrue(HazardCatalog.IsFlood(HazardKind.FloodWide));

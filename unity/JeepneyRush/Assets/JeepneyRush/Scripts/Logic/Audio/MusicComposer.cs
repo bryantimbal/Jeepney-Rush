@@ -88,8 +88,9 @@ namespace JeepneyRush.Logic.Audio
         {
             var t = RunTrack();
             if (env == EnvironmentKind.Manila) return Render(t);
-            int shift = env == EnvironmentKind.Provincial ? -2 : 3;
-            t.Bpm = env == EnvironmentKind.Provincial ? 116 : 140;
+            // Mountain Province: lower and slower, like a gong-and-guitar highland groove
+            int shift = env == EnvironmentKind.Provincial ? -2 : env == EnvironmentKind.Mountain ? -5 : 3;
+            t.Bpm = env == EnvironmentKind.Provincial ? 116 : env == EnvironmentKind.Mountain ? 104 : 140;
             for (int i = 0; i < t.Melody.Count; i++) { var n = t.Melody[i]; t.Melody[i] = new Note(n.Step, n.Midi + shift, n.Len); }
             for (int i = 0; i < t.Bass.Count; i++) { var n = t.Bass[i]; t.Bass[i] = new Note(n.Step, n.Midi + shift, n.Len); }
             for (int i = 0; i < t.Chords.Count; i++)

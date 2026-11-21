@@ -151,7 +151,9 @@ namespace JeepneyRush
         {
             var key = "surface:" + texture;
             if (Cache.TryGetValue(key, out var m) && m != null) return m;
-            m = Lit(LoadTexture(texture), Color.white, 0f, 0.25f);
+            var tex = LoadTexture(texture);
+            if (tex != null && tex != Texture2D.whiteTexture) tex.wrapMode = TextureWrapMode.Repeat; // road surfaces scroll – must tile even without import settings
+            m = Lit(tex, Color.white, 0f, 0.25f);
             m.mainTextureScale = tiling;
             m.name = "JR_" + key;
             Cache[key] = m;

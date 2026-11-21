@@ -664,22 +664,42 @@ namespace JeepneyRush
             Show(_debug, false);
             speedCol.Add(_debug);
             bottom.Add(speedCol);
+            // ---- thumb controls: BRAKE (left) · BUSINA (centre, either thumb) · GAS (right, gear D/R above it)
+            VisualElement Pedal(VisualElement b, string color, float size)
+            {
+                b.style.width = b.style.height = size;
+                b.style.backgroundColor = UiKit.Hex(color);
+                UiKit.Border(b.style, 8, UiKit.Ink, size * 0.24f);
+                b.style.borderBottomWidth = 20;
+                return b;
+            }
+            var brake = Pedal(HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF3B3B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; }), "#FF3B3B", 245);
+            brake.style.marginTop = 16;
+            speedCol.Add(brake);
+
+            // centred on the screen regardless of the side columns' widths (the strip itself ignores touches)
+            var centre = UiKit.Box("hornCol");
+            centre.pickingMode = PickingMode.Ignore;
+            centre.style.position = Position.Absolute;
+            centre.style.left = centre.style.right = 0;
+            centre.style.bottom = 52;
+            centre.style.alignItems = Align.Center;
+            // BUSINA: honks the instant it is pressed, reachable with either thumb
+            var horn = HoldButton("BUSINA", "ui_horn", UiKit.Hex("#FFD000"), v => { if (v) Services.Game.Session?.Honk(); });
+            horn.name = "horn";
+            horn.style.width = horn.style.height = 200;
+            UiKit.Border(horn.style, 8, UiKit.Ink, 100);
+            horn.style.borderBottomWidth = 20;
+            centre.Add(horn);
+            bottom.Add(centre);
+
             var controls = UiKit.Box();
             controls.style.alignItems = Align.FlexEnd;
-            // BUSINA: big yellow horn button, honks the instant it is pressed (works while holding GAS)
-            var horn = HoldButton("BUSINA", "ui_horn", UiKit.Hex("#FFD60A"), v => { if (v) Services.Game.Session?.Honk(); });
-            horn.name = "horn";
-            horn.style.width = horn.style.height = 170;
-            UiKit.Border(horn.style, 7, UiKit.Ink, 85);
-            horn.style.borderBottomWidth = 16;
-            horn.style.marginBottom = 18;
-            controls.Add(horn);
-            // one pedal per thumb: BRAKE bottom-left (under the speedometer), GAS bottom-right (under the horn)
-            var brake = HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF6B6B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; });
-            brake.style.marginTop = 16;
-            speedCol.Add(BuildGearButton());
-            speedCol.Add(brake);
-            var gas = HoldButton("GAS", "ui_gas", UiKit.Hex("#3EE07A"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; });
+            var gear = BuildGearButton();
+            gear.style.alignSelf = Align.FlexEnd;
+            gear.style.marginBottom = 16;
+            controls.Add(gear);
+            var gas = Pedal(HoldButton("GAS", "ui_gas", UiKit.Hex("#22D065"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; }), "#22D065", 245);
             controls.Add(gas);
             bottom.Add(controls);
             _hud.Add(bottom);

@@ -198,18 +198,26 @@ namespace JeepneyRush.Tests
         [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(8)]
         public void SkilledBotSurvivesFourKilometres(int seed)
         {
-            var env = (EnvironmentKind)(seed % 3);
+            var env = (EnvironmentKind)(seed % Environments.All.Length);
             var (hits, stops, coins, passengers, powerUps, intrusions, world) = Simulate(seed, 4000, env);
             CollectionAssert.IsEmpty(hits, string.Join(", ", hits));
             Assert.Greater(powerUps, 4);
-            Assert.Greater(stops, 8);
+            Assert.Greater(stops, env == EnvironmentKind.Mountain ? 5 : 8); // mountain stops are far apart
             Assert.Greater(coins, 40);
-            Assert.Greater(passengers, 10);
+            Assert.Greater(passengers, env == EnvironmentKind.Mountain ? 6 : 10);
             CollectionAssert.IsEmpty(intrusions, "vehicles/obstacles in PARA zones: " + string.Join(", ", intrusions));
-            Assert.Greater(world.Spawned.TryGetValue(HazardKind.SpeedHump, out var humps) ? humps : 0, 0, "no speed humps in 4 km");
+            int Count(HazardKind k) => world.Spawned.TryGetValue(k, out var n) ? n : 0;
+            if (Environments.Paved(env)) Assert.Greater(Count(HazardKind.SpeedHump), 0, "no speed humps in 4 km");
+            else
+            {
+                // unpaved mountain road: mud and fallen rocks, no painted humps
+                Assert.AreEqual(0, Count(HazardKind.SpeedHump));
+                Assert.Greater(Count(HazardKind.MudPatch), 3, "mud patches on the dirt road");
+                Assert.Greater(Count(HazardKind.Rocks), 0, "fallen rocks");
+            }
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
-            Assert.GreaterOrEqual(world.Crossings.Count, 4, "too few intersections in 4 km");
+            Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : 4, "too few intersections in 4 km");
             var cfg = new BalanceConfig();
             for (int i = 0; i < world.Stations.Count; i++)
             {
@@ -224,10 +232,28 @@ namespace JeepneyRush.Tests
             int floods = 0;
             for (int seed = 1; seed <= 6; seed++)
             {
-                var (_, _, _, _, _, _, world) = Simulate(seed, 4000, (EnvironmentKind)(seed % 3));
+                var (_, _, _, _, _, _, world) = Simulate(seed, 4000, (EnvironmentKind)(seed % Environments.All.Length));
                 floods += (world.Spawned.TryGetValue(HazardKind.FloodPuddle, out var a) ? a : 0) + (world.Spawned.TryGetValue(HazardKind.FloodWide, out var b) ? b : 0);
             }
             Assert.Greater(floods, 0);
+        }
+
+        [Test]
+        public void MountainHasMuchLessTraffic()
+        {
+            int Vehicles(EnvironmentKind env)
+            {
+                int n = 0;
+                for (int seed = 1; seed <= 3; seed++)
+                {
+                    var (_, _, _, _, _, _, w) = Simulate(seed, 3000, env);
+                    foreach (var kv in w.Spawned) if (HazardCatalog.IsMoving(kv.Key)) n += kv.Value;
+                }
+                return n;
+            }
+            int manila = Vehicles(EnvironmentKind.Manila), mountain = Vehicles(EnvironmentKind.Mountain);
+            Assert.Less(mountain, manila * 0.6f, $"mountain {mountain} vs manila {manila} vehicles");
+            Assert.Greater(mountain, 0);
         }
 
         [Test]

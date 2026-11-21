@@ -128,6 +128,13 @@ namespace JeepneyRush
                 Burst(_splash, pos + new Vector3(side, 0.2f, 0.5f), big ? 22 : 12, new Vector3(side * 3.5f, 5f, -worldSpeed * 0.3f), 2.2f);
         }
 
+        /// <summary>Brown mud thrown up by the tyres ("putik").</summary>
+        public void MudSplash(Vector3 pos, float worldSpeed)
+        {
+            foreach (float side in new[] { -1.1f, 1.1f })
+                Burst(_splash, pos + new Vector3(side, 0.2f, 0.3f), 16, new Vector3(side * 3f, 4f, -worldSpeed * 0.3f), 2f, new Color(0.36f, 0.25f, 0.15f, 0.95f));
+        }
+
         /// <summary>Small spray behind the tyres on a wet road.</summary>
         public void Spray(Vector3 pos, float worldSpeed)
         {

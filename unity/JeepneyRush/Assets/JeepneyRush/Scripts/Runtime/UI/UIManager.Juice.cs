@@ -206,15 +206,16 @@ namespace JeepneyRush
             b.style.alignItems = Align.Center;
             b.style.alignSelf = Align.FlexStart;
             b.style.marginTop = 14;
-            b.style.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 0.92f);
-            UiKit.Border(b.style, 6, UiKit.Ink, 30);
+            b.style.backgroundColor = new Color(0.1f, 0.1f, 0.12f, 0.95f);
+            UiKit.Border(b.style, 7, UiKit.Ink, 34);
             b.style.borderBottomWidth = 12;
             UiKit.Pad(b.style, 8, 18);
-            b.Add(UiKit.Text("GEAR", 22, new Color(1, 1, 1, 0.7f), true, 1f));
+            b.Add(UiKit.Text("GEAR", 26, Color.white, true, 1.5f));
             Label Cell(string t)
             {
-                var l = UiKit.Text(t, 56, Color.white, true, 2f);
-                l.style.width = 70;
+                var l = UiKit.Text(t, 66, Color.white, true, 2f);
+                l.style.width = 88;
+                l.style.height = 84;
                 l.style.marginLeft = 8;
                 l.style.unityTextAlign = TextAnchor.MiddleCenter;
                 UiKit.Border(l.style, 0, Color.clear, 16);

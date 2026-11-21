@@ -2,7 +2,7 @@ using System;
 
 namespace JeepneyRush.Logic.Geometry
 {
-    /// <summary>Provincial Road and Beach Highway scenery slices (40 m, both sides of the road).</summary>
+    /// <summary>Provincial Road, Beach Highway and Mountain Province scenery slices (40 m, both sides of the road).</summary>
     public static class SceneryProvinces
     {
         private const float L = SceneryBuilder.ChunkLength;
@@ -15,6 +15,7 @@ namespace JeepneyRush.Logic.Geometry
             {
                 case EnvironmentKind.Provincial: return Provincial(seed, special);
                 case EnvironmentKind.Beach: return Beach(seed, special);
+                case EnvironmentKind.Mountain: return MountainProvince(seed, special);
                 default: return SceneryBuilder.ManilaChunk(seed, special);
             }
         }
@@ -237,6 +238,120 @@ namespace JeepneyRush.Logic.Geometry
                 b.Push(new V3(rng.Range(-SceneryBuilder.SidewalkOuter, SceneryBuilder.SidewalkOuter) > 0 ? rng.Range(R + 1f, 8.5f) : -rng.Range(R + 1f, 12f), SY, rng.Range(-L / 2, L / 2)), new Rot(0, rng.Range(0, 6.28f), 0));
                 PropBuilder.AddPerson(b, rng.Int(0, 7), false);
                 b.Pop();
+            }
+            return b.Data;
+        }
+
+        // ------------------------------------------------------------------ Mountain Province
+        /// <summary>Benguet pine: straight trunk and stacked dark cones.</summary>
+        public static void PineTree(MeshBuilder b, GameRandom rng, float x, float y, float z, float h)
+        {
+            b.Cylinder("paint", "#5B4331", 0.14f, 0.22f, h * 0.45f, 6, x, y + h * 0.22f, z);
+            string[] greens = { "#1F4D3A", "#24573F", "#2D6148", "#1B4433" };
+            string g = rng.Pick(greens);
+            int tiers = 4;
+            for (int t = 0; t < tiers; t++)
+            {
+                float k = t / (float)tiers;
+                float r = (1.5f - k * 1.0f) * (h / 9f);
+                b.Cylinder("paint", t % 2 == 0 ? g : Palette.Shade(g, 1.12f), 0f, r, h * 0.32f, 7, x, y + h * (0.28f + k * 0.5f) + h * 0.16f, z);
+            }
+        }
+
+        private static void Boulder(MeshBuilder b, GameRandom rng, float x, float y, float z, float s)
+        {
+            string c = rng.Pick(new[] { "#7D7A73", "#6B6860", "#8A857B" });
+            b.Sphere("paint", c, s, x, y + s * 0.45f, z, 6, rng.Range(0.9f, 1.4f), rng.Range(0.6f, 0.9f), rng.Range(0.8f, 1.3f));
+        }
+
+        /// <summary>Cordillera house on posts with a tall pyramid roof (inspired by the traditional fale / binangiyan form).</summary>
+        private static void HighlandHut(MeshBuilder b, float x, float z, float yaw)
+        {
+            b.Push(new V3(x, SY, z), new Rot(0, yaw, 0));
+            foreach (float sx in new[] { -1f, 1f }) foreach (float sz in new[] { -1f, 1f }) b.Box("paint", "#4E3826", 0.22f, 1.6f, 0.22f, sx * 1.1f, 0.8f, sz * 1.1f);
+            b.Cylinder("paint", "#6B4F35", 1.25f, 1.25f, 0.18f, 10, 0, 1.65f, 0);                // rat guard disc
+            b.Box("paint", "#7A5A3E", 2.4f, 1.1f, 2.4f, 0, 2.25f, 0);
+            b.Cylinder("paint", "#9C8455", 0f, 2.5f, 3.2f, 4, 0, 4.4f, 0, new Rot(0, (float)(Math.PI / 4), 0)); // thatch
+            b.Box("paint", "#2F2218", 0.7f, 0.8f, 0.05f, 0, 2.2f, 1.21f);
+            b.Pop();
+        }
+
+        /// <summary>Stone-walled rice terraces stepping up the hillside.</summary>
+        private static void Terraces(MeshBuilder b, GameRandom rng, float side, float x0, float z, float length)
+        {
+            for (int step = 0; step < 7; step++)
+            {
+                float x = side * (x0 + step * 3.6f);
+                float h = 0.6f + step * 1.15f;
+                string paddy = rng.Pick(new[] { "#6A994E", "#7CB518", "#5E8C3A", "#8DB255", "#6FA8A0" });
+                b.Box("paint", "#6E6558", 3.6f, h, length, x, h / 2f - 0.05f, z);                // stone wall
+                b.Box("paint", paddy, 3.4f, 0.12f, length - 0.3f, x, h + 0.02f, z);              // paddy
+                b.Box("paint", Palette.Shade(paddy, 0.85f), 0.25f, 0.18f, length - 0.3f, x - side * 1.6f, h + 0.08f, z); // dike lip
+            }
+        }
+
+        /// <summary>
+        /// Mountain Province: unpaved road through pine forest; a cut rock wall with
+        /// boulders on one side, rice terraces on the other, misty peaks behind,
+        /// wooden fence posts, highland huts and the odd vegetable stall.
+        /// </summary>
+        public static MeshData MountainProvince(int seed, bool waterfall)
+        {
+            var rng = new GameRandom(seed);
+            var b = new MeshBuilder();
+            float wallSide = rng.Chance(0.5) ? -1f : 1f;
+            foreach (float side in new[] { -1f, 1f })
+            {
+                bool wall = side == wallSide;
+                // fence posts / guard logs along the dirt shoulder
+                for (float pz = -L / 2 + 2; pz < L / 2; pz += rng.Range(3.5f, 5.5f))
+                    b.Box("paint", rng.Pick(new[] { "#6B4F35", "#5B4331" }), 0.16f, rng.Range(0.7f, 1.0f), 0.16f, side * (R + 1.6f), SY + 0.4f, pz);
+                if (wall)
+                {
+                    // cut rock face rising from the shoulder, streaked with moss
+                    for (float pz = -L / 2; pz < L / 2; pz += 5f)
+                    {
+                        float h = rng.Range(5f, 10f);
+                        b.Box("paint", rng.Pick(new[] { "#7A7064", "#6E655A", "#857A6C" }), 4f, h, 5.2f, side * (R + 5f), h / 2f - 0.05f, pz + 2.5f, new Rot(0, 0, side * rng.Range(0.05f, 0.18f)));
+                        if (rng.Chance(0.6)) b.Box("paint", "#4F6B3A", 0.3f, h * 0.6f, rng.Range(1f, 3f), side * (R + 3.05f), h * 0.4f, pz + rng.Range(0.5f, 4.5f));
+                    }
+                    for (int i = 0; i < rng.Int(2, 4); i++) Boulder(b, rng, side * rng.Range(R + 1.8f, R + 2.8f), SY, rng.Range(-L / 2, L / 2), rng.Range(0.4f, 0.9f));
+                    for (int i = 0; i < rng.Int(5, 9); i++) PineTree(b, rng, side * rng.Range(R + 7.5f, 24f), rng.Range(6f, 10f), rng.Range(-L / 2, L / 2), rng.Range(9f, 15f));
+                    if (waterfall)
+                    {
+                        b.Box("glow", "#CFE8F2", 1.4f, 9f, 0.3f, side * (R + 3.1f), 4.4f, 0, new Rot(0, (float)(Math.PI / 2), 0)); // falling water
+                        b.Box("water", "#5F8FA0", 3f, 0.1f, 3.5f, side * (R + 2.4f), SY + 0.05f, 0);                              // pool
+                        for (int i = 0; i < 4; i++) Boulder(b, rng, side * (R + 2.2f + rng.Range(-0.6f, 0.6f)), SY, rng.Range(-2f, 2f), rng.Range(0.3f, 0.5f));
+                    }
+                }
+                else
+                {
+                    // terraces and pine forest on the open side
+                    Terraces(b, rng, side, R + 6f, rng.Range(-6f, 6f), rng.Range(18f, 30f));
+                    for (int i = 0; i < rng.Int(4, 7); i++) PineTree(b, rng, side * rng.Range(R + 2.2f, R + 5f), SY, rng.Range(-L / 2, L / 2), rng.Range(7f, 12f));
+                    float roll = rng.Range(0, 1);
+                    float hz = rng.Range(-L / 2 + 6, L / 2 - 6);
+                    if (roll < 0.35f) HighlandHut(b, side * rng.Range(R + 4.5f, R + 6f), hz, rng.Range(0, 6.28f));
+                    else if (roll < 0.55f)
+                    {
+                        // roadside vegetable stand (cabbage, carrots, sayote)
+                        float vx = side * (R + 3.2f);
+                        b.Box("paint", "#8D6E4F", 2.4f, 0.9f, 1.4f, vx, SY + 0.45f, hz);
+                        for (int k = 0; k < 6; k++) b.Sphere("paint", k % 3 == 0 ? "#9BC53D" : k % 3 == 1 ? "#F18F01" : "#C5D86D", 0.22f, vx + (k % 3 - 1) * 0.6f, SY + 1.05f, hz + (k / 3 - 0.5f) * 0.6f, 6);
+                        b.Box("paint", "#2E86AB", 2.8f, 0.08f, 1.9f, vx, SY + 2.2f, hz);
+                        foreach (float sz in new[] { -0.8f, 0.8f }) b.Box("paint", "#5B4331", 0.08f, 2.2f, 0.08f, vx - side * 1.2f, SY + 1.1f, hz + sz);
+                    }
+                    for (int i = 0; i < rng.Int(0, 2); i++) Boulder(b, rng, side * rng.Range(R + 1.8f, R + 4f), SY, rng.Range(-L / 2, L / 2), rng.Range(0.3f, 0.7f));
+                    // villagers
+                    for (int i = 0; i < rng.Int(0, 2); i++)
+                    {
+                        b.Push(new V3(side * rng.Range(R + 1.2f, R + 3f), SY, rng.Range(-L / 2, L / 2)), new Rot(0, rng.Range(0, 6.28f), 0));
+                        PropBuilder.AddPerson(b, rng.Int(0, 7), false);
+                        b.Pop();
+                    }
+                }
+                // tall misty peaks behind
+                for (int i = 0; i < 3; i++) Mountain(b, side * rng.Range(55, 100), rng.Range(-L / 2, L / 2), rng.Range(38, 70), rng.Range(20, 34), rng.Pick(new[] { "#4F6F63", "#5A7A6E", "#456558", "#6B8A80" }));
             }
             return b.Data;
         }

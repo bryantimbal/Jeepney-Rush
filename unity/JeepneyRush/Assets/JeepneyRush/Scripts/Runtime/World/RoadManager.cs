@@ -47,12 +47,13 @@ namespace JeepneyRush
             Environment = env;
             float centre = RoadLength / 2f - RoadNear; // spans z = -RoadNear .. RoadLength - RoadNear
             float roadW = SceneryBuilder.RoadHalfWidth * 2;
-            _road = MaterialLibrary.Surface("road", new Vector2(1, RoadLength / RoadTexMetres));
+            bool paved = Environments.Paved(env);
+            _road = MaterialLibrary.Surface(paved ? "road" : "road_dirt", new Vector2(1, RoadLength / RoadTexMetres));
             if (_road.HasProperty("_Smoothness")) _roadDry = _road.GetFloat("_Smoothness");
             float swW = SceneryBuilder.SidewalkOuter - SceneryBuilder.RoadHalfWidth;
-            string ground = env == EnvironmentKind.Provincial ? "grass" : env == EnvironmentKind.Beach ? "sand" : "sidewalk";
+            string ground = env == EnvironmentKind.Provincial ? "grass" : env == EnvironmentKind.Beach ? "sand" : env == EnvironmentKind.Mountain ? "dirt" : "sidewalk";
             _sidewalk = MaterialLibrary.Surface(ground, new Vector2(swW / 2f, RoadLength / 2f));
-            _curb = MaterialLibrary.Surface("curb", new Vector2(RoadLength / 4f, 1));
+            _curb = MaterialLibrary.Surface(paved ? "curb" : "curb_dirt", new Vector2(RoadLength / 4f, 1));
 
             Plane("Road", _road, new Vector3(0, 0, centre), new Vector2(roadW, RoadLength));
             foreach (float s in new[] { -1f, 1f })
@@ -64,7 +65,8 @@ namespace JeepneyRush
                 Quad("Curb", _curb, new Vector3(x, 0, centre - hz), new Vector3(x, h, centre - hz), new Vector3(x, h, centre + hz), new Vector3(x, 0, centre + hz), nrm,
                     new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
             }
-            var groundColor = env == EnvironmentKind.Provincial ? new Color(0.42f, 0.6f, 0.3f) : env == EnvironmentKind.Beach ? new Color(0.91f, 0.85f, 0.65f) : new Color(0.42f, 0.42f, 0.44f);
+            var groundColor = env == EnvironmentKind.Provincial ? new Color(0.42f, 0.6f, 0.3f) : env == EnvironmentKind.Beach ? new Color(0.91f, 0.85f, 0.65f)
+                : env == EnvironmentKind.Mountain ? new Color(0.3f, 0.42f, 0.26f) : new Color(0.42f, 0.42f, 0.44f);
             var groundGo = Plane("Ground", MaterialLibrary.Lit(Texture2D.whiteTexture, groundColor, 0, 0.1f), new Vector3(0, -0.05f, centre), new Vector2(240, RoadLength));
             groundGo.GetComponent<MeshRenderer>().receiveShadows = false;
 

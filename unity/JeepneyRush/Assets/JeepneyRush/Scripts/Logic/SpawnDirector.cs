@@ -28,7 +28,7 @@ namespace JeepneyRush.Logic
     /// </summary>
     public sealed class SpawnDirector
     {
-        private enum Pattern { Breather, Single, Vehicle, Double, HumpRow, Convoy, Roadwork, Parked, Weaver, Flood }
+        private enum Pattern { Breather, Single, Vehicle, Double, HumpRow, Convoy, Roadwork, Parked, Weaver, Flood, Mud }
 
         private struct Candidate
         {
@@ -63,6 +63,8 @@ namespace JeepneyRush.Logic
         private float _nextPowerUpAt;
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
+        private readonly EnvironmentKind _env;
+        private readonly float _density;
         private float _planWet;
         /// <summary>Slow traffic can take a long time to reach the player; plan that far ahead.</summary>
         public const float MaxHorizon = 30f;
@@ -79,6 +81,8 @@ namespace JeepneyRush.Logic
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
             _wetness = wetness ?? (_ => 0f);
             _traffic = Environments.TrafficWeights(environment);
+            _env = environment;
+            _density = Environments.TrafficDensity(environment);
             _nextPowerUpAt = 200f + _rng.Range(0, 150);
             NextStationAt = cfg.firstStationAt + _rng.Range(0, 150);
             _nextCrossingAt = cfg.firstIntersectionAt + _rng.Range(0, 120);
@@ -125,7 +129,7 @@ namespace JeepneyRush.Logic
             // once the jeepney is past the current station, plan the next one
             if (distance > NextStationAt + 20f)
             {
-                NextStationAt += _rng.Range(_cfg.stationSpacingMin, _cfg.stationSpacingMax);
+                NextStationAt += _rng.Range(_cfg.stationSpacingMin, _cfg.stationSpacingMax) * Environments.StationSpacingScale(_env);
                 PlanStation(NextStationAt);
             }
             int guard = 0;
@@ -157,7 +161,7 @@ namespace JeepneyRush.Logic
                 _pendingCrossings.Add(x);
                 for (int l = 0; l < _cfg.laneCount; l++)
                     _reservations.Add(new Reservation { Lane = l, From = at - TrafficLightRules.StopLineOffset - 22, To = at + TrafficLightRules.HalfBox + 6 });
-                _nextCrossingAt = at + _rng.Range(_cfg.intersectionSpacingMin, _cfg.intersectionSpacingMax);
+                _nextCrossingAt = at + _rng.Range(_cfg.intersectionSpacingMin, _cfg.intersectionSpacingMax) * Environments.IntersectionSpacingScale(_env);
             }
         }
 
@@ -185,7 +189,7 @@ namespace JeepneyRush.Logic
                 var stop = _route.Plan(_nextStopAt, side, lane, _rng.Int(1, 4));
                 _pendingStops.Add(stop);
                 _reservations.Add(new Reservation { Lane = lane, From = stop.At - _cfg.stopZoneLength / 2 - 22, To = stop.At + _cfg.stopZoneLength / 2 + 6 });
-                _nextStopAt += _rng.Range(_cfg.stopSpacingMin, _cfg.stopSpacingMax);
+                _nextStopAt += _rng.Range(_cfg.stopSpacingMin, _cfg.stopSpacingMax) * Environments.StopSpacingScale(_env);
             }
         }
 
@@ -251,20 +255,23 @@ namespace JeepneyRush.Logic
         private Pattern PickPattern(float d, float at)
         {
             bool early = at < 300;
-            bool humps = at >= _cfg.humpMinDistance;
+            bool humps = at >= _cfg.humpMinDistance && Environments.Paved(_env); // no painted humps on a dirt road
+            bool mountain = _env == EnvironmentKind.Mountain;
+            float k = _density;
             float wet = _wetness(at);
             return _rng.Weighted(new (Pattern, float)[]
             {
-                (Pattern.Breather, 0.9f - d * 0.6f),
-                (Pattern.Single, 2.2f),
-                (Pattern.Vehicle, 2.6f),
-                (Pattern.Double, early ? 0.2f : 0.6f + 2.2f * d),
+                (Pattern.Breather, (0.9f - d * 0.6f) * (mountain ? 1.8f : 1f)),
+                (Pattern.Single, mountain ? 2.6f : 2.2f),
+                (Pattern.Vehicle, 2.6f * k),
+                (Pattern.Double, (early ? 0.2f : 0.6f + 2.2f * d) * k),
                 (Pattern.HumpRow, humps ? 0.45f + 0.5f * d : 0f),
                 (Pattern.Flood, wet > 0.25f ? 1.0f + 2.0f * wet : 0f),
-                (Pattern.Convoy, early ? 0.3f : 0.9f + 0.5f * d),
-                (Pattern.Roadwork, 0.7f),
-                (Pattern.Parked, 0.8f),
-                (Pattern.Weaver, early ? 0f : 0.4f + 0.9f * d),
+                (Pattern.Mud, mountain ? 1.6f + 1.4f * wet : 0f),
+                (Pattern.Convoy, (early ? 0.3f : 0.9f + 0.5f * d) * k),
+                (Pattern.Roadwork, mountain ? 0.35f : 0.7f),
+                (Pattern.Parked, 0.8f * k),
+                (Pattern.Weaver, (early ? 0f : 0.4f + 0.9f * d) * k),
             });
         }
 
@@ -281,10 +288,16 @@ namespace JeepneyRush.Logic
             (HazardKind.Bus, _traffic[4] * (0.6f + d)), (HazardKind.Truck, _traffic[5] * (0.6f + d * 0.8f)),
         });
 
-        private HazardKind RandomStatic() => _rng.Weighted(new (HazardKind, float)[]
-        {
-            (HazardKind.Cone, 1.6f), (HazardKind.Barrier, 1.6f), (HazardKind.Pothole, 1.4f), (HazardKind.ConstructionSign, 0.9f), (HazardKind.Roadblock, 0.9f),
-        });
+        private HazardKind RandomStatic() => _env == EnvironmentKind.Mountain
+            ? _rng.Weighted(new (HazardKind, float)[]
+            {
+                // landslide rocks and deep potholes; the odd road-works sign
+                (HazardKind.Rocks, 2.2f), (HazardKind.Pothole, 2.4f), (HazardKind.ConstructionSign, 0.6f), (HazardKind.Barrier, 0.4f),
+            })
+            : _rng.Weighted(new (HazardKind, float)[]
+            {
+                (HazardKind.Cone, 1.6f), (HazardKind.Barrier, 1.6f), (HazardKind.Pothole, 1.4f), (HazardKind.ConstructionSign, 0.9f), (HazardKind.Roadblock, 0.9f),
+            });
 
         private void BuildPattern(Pattern p, float d, float speed)
         {
@@ -318,7 +331,12 @@ namespace JeepneyRush.Logic
                         if (_rng.Chance(0.4)) Stat(HazardKind.FloodPuddle, Other(lane), -_rng.Range(4, 12));
                     }
                     break;
-                case Pattern.Convoy: Veh(_rng.Chance(0.55) ? HazardKind.Bus : HazardKind.Truck, lane); break;
+                case Pattern.Mud:
+                    // muddy patches across one or two lanes (soft: they slow you down)
+                    Stat(HazardKind.MudPatch, lane);
+                    if (_rng.Chance(0.45)) Stat(HazardKind.MudPatch, Other(lane), -_rng.Range(3, 10));
+                    break;
+                case Pattern.Convoy: Veh(_env == EnvironmentKind.Mountain || !_rng.Chance(0.55) ? HazardKind.Truck : HazardKind.Bus, lane); break;
                 case Pattern.Roadwork:
                     // a cone line leading to a road block
                     Stat(HazardKind.Roadblock, lane, -6f);
