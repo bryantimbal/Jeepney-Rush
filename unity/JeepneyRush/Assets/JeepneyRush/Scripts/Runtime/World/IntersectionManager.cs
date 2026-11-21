@@ -216,7 +216,7 @@ namespace JeepneyRush
                 var c = v.Light.Color;
                 for (int k = 0; k < v.Lamps.Length; k++)
                 {
-                    bool on = (int)c == k % 3;
+                    bool on = TrafficLightRules.LampIndex(c) == k % 3; // lamps are red/yellow/green top to bottom
                     if (c == LightColor.Yellow && k % 3 == 1) on = (_time * 3f) % 1f < 0.8f; // slight flicker so it reads as "changing"
                     if (v.Lamps[k].activeSelf != on) v.Lamps[k].SetActive(on);
                 }

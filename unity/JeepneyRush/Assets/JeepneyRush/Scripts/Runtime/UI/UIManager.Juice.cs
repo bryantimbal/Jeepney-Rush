@@ -192,6 +192,59 @@ namespace JeepneyRush
             }
         }
 
+        private Label _gearD, _gearR;
+        private VisualElement _gearBtn;
+
+        /// <summary>Gear shifter: tap to switch D (drive) ↔ R (reverse). Shows the active gear lit.</summary>
+        private VisualElement BuildGearButton()
+        {
+            var b = new VisualElement { name = "gear" };
+            b.pickingMode = PickingMode.Position;
+            b.AddToClassList(InteractiveClass);
+            b.style.flexDirection = FlexDirection.Row;
+            b.style.alignItems = Align.Center;
+            b.style.alignSelf = Align.FlexStart;
+            b.style.marginTop = 14;
+            b.style.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 0.92f);
+            UiKit.Border(b.style, 6, UiKit.Ink, 30);
+            b.style.borderBottomWidth = 12;
+            UiKit.Pad(b.style, 8, 18);
+            b.Add(UiKit.Text("GEAR", 22, new Color(1, 1, 1, 0.7f), true, 1f));
+            Label Cell(string t)
+            {
+                var l = UiKit.Text(t, 56, Color.white, true, 2f);
+                l.style.width = 70;
+                l.style.marginLeft = 8;
+                l.style.unityTextAlign = TextAnchor.MiddleCenter;
+                UiKit.Border(l.style, 0, Color.clear, 16);
+                return l;
+            }
+            _gearD = Cell("D");
+            _gearR = Cell("R");
+            b.Add(_gearD);
+            b.Add(_gearR);
+            b.RegisterCallback<PointerDownEvent>(e =>
+            {
+                e.StopPropagation();
+                b.style.translate = new Translate(0, 5, 0);
+                Services.Game.Session?.ToggleGear();
+            });
+            b.RegisterCallback<PointerUpEvent>(_ => b.style.translate = new Translate(0, 0, 0));
+            b.RegisterCallback<PointerLeaveEvent>(_ => b.style.translate = new Translate(0, 0, 0));
+            _gearBtn = b;
+            SetGear(false);
+            return b;
+        }
+
+        public void SetGear(bool reverse)
+        {
+            if (_gearD == null) return;
+            _gearD.style.backgroundColor = reverse ? Color.clear : UiKit.Hex("#3EE07A");
+            _gearD.style.color = reverse ? new Color(1, 1, 1, 0.35f) : UiKit.Ink;
+            _gearR.style.backgroundColor = reverse ? UiKit.Hex("#FF6B6B") : Color.clear;
+            _gearR.style.color = reverse ? UiKit.Ink : new Color(1, 1, 1, 0.35f);
+        }
+
         private Label _weather, _fuelLabel, _fuelStation;
         private VisualElement _fuelFill, _fuelBox;
 

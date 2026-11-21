@@ -13,7 +13,7 @@ namespace JeepneyRush
     /// </summary>
     public static class InputCompat
     {
-        public enum Key { Left, Right, Up, Down, Jump, Horn, Pause }
+        public enum Key { Left, Right, Up, Down, Jump, Horn, Pause, Gear }
         public enum HoldKey { Gas, Brake }
 
         public struct Pointer
@@ -56,6 +56,7 @@ namespace JeepneyRush
                 case Key.Jump: return kb.spaceKey.wasPressedThisFrame;
                 case Key.Down: return kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame;
                 case Key.Horn: return kb.hKey.wasPressedThisFrame;
+                case Key.Gear: return kb.rKey.wasPressedThisFrame;
                 case Key.Pause: return kb.pKey.wasPressedThisFrame;
             }
             return false;
@@ -68,6 +69,7 @@ namespace JeepneyRush
                 case Key.Jump: return Input.GetKeyDown(KeyCode.Space);
                 case Key.Down: return Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S);
                 case Key.Horn: return Input.GetKeyDown(KeyCode.H);
+                case Key.Gear: return Input.GetKeyDown(KeyCode.R);
                 case Key.Pause: return Input.GetKeyDown(KeyCode.P);
             }
             return false;

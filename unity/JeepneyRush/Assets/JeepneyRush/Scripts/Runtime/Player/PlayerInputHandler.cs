@@ -11,7 +11,7 @@ namespace JeepneyRush
     /// </summary>
     public sealed class PlayerInputHandler : MonoBehaviour
     {
-        public enum Action { Left, Right, Down, Horn, Pause }
+        public enum Action { Left, Right, Down, Horn, Pause, Gear }
         public event Action<Action> OnAction;
 
         public bool InputEnabled { get; set; }
@@ -45,6 +45,7 @@ namespace JeepneyRush
             if (InputCompat.KeyPressed(InputCompat.Key.Down)) Fire(Action.Down);
             if (InputCompat.KeyPressed(InputCompat.Key.Horn)) Fire(Action.Horn);
             if (InputCompat.KeyPressed(InputCompat.Key.Pause)) Fire(Action.Pause);
+            if (InputCompat.KeyPressed(InputCompat.Key.Gear)) Fire(Action.Gear);
 
             InputCompat.GetPointers(_pointers);
             var keys = new List<int>(_tracks.Keys);

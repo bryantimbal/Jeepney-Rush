@@ -60,6 +60,12 @@ namespace JeepneyRush.Logic
         public static bool CrossedLine(float lineZBefore, float lineZ, BalanceConfig cfg) =>
             lineZBefore - cfg.playerHalfLength > 0 && lineZ - cfg.playerHalfLength <= 0;
 
+        /// <summary>
+        /// Which lamp of a signal head is lit. Heads are built top to bottom red, yellow, green
+        /// (<see cref="Geometry.PropBuilder.SignalLamps"/>) – note this is NOT the enum order.
+        /// </summary>
+        public static int LampIndex(LightColor c) => c == LightColor.Red ? 0 : c == LightColor.Yellow ? 1 : 2;
+
         /// <summary>Only crossing on RED is an offence (yellow = finish crossing if you can't stop).</summary>
         public static bool IsViolation(LightColor c) => c == LightColor.Red;
 

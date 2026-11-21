@@ -39,7 +39,10 @@ namespace JeepneyRush
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
         private bool _gasWas;
-        private float _revCooldown, _dwell, _loadT, _stillT, _beepT;
+        private float _revCooldown, _dwell, _loadT, _beepT;
+        /// <summary>Gear shift: false = D (drive), true = R (reverse).</summary>
+        private bool _reverseGear;
+        public bool ReverseGear => _reverseGear;
         private PassengerStopView _inZone;
         // ---- fuel & gas stations
         private StationManager _stations;
@@ -212,7 +215,9 @@ namespace JeepneyRush
             _smoothHumps = _hits = 0;
             _wetDistance = 0;
             _gasWas = false;
-            _dwell = _loadT = _stillT = _beepT = 0;
+            _dwell = _loadT = _beepT = 0;
+            _reverseGear = false;
+            Services.UI.SetGear(false);
             _fuel = new FuelTank(_cfg);
             _stationZone = null;
             _refuelling = _lowWarned = _engineDead = false;
@@ -245,7 +250,32 @@ namespace JeepneyRush
                 case PlayerInputHandler.Action.Horn:
                     Honk();
                     break;
+                case PlayerInputHandler.Action.Gear:
+                    ToggleGear();
+                    break;
             }
+        }
+
+        /// <summary>
+        /// Gear shift D ↔ R. Like a real gearbox you can only shift when (almost) stopped –
+        /// hold BRAKE first.
+        /// </summary>
+        public void ToggleGear()
+        {
+            var st = Services.Game.State;
+            if (_dying || (st != GameState.Playing && st != GameState.Starting)) return;
+            if (Mathf.Abs(_speed) > 1.0f)
+            {
+                Services.UI.Float("PRENO MUNA BAGO MAG-SHIFT!", UIManager.FloatKind.Bad);
+                Services.Audio.Play(Logic.Audio.Sfx.Full, 0.7f);
+                return;
+            }
+            _reverseGear = !_reverseGear;
+            Services.UI.SetGear(_reverseGear);
+            Services.Audio.Play(Logic.Audio.Sfx.Click, 1f, 0.6f); // gearbox "clunk"
+            Services.Audio.Play(Logic.Audio.Sfx.Land, 0.5f, 1.4f);
+            _player.Bump(0.04f);
+            Services.UI.Float(_reverseGear ? "R · ATRAS" : "D · ARANGKADA", UIManager.FloatKind.Info);
         }
 
         /// <summary>BUSINA: the jeepney horn. The car ahead in your lane moves over (if safe) or hurries up.</summary>
@@ -304,7 +334,6 @@ namespace JeepneyRush
             {
                 // crashing, or passengers getting on/off: the jeepney stays put
                 _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * 2f * dt);
-                _stillT = 0; // after loading, BRAKE must be held again before reversing
             }
             else if (_fuel.Empty)
             {
@@ -313,25 +342,19 @@ namespace JeepneyRush
             }
             else if (brakeHeld)
             {
-                // real brakes: decelerate all the way to a complete stop ...
-                if (_speed > 0.05f || _stillT < _cfg.reverseDelay)
-                {
-                    _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt);
-                    _stillT = _speed <= 0.05f ? _stillT + dt : 0f;
-                }
-                else
-                {
-                    // ... and keep holding to back up (e.g. to a PARA stop you overshot)
-                    // stop reversing at the reverse limit, when back at a PARA zone, or right before
-                    // backing into something (parking sensor)
-                    bool room = _score.Distance > _score.MaxDistance - _cfg.reverseLimit && _inZone == null && _stationZone == null && ClearanceBehind() > 0.8f;
-                    _speed = Mathf.MoveTowards(_speed, room ? -_cfg.reverseSpeed : 0f, (room ? 3f : 12f) * dt);
-                    if (!room && _speed > -0.05f) _speed = 0;
-                }
+                // real brakes: decelerate to a complete stop and hold it (never reverses by itself)
+                _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt);
+            }
+            else if (_reverseGear)
+            {
+                // gear R + GAS backs up; stops at the reverse limit, when back at a PARA zone or
+                // gas station pad, or right before backing into something (parking sensor)
+                bool room = _score.Distance > _score.MaxDistance - _cfg.reverseLimit && _inZone == null && _stationZone == null && ClearanceBehind() > 0.8f;
+                float target = gasHeld && room ? -_cfg.reverseSpeed : 0f;
+                _speed = Mathf.MoveTowards(_speed, target, (room ? 3f : 12f) * dt);
             }
             else
             {
-                _stillT = 0;
                 if (_speed < 0) _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * dt); // stop reversing first
                 float target = _difficulty.BaseSpeed * _player.SpeedMultiplier * pu.SpeedMultiplier * (0.35f + 0.65f * intro);
                 float accel = _player.Braking ? 5f : gasHeld || pu.IsActive(PowerUpKind.Turbo) ? 3f : 2f;
@@ -410,9 +433,11 @@ namespace JeepneyRush
             else if (_inZone != null)
                 Services.UI.SetEnforcerBanner("PARA! HOLD BRAKE · FULL STOP");
             else if (_speed < -0.3f)
-                Services.UI.SetEnforcerBanner("ATRAS! (REVERSING)");
+                Services.UI.SetEnforcerBanner("ATRAS! (GEAR R)");
+            else if (_reverseGear && !_dying)
+                Services.UI.SetEnforcerBanner("GEAR R · GAS = ATRAS · TAP D TO DRIVE");
             else if (next != null && nextZ < 0 && _route_HasBusiness(next) && _speed < 3f)
-                Services.UI.SetEnforcerBanner("LAGPAS SA PARA! HOLD BRAKE TO REVERSE");
+                Services.UI.SetEnforcerBanner("LAGPAS SA PARA! SHIFT TO R + GAS");
             else if (next != null && nextZ > 0 && nextZ < 70f && _route_HasBusiness(next))
                 Services.UI.SetEnforcerBanner($"PARA ZONE {Mathf.CeilToInt(nextZ)} m · BRAKE TO STOP");
             else if (hump > 0 && hump < 75f)

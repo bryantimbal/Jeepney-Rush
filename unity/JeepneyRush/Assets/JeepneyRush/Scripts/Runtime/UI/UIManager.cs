@@ -673,6 +673,7 @@ namespace JeepneyRush
             // one pedal per thumb: BRAKE bottom-left (under the speedometer), GAS bottom-right (under the horn)
             var brake = HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF6B6B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; });
             brake.style.marginTop = 16;
+            speedCol.Add(BuildGearButton());
             speedCol.Add(brake);
             var gas = HoldButton("GAS", "ui_gas", UiKit.Hex("#3EE07A"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; });
             controls.Add(gas);
@@ -688,7 +689,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

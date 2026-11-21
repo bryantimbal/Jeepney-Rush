@@ -90,5 +90,17 @@ namespace JeepneyRush.Tests
             Assert.IsFalse(CrossTrafficRules.JeepneyInBox(-TrafficLightRules.StopLineOffset - c.playerHalfLength, c));
             Assert.IsFalse(CrossTrafficRules.JeepneyInBox(12f, c), "already through");
         }
+
+        [Test]
+        public void LitLampMatchesTheColour()
+        {
+            // regression: green used to light the top (red) lamp
+            var lamps = JeepneyRush.Logic.Geometry.PropBuilder.SignalLamps();
+            Assert.Greater(lamps[0].Y, lamps[1].Y);
+            Assert.Greater(lamps[1].Y, lamps[2].Y);
+            Assert.AreEqual(0, TrafficLightRules.LampIndex(LightColor.Red), "red is the top lamp");
+            Assert.AreEqual(1, TrafficLightRules.LampIndex(LightColor.Yellow));
+            Assert.AreEqual(2, TrafficLightRules.LampIndex(LightColor.Green), "green is the bottom lamp");
+        }
     }
 }

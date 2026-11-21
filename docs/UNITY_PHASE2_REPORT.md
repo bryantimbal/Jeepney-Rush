@@ -144,3 +144,11 @@ Tests: **80/80 pass**. New tests: light cycle and countdown, yellow fairness at 
 * Waiting at your stop line is always safe. A test checks the geometry: the stop line is well clear of the cross lanes for every vehicle type.
 
 Tests: **82/82 pass**. New tests: cross traffic only moves on your red with an all-red clearance, and waiting at the stop line never overlaps a crossing car. The compile check has 0 errors.
+
+## Update 10 – traffic-light fix, D/R gear shift
+| Reported | Change |
+|---|---|
+| Lights looked reversed (cross traffic went on "green") | The timing logic was right, but the **lamps were wired upside down**: the heads are built red-yellow-green from top to bottom, while the colour list runs green-yellow-red, so a green light lit the red lamp. Now the lit lamp matches the real state: when you see **red**, you stop and the cross traffic goes. When you see **green**, you go and the cross traffic waits. A regression test checks the lamp order. |
+| Long-pressing BRAKE at an intersection made the jeepney reverse | **BRAKE never reverses any more.** It slows to a full stop and holds there as long as you press it. Reversing now uses a **GEAR shifter** (left side, above BRAKE): **D** (green) = drive, **R** (red) = reverse. Tap it to shift, but only when (almost) stopped, otherwise you get "PRENO MUNA BAGO MAG-SHIFT!". In R, **hold GAS to back up** (slowly, with the beeper, parking sensor, 25 m limit, and auto-stop when you touch a PARA zone or a gas-station pad). Tap D to drive forward again. The banner reminds you while R is engaged. Keyboard: **R** toggles the gear. |
+
+Tests: **83/83 pass**. The compile check has 0 errors.
