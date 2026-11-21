@@ -134,3 +134,13 @@ Tests: **75/75 pass**. New fuel tests: burn rates, idle/reverse use, low/empty, 
 Tests: **80/80 pass**. New tests: light cycle and countdown, yellow fairness at every speed, red-only violations and stop-line crossing, route-specific stop names and boarding lines. The fairness test now also requires intersections to be clear. The compile check has 0 errors.
 
 **Update note:** this update changes `Resources/Textures/stop_signs.png` (it's taller now: 4×11 signs). Copy the folder with **Replace** as usual. No Setup Project needed.
+
+## Update 9 – cross traffic at intersections
+* Sedans, SUVs, tricycles, motorcycles and jeepneys now come out of both side streets and **drive across the intersection** on their own lanes, keeping right.
+* While **you have green or yellow**, they **queue at their stop line** at the curb (up to 4 per side), gently idling.
+* When **your light turns red**, they wait one all-red second, then drive through, keeping a safe gap to the car in front. They stop sending new cars a second before your green.
+* They are **solid**. Run the red into the cross traffic and you crash (heart lost, passengers complain) on top of the red-light ticket. A car that gets hit stays put, and the cars behind it wait.
+* They never pull into a jeepney that is still inside the box (e.g. you entered on a late yellow): they hold at their line until you're through.
+* Waiting at your stop line is always safe. A test checks the geometry: the stop line is well clear of the cross lanes for every vehicle type.
+
+Tests: **82/82 pass**. New tests: cross traffic only moves on your red with an all-red clearance, and waiting at the stop line never overlaps a crossing car. The compile check has 0 errors.

@@ -70,4 +70,32 @@ namespace JeepneyRush.Logic
         public static bool YellowIsFair(float speed, BalanceConfig cfg) =>
             speed <= 0.5f || StopRules.StoppingDistance(speed, cfg) / speed <= cfg.lightYellow;
     }
+
+    /// <summary>
+    /// Cross traffic: cars on the side street drive through only while the jeepney's light
+    /// is red (after an all-red clearance) and never into a jeepney that is still in the box.
+    /// </summary>
+    public static class CrossTrafficRules
+    {
+        /// <summary>Seconds of "all red" at both ends of the cross street's green.</summary>
+        public const float Clearance = 1.0f;
+        /// <summary>Cross-street lanes (local z of the intersection): cars heading +x keep right (toward the jeepney).</summary>
+        public const float LaneZ = 2.2f;
+        public static float LaneFor(float dir) => dir > 0 ? -LaneZ : LaneZ;
+
+        /// <summary>May cross cars enter the intersection now?</summary>
+        public static bool CrossGreen(LightColor jeepneyLight, float remaining, BalanceConfig cfg) =>
+            jeepneyLight == LightColor.Red && cfg.lightRed - remaining >= Clearance && remaining > Clearance;
+
+        /// <summary>
+        /// Is the jeepney (centre at local z <paramref name="jeepLocalZ"/> of the intersection)
+        /// in or entering the cross-traffic box? Cars hold at their line while it is.
+        /// </summary>
+        public static bool JeepneyInBox(float jeepLocalZ, BalanceConfig cfg) =>
+            jeepLocalZ + cfg.playerHalfLength > -TrafficLightRules.HalfBox - 0.5f && jeepLocalZ - cfg.playerHalfLength < TrafficLightRules.HalfBox + 0.5f;
+
+        /// <summary>A jeepney waiting at the stop line never overlaps a crossing car.</summary>
+        public static bool StopLineIsSafe(BalanceConfig cfg, float carHalfWidth) =>
+            -TrafficLightRules.StopLineOffset < -LaneZ - carHalfWidth && !JeepneyInBox(-TrafficLightRules.StopLineOffset - cfg.playerHalfLength, cfg);
+    }
 }

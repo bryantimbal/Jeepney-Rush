@@ -62,5 +62,33 @@ namespace JeepneyRush.Tests
                 StringAssert.DoesNotContain("QUIAPO", Lines.BoardFor(EnvironmentKind.Provincial, rng));
             }
         }
+
+        [Test]
+        public void CrossTrafficOnlyMovesOnTheJeepneysRed()
+        {
+            var c = new BalanceConfig();
+            var l = new TrafficLightCycle(c, 0);
+            bool sawGo = false;
+            for (float t = 0; t < l.Period * 2; t += 0.05f)
+            {
+                bool go = CrossTrafficRules.CrossGreen(l.Color, l.Remaining, c);
+                if (go) Assert.AreEqual(LightColor.Red, l.Color, "cross cars move only on the jeepney's red");
+                if (l.Color == LightColor.Red && c.lightRed - l.Remaining < CrossTrafficRules.Clearance) Assert.IsFalse(go, "all-red clearance");
+                sawGo |= go;
+                l.Tick(0.05f);
+            }
+            Assert.IsTrue(sawGo);
+        }
+
+        [Test]
+        public void WaitingAtTheStopLineIsSafeFromCrossTraffic()
+        {
+            var c = new BalanceConfig();
+            foreach (var k in new[] { HazardKind.Sedan, HazardKind.Suv, HazardKind.Tricycle, HazardKind.Motorcycle, HazardKind.ParkedJeepney })
+                Assert.IsTrue(CrossTrafficRules.StopLineIsSafe(c, HazardCatalog.Get(k).HalfWidth), k.ToString());
+            Assert.IsTrue(CrossTrafficRules.JeepneyInBox(0f, c));
+            Assert.IsFalse(CrossTrafficRules.JeepneyInBox(-TrafficLightRules.StopLineOffset - c.playerHalfLength, c));
+            Assert.IsFalse(CrossTrafficRules.JeepneyInBox(12f, c), "already through");
+        }
     }
 }

@@ -15,10 +15,20 @@ namespace JeepneyRush
         public readonly List<int> WalkerVariants = new List<int>();
         public readonly List<float> WalkerDir = new List<float>();
         public bool Crossed, Ticketed;
+        /// <summary>Cross-street traffic (moves along X through the box).</summary>
+        public readonly List<CrossCar> Cars = new List<CrossCar>();
+        public readonly float[] SpawnTimer = new float[2];
         public float LineZBefore;
 
         /// <summary>Stop line ahead of the jeepney (Unity z, + = ahead).</summary>
         public float StopLineZ => transform.localPosition.z - TrafficLightRules.StopLineOffset;
+    }
+
+    public sealed class CrossCar
+    {
+        public Hazard H;
+        public float Dir;
+        public float Speed;
     }
 
     /// <summary>
@@ -67,14 +77,112 @@ namespace JeepneyRush
             v.transform.localPosition = new Vector3(0, 0, unityZ);
             v.transform.localRotation = Quaternion.identity;
             v.LineZBefore = v.StopLineZ;
+            v.SpawnTimer[0] = Random.Range(0f, 1.5f);
+            v.SpawnTimer[1] = Random.Range(0f, 1.5f);
             _items.Add(v);
         }
 
         public void Clear()
         {
-            foreach (var v in _items) ReleaseWalkers(v);
+            foreach (var v in _items) { ReleaseWalkers(v); ReleaseCars(v); }
             foreach (var v in _items) Services.Pools.Release(v.gameObject);
             _items.Clear();
+        }
+
+        private static readonly (HazardKind kind, float weight)[] CrossKinds =
+        {
+            (HazardKind.Sedan, 3f), (HazardKind.Suv, 1.5f), (HazardKind.Tricycle, 1.6f), (HazardKind.Motorcycle, 1.4f), (HazardKind.ParkedJeepney, 1.2f),
+        };
+        private const float CrossCruise = 8f;
+
+        private void ReleaseCars(IntersectionView v)
+        {
+            foreach (var c in v.Cars) if (c.H != null) Services.Pools.Release(c.H.gameObject);
+            v.Cars.Clear();
+        }
+
+        private void SpawnCar(IntersectionView v, float dir)
+        {
+            float total = 0;
+            foreach (var k in CrossKinds) total += k.weight;
+            float r = Random.value * total;
+            var kind = CrossKinds[0].kind;
+            foreach (var k in CrossKinds) { if (r < k.weight) { kind = k.kind; break; } r -= k.weight; }
+            int variant = Random.Range(0, ModelLibrary.VariantCount(kind));
+            string key = $"xc:{kind}:{variant}";
+            if (!Services.Pools.Has(key)) Services.Pools.Register(key, () => Hazard.Create(kind, variant, key));
+            var h = Services.Pools.Get(key, v.transform).GetComponent<Hazard>();
+            h.ResetState(0, 0, true);
+            float so = SceneryBuilder.SidewalkOuter;
+            h.transform.localPosition = new Vector3(-dir * (so + 4f), 0, CrossTrafficRules.LaneFor(dir));
+            h.transform.localRotation = Quaternion.Euler(0, dir > 0 ? 90 : -90, 0); // models face +Z
+            v.Cars.Add(new CrossCar { H = h, Dir = dir, Speed = CrossCruise });
+        }
+
+        /// <summary>
+        /// Side-street cars: they queue at their stop line while the jeepney has green/yellow,
+        /// drive through on the jeepney's red (after an all-red second) and never pull into a
+        /// jeepney that is still in the box.
+        /// </summary>
+        private void TickCars(IntersectionView v, float dt, float viewZ)
+        {
+            float rw = SceneryBuilder.RoadHalfWidth, so = SceneryBuilder.SidewalkOuter;
+            bool go = CrossTrafficRules.CrossGreen(v.Light.Color, v.Light.Remaining, _cfg) && !CrossTrafficRules.JeepneyInBox(-viewZ, _cfg);
+            // new arrivals from both side streets
+            if (viewZ < 220f && viewZ > -20f)
+                for (int d = 0; d < 2; d++)
+                {
+                    float dir = d == 0 ? 1f : -1f;
+                    v.SpawnTimer[d] -= dt;
+                    if (v.SpawnTimer[d] > 0) continue;
+                    v.SpawnTimer[d] = Random.Range(go ? 1.2f : 2.2f, go ? 2.6f : 4.5f);
+                    int queued = 0;
+                    bool clear = true;
+                    foreach (var c in v.Cars)
+                    {
+                        if (c.Dir != dir) continue;
+                        queued++;
+                        if (dir * c.H.transform.localPosition.x < -(so + 4f) + 6f) clear = false;
+                    }
+                    if (queued < 4 && clear) SpawnCar(v, dir);
+                }
+            for (int i = v.Cars.Count - 1; i >= 0; i--)
+            {
+                var c = v.Cars[i];
+                var t = c.H.transform;
+                var p = t.localPosition;
+                if (c.H.Hit) { c.Speed = 0; continue; } // got hit by a red-light runner: stays put
+                float hl = c.H.Def.HalfLength;
+                float x = p.x * c.Dir;                       // progress along its own direction
+                float stopX = -(rw + 1.2f + hl);             // its stop line (front bumper at the curb)
+                float limit = float.MaxValue;
+                if (!go && x < stopX + 0.3f) limit = stopX;  // wait at the line
+                // keep a gap to the car in front (same direction)
+                foreach (var o in v.Cars)
+                {
+                    if (o == c || o.Dir != c.Dir) continue;
+                    float ox = o.H.transform.localPosition.x * c.Dir;
+                    if (ox > x) limit = Mathf.Min(limit, ox - o.H.Def.HalfLength - hl - 1.5f);
+                }
+                float target = CrossCruise;
+                if (limit < float.MaxValue)
+                {
+                    float gap = Mathf.Max(0, limit - x);
+                    target = Mathf.Min(target, Mathf.Sqrt(2f * 6f * gap));
+                    if (gap < 0.05f) target = 0;
+                }
+                c.Speed = Mathf.MoveTowards(c.Speed, target, (target < c.Speed ? 12f : 4f) * dt);
+                x = Mathf.Min(x + c.Speed * dt, limit < float.MaxValue ? Mathf.Max(x, limit) : float.MaxValue);
+                p.x = x * c.Dir;
+                t.localPosition = p;
+                // a little suspension bob so waiting cars look alive
+                c.H.Body.localPosition = new Vector3(0, Mathf.Abs(Mathf.Sin((_time + i) * 6f)) * 0.02f, 0);
+                if (x > so + 4f)
+                {
+                    Services.Pools.Release(c.H.gameObject);
+                    v.Cars.RemoveAt(i);
+                }
+            }
         }
 
         private void ReleaseWalkers(IntersectionView v)
@@ -155,9 +263,12 @@ namespace JeepneyRush
                     }
                 }
 
+                TickCars(v, dt, p.z);
+
                 if (p.z < -60f)
                 {
                     ReleaseWalkers(v);
+                    ReleaseCars(v);
                     Services.Pools.Release(v.gameObject);
                     _items.RemoveAt(i);
                 }
