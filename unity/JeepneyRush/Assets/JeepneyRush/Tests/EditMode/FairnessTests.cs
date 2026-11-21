@@ -43,6 +43,8 @@ namespace JeepneyRush.Tests
             public void SpawnStop(PassengerStop stop, float z) => Stops.Add((stop, z));
             public int PowerUps;
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => PowerUps++;
+            public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
+            public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
         }
 
         private static (List<string> hits, int stops, int coins, int passengers, int powerUps, List<string> zoneIntrusions, MockWorld world) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
@@ -87,6 +89,23 @@ namespace JeepneyRush.Tests
                         if ((o.Lane == s.Lane || fullWidth) && Math.Abs(o.Z - z) < cfg.stopZoneLength / 2 + d.HalfLength)
                         {
                             string tag = $"{o.Kind}@stop{s.Id}";
+                            if (!intrusions.Contains(tag)) intrusions.Add(tag);
+                        }
+                    }
+                }
+                for (int i = 0; i < world.Stations.Count; i++)
+                {
+                    var (st, z) = world.Stations[i];
+                    z += speed * dt;
+                    world.Stations[i] = (st, z);
+                    if (z < -110 || z > cfg.stationZoneLength / 2) continue;
+                    foreach (var o in world.Objs)
+                    {
+                        var d = HazardCatalog.Get(o.Kind);
+                        bool fullWidth = d.HalfWidth >= HazardCatalog.FullRoadHalfWidth - 0.01f;
+                        if ((o.Lane == st.Lane || fullWidth) && Math.Abs(o.Z - z) < cfg.stationZoneLength / 2 + d.HalfLength)
+                        {
+                            string tag = $"{o.Kind}@station{st.Id}";
                             if (!intrusions.Contains(tag)) intrusions.Add(tag);
                         }
                     }
@@ -172,6 +191,14 @@ namespace JeepneyRush.Tests
             Assert.Greater(passengers, 10);
             CollectionAssert.IsEmpty(intrusions, "vehicles/obstacles in PARA zones: " + string.Join(", ", intrusions));
             Assert.Greater(world.Spawned.TryGetValue(HazardKind.SpeedHump, out var humps) ? humps : 0, 0, "no speed humps in 4 km");
+            // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
+            Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
+            var cfg = new BalanceConfig();
+            for (int i = 0; i < world.Stations.Count; i++)
+            {
+                float prev = i == 0 ? 0 : world.Stations[i - 1].station.At;
+                Assert.Less(world.Stations[i].station.At - prev, FuelTank.RangeOnGas(cfg) - 100f, "stations too far apart for a full tank");
+            }
         }
 
         [Test]

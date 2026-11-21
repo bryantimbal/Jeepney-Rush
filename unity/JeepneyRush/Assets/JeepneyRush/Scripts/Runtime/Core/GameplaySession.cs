@@ -41,6 +41,15 @@ namespace JeepneyRush
         private bool _gasWas;
         private float _revCooldown, _dwell, _loadT, _stillT, _beepT;
         private PassengerStopView _inZone;
+        // ---- fuel & gas stations
+        private StationManager _stations;
+        private FuelTank _fuel;
+        private StationView _stationZone;
+        private RefuelQuote _quote;
+        private float _refuelLeft, _refuelWalk, _stationDwell, _emptyT, _sputterT, _pumpSfxT;
+        private bool _refuelling, _lowWarned, _engineDead;
+        private int _refuels;
+        public FuelTank Fuel => _fuel;
         private bool _dying;
 
         public ScoreManager Score => _score;
@@ -120,13 +129,15 @@ namespace JeepneyRush
             _enforcer.Init();
             _enforcer.Passed = OnEnforcerPassed;
             _spawner = new LevelSpawner(_traffic, _obstacles, _coins, _passengers, _powerUps);
+            _stations = GetOrAdd<StationManager>(Child("StationManager"));
+            _spawner.Stations = _stations;
             _traffic.CollectAll = _spawner.CollectBlockers;
             _traffic.PlayerLanes = () => _spawner.PlayerLanes;
 
             // hills & bends are applied for rendering only (gameplay stays in straight lanes)
             _bender = GetOrAdd<RoadBender>(Child("RoadBender"));
             _bender.Road = _road;
-            foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _road.SegmentRoot })
+            foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _road.SegmentRoot })
                 _bender.AddRoot(root);
             _weather = GetOrAdd<WeatherManager>(Child("Weather"));
             _weather.Init(_camera.GetComponent<Camera>(), _road);
@@ -166,6 +177,8 @@ namespace JeepneyRush
             _rng = new GameRandom(seed);
             _traffic.Clear();
             _obstacles.Clear();
+            _stations.Clear();
+            _stations.Init(_cfg);
             _coins.Clear();
             _traffic.Init(_cfg, _rng);
             _obstacles.Init(_cfg, _rng);
@@ -193,6 +206,11 @@ namespace JeepneyRush
             _wetDistance = 0;
             _gasWas = false;
             _dwell = _loadT = _stillT = _beepT = 0;
+            _fuel = new FuelTank(_cfg);
+            _stationZone = null;
+            _refuelling = _lowWarned = _engineDead = false;
+            _refuelLeft = _refuelWalk = _stationDwell = _emptyT = _sputterT = _pumpSfxT = 0;
+            _refuels = 0;
             _inZone = null;
             _dying = false;
             _camera.Snap(_player.transform.position);
@@ -250,7 +268,7 @@ namespace JeepneyRush
             _player.GasHeld = gasHeld && !brakeHeld;
             _player.BrakeHeld = brakeHeld;
             _revCooldown -= dt;
-            if (_player.GasHeld && !_gasWas && _revCooldown <= 0)
+            if (_player.GasHeld && !_gasWas && _revCooldown <= 0 && !_fuel.Empty)
             {
                 _revCooldown = 0.7f;
                 // stepping on the accelerator: diesel rev + a black cough of smoke
@@ -260,11 +278,16 @@ namespace JeepneyRush
             _gasWas = _player.GasHeld;
             _difficulty.Tick(_score.Distance);
             float intro = Mathf.Clamp01(_runTime / 1.2f);
-            if (_dying || _loadT > 0)
+            if (_dying || _loadT > 0 || _refuelling)
             {
                 // crashing, or passengers getting on/off: the jeepney stays put
                 _speed = Mathf.MoveTowards(_speed, 0f, _cfg.brakeDecel * 2f * dt);
                 _stillT = 0; // after loading, BRAKE must be held again before reversing
+            }
+            else if (_fuel.Empty)
+            {
+                // out of diesel: no power – the jeepney coasts (brakes still work, no reversing)
+                _speed = Mathf.MoveTowards(_speed, 0f, (brakeHeld ? _cfg.brakeDecel : 2.2f) * dt);
             }
             else if (brakeHeld)
             {
@@ -279,7 +302,7 @@ namespace JeepneyRush
                     // ... and keep holding to back up (e.g. to a PARA stop you overshot)
                     // stop reversing at the reverse limit, when back at a PARA zone, or right before
                     // backing into something (parking sensor)
-                    bool room = _score.Distance > _score.MaxDistance - _cfg.reverseLimit && _inZone == null && ClearanceBehind() > 0.8f;
+                    bool room = _score.Distance > _score.MaxDistance - _cfg.reverseLimit && _inZone == null && _stationZone == null && ClearanceBehind() > 0.8f;
                     _speed = Mathf.MoveTowards(_speed, room ? -_cfg.reverseSpeed : 0f, (room ? 3f : 12f) * dt);
                     if (!room && _speed > -0.05f) _speed = 0;
                 }
@@ -309,6 +332,7 @@ namespace JeepneyRush
             float dz = _speed * dt;
             if (wet > 0.3f && dz > 0) _wetDistance += dz;
             _score.AddDistance(dz, _player.GasHeld ? _cfg.gasScoreMultiplier : 1f);
+            if (!_dying && !_refuelling) BurnFuel(dz, dt);
             if (dz > 0) _cleanDistance += dz;
             if (_speed < -0.3f)
             {
@@ -341,11 +365,21 @@ namespace JeepneyRush
             _powerUps.Tick(dt, _speed);
             _enforcer.Tick(dt, _speed);
             if (!_dying) UpdateStops(dt);
+            _stations.Tick(dt, _speed, _player.transform.localPosition);
+            if (!_dying) UpdateStations(dt);
             float hump = NextHumpZ();
             var next = _passengers.NextStop();
             float nextZ = next != null ? next.transform.localPosition.z - _cfg.stopZoneLength / 2f : -1f;
             if (_enforcer.Active && _enforcer.Z > 0)
                 Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+            else if (_refuelling)
+                Services.UI.SetEnforcerBanner(_refuelWalk > 0 ? "GAS STATION · PA-FULL TANK PO!" : $"NAGPAPAGASOLINA... {Mathf.RoundToInt(_fuel.Fraction * 100)}%");
+            else if (_fuel.Empty)
+                Services.UI.SetEnforcerBanner("UBOS ANG GAS! · STOP AT A GAS STATION");
+            else if (_stationZone != null && _fuel.Fraction < 0.97f)
+                Services.UI.SetEnforcerBanner("GAS STATION · HOLD BRAKE · FULL STOP");
+            else if (NextStationAhead(out float stz) && stz < 90f && _fuel.Fraction < 0.8f && _inZone == null)
+                Services.UI.SetEnforcerBanner($"GAS STATION {Mathf.CeilToInt(stz)} m · STOP TO REFUEL");
             else if (_loadT > 0)
                 Services.UI.SetEnforcerBanner("SAKAY / BABA... HINTAY LANG");
             else if (_inZone != null)
@@ -369,8 +403,13 @@ namespace JeepneyRush
 
             // ---- camera, audio, HUD
             _camera.Follow(_player.transform.position, _player.Lanes.VelocityX, s01, dt);
-            Services.Audio.UpdateEngine(s01, _player.Braking, _player.GasHeld);
-            if (!_dying) Services.UI.UpdateHud(this);
+            if (!_engineDead) Services.Audio.UpdateEngine(s01, _player.Braking, _player.GasHeld);
+            if (!_dying)
+            {
+                Services.UI.UpdateHud(this);
+                float stationM = NextStationAhead(out float sz) ? sz : (_director != null ? _director.NextStationAt - _score.Distance : -1f);
+                Services.UI.SetFuel(_fuel.Fraction, stationM, _fuel.Low);
+            }
         }
 
         /// <summary>Free space (m) behind the jeepney's rear bumper before a solid obstacle in its path.</summary>
@@ -581,6 +620,119 @@ namespace JeepneyRush
             GameEvents.RaisePowerUp(p.Kind);
         }
 
+        // ---------------------------------------------------------------- fuel
+        private bool NextStationAhead(out float metres)
+        {
+            metres = -1;
+            var s = _stations.Next();
+            if (s == null) return false;
+            metres = s.transform.localPosition.z - _cfg.stationZoneLength / 2f;
+            return metres > 0;
+        }
+
+        private void BurnFuel(float dz, float dt)
+        {
+            bool wasEmpty = _fuel.Empty;
+            _fuel.Burn(dz, _player.GasHeld, dt);
+            if (_fuel.Low && !_lowWarned)
+            {
+                _lowWarned = true;
+                Services.UI.Float("MAHINA NA ANG GAS!", UIManager.FloatKind.Bad);
+                Services.Audio.Play(Logic.Audio.Sfx.Full, 0.9f);
+                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, MAGPA-GAS KA NA!", _passengers.RandomRiderHead);
+            }
+            // last drops: the engine coughs
+            if (!_fuel.Empty && _fuel.Fraction < 0.06f)
+            {
+                _sputterT -= dt;
+                if (_sputterT <= 0) { _sputterT = Random.Range(0.8f, 1.8f); Services.Audio.Play(Logic.Audio.Sfx.Sputter, 0.8f); _player.Bump(0.06f); }
+            }
+            if (_fuel.Empty && !wasEmpty)
+            {
+                _engineDead = true;
+                Services.Audio.Play(Logic.Audio.Sfx.Sputter, 1f);
+                Services.Audio.StopEngine();
+                Services.UI.Float("UBOS ANG GAS!", UIManager.FloatKind.Big);
+                if (_passengers.Route.Count > 0) Services.UI.Say("NAKU, NAUBUSAN!", _passengers.RandomRiderHead, true);
+            }
+            if (_fuel.Empty && Mathf.Abs(_speed) < 0.1f && _stationZone == null)
+            {
+                _emptyT += dt;
+                if (_emptyT > 1.8f) OutOfFuel();
+            }
+            else _emptyT = 0;
+        }
+
+        private void OutOfFuel()
+        {
+            if (_dying) return;
+            Services.UI.Float("TIRIK! UBOS ANG GAS", UIManager.FloatKind.Big);
+            BeginDeath();
+        }
+
+        /// <summary>Gas stations: stop on the pad (touching it is enough) and the attendant fills you up.</summary>
+        private void UpdateStations(float dt)
+        {
+            if (_refuelling)
+            {
+                if (_refuelWalk > 0) { _refuelWalk -= dt; return; } // attendant walks over
+                float add = Mathf.Min(_cfg.refuelLitresPerSecond * dt, _refuelLeft);
+                _fuel.Add(add);
+                _refuelLeft -= add;
+                _pumpSfxT -= dt;
+                if (_pumpSfxT <= 0) { _pumpSfxT = 1.1f; Services.Audio.Play(Logic.Audio.Sfx.Refuel, 0.8f); }
+                if (_refuelLeft <= 0.01f) FinishRefuel();
+                return;
+            }
+            var x = _player.Lanes.X;
+            _stationZone = null;
+            foreach (var s in _stations.Stations)
+                if (!s.Done && StopRules.InZone(s.transform.localPosition.z, x, _cfg.LaneX(s.Station.Lane), _cfg, _cfg.stationZoneLength)) { _stationZone = s; break; }
+            if (_stationZone != null && Mathf.Abs(_speed) <= _cfg.stopSpeed && _loadT <= 0)
+            {
+                _stationDwell += dt;
+                if (_stationDwell >= _cfg.stopDwell) StartRefuel(_stationZone);
+            }
+            else _stationDwell = 0;
+        }
+
+        private void StartRefuel(StationView s)
+        {
+            _stationDwell = 0;
+            _quote = FuelRules.Quote(_fuel.Fuel, _fuel.Capacity, _score.Coins, _cfg);
+            if (_quote.Total < 0.5f)
+            {
+                s.Done = true;
+                Services.UI.Float("PUNO PA ANG TANGKE!", UIManager.FloatKind.Info);
+                return;
+            }
+            _refuelling = true;
+            _refuelLeft = _quote.Total;
+            _refuelWalk = 0.7f;
+            _pumpSfxT = 0.7f;
+            _stations.Serving = s;
+            Services.UI.Say(_quote.Credit > 0 && _quote.Paid < 1 ? "KUYA, UTANG MUNA PO..." : "PA-FULL TANK PO!", () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)));
+            if (_engineDead) { _engineDead = false; }
+        }
+
+        private void FinishRefuel()
+        {
+            _refuelling = false;
+            var s = _stations.Serving;
+            if (s != null) s.Done = true;
+            _stations.Serving = null;
+            _score.SpendCoins(_quote.Cost);
+            _refuels++;
+            _lowWarned = _fuel.Low;
+            Services.Audio.Play(Logic.Audio.Sfx.Purchase);
+            Services.Audio.StartEngine();
+            _fx.GasPuff(_player.transform.position, 0);
+            int litres = Mathf.RoundToInt(_quote.Total);
+            if (_quote.Credit > 0.5f) Services.UI.Float($"UTANG MUNA! +{litres} L", UIManager.FloatKind.Info);
+            else Services.UI.Float($"FULL TANK! +{litres} L · -{_quote.Cost} COINS", UIManager.FloatKind.Good);
+            Services.UI.Float("ARANGKADA! (GAS)", UIManager.FloatKind.Info);
+        }
+
         /// <summary>Does anyone want to get on or off at this stop?</summary>
         private bool _route_HasBusiness(PassengerStopView s) =>
             s.Stop.Waiting > 0 && _passengers.Route.Count < _cfg.passengerCapacity || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
@@ -669,7 +821,7 @@ namespace JeepneyRush
             var summary = new RunSummary
             {
                 Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Passengers = route.PickedUp,
-                Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Hits = _hits,
+                Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };
             var rewards = Services.Save.RecordRun(summary);

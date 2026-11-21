@@ -96,6 +96,8 @@ namespace JeepneyRush.Logic
         public int SmoothHumps;
         /// <summary>Metres driven on a wet road (rain/typhoon).</summary>
         public float WetDistance;
+        /// <summary>Gas-station fill-ups this run.</summary>
+        public int Refuels;
         public int Hits;
         /// <summary>Longest distance driven without a collision.</summary>
         public float CleanDistance;

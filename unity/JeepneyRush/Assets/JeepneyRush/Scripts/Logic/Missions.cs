@@ -6,7 +6,7 @@ namespace JeepneyRush.Logic
     public enum MissionType
     {
         DistanceInRun, CoinsInRun, PassengersInRun, DeliveriesInRun, CleanDistanceInRun, StreakInRun,
-        TotalDistance, TotalCoins, TotalPassengers, TotalDeliveries, TotalPowerUps, TotalSmoothHumps, Runs, TotalWetDistance,
+        TotalDistance, TotalCoins, TotalPassengers, TotalDeliveries, TotalPowerUps, TotalSmoothHumps, Runs, TotalWetDistance, TotalRefuels,
     }
 
     public sealed class MissionDef
@@ -38,6 +38,7 @@ namespace JeepneyRush.Logic
             (MissionType.TotalPowerUps, 3, 8, 1, "Use {0} power-ups"),
             (MissionType.TotalSmoothHumps, 5, 15, 1, "Cross {0} speed humps slowly"),
             (MissionType.TotalWetDistance, 300, 900, 100, "Drive {0} m in the rain"),
+            (MissionType.TotalRefuels, 2, 5, 1, "Refuel at {0} gas stations"),
             (MissionType.Runs, 3, 6, 1, "Play {0} runs"),
         };
 
@@ -91,6 +92,7 @@ namespace JeepneyRush.Logic
                 case MissionType.TotalPowerUps: return r.PowerUps;
                 case MissionType.TotalSmoothHumps: return r.SmoothHumps;
                 case MissionType.TotalWetDistance: return (int)r.WetDistance;
+                case MissionType.TotalRefuels: return r.Refuels;
                 case MissionType.Runs: return 1;
             }
             return 0;

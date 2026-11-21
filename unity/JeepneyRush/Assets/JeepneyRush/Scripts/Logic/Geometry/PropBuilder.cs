@@ -53,6 +53,75 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+/// <summary>
+        /// Roadside gas station ("gasolinahan") on the right curb: canopy cantilevered over the
+        /// curb lane, two pumps on an island, a price sign before it and the refuelling pad in
+        /// the lane. Generic colours (no real brand). Local x is road space (lane centre = laneX).
+        /// </summary>
+        public static MeshData GasStation(float laneX, float laneWidth, float padLength)
+        {
+            var b = new MeshBuilder();
+            float rw = SceneryBuilder.RoadHalfWidth, sh = SceneryBuilder.SidewalkHeight;
+            const string teal = "#0E7C86", orange = "#FF8C1A", white = "#F4F4F0", grey = "#8E9499";
+            // ---- pad in the lane: dashed white border + orange chevrons
+            float hx = laneWidth / 2f, hz = padLength / 2f;
+            for (float z = -hz; z < hz; z += 1.6f)
+                foreach (float sx in new[] { -1f, 1f })
+                    b.Box("paint", white, 0.14f, 0.012f, 0.9f, laneX + sx * (hx - 0.07f), 0.008f, z + 0.45f);
+            foreach (float z in new[] { -hz, hz }) b.Box("paint", white, laneWidth, 0.012f, 0.16f, laneX, 0.008f, z);
+            for (int i = 0; i < 4; i++)
+            {
+                float z = -hz + 2.2f + i * (padLength - 4.4f) / 3f;
+                b.Box("paint", orange, 1.1f, 0.012f, 0.22f, laneX - 0.42f, 0.009f, z, new Rot(0, -0.6f, 0));
+                b.Box("paint", orange, 1.1f, 0.012f, 0.22f, laneX + 0.42f, 0.009f, z, new Rot(0, 0.6f, 0));
+            }
+            // ---- canopy over the curb lane and the sidewalk
+            float cx0 = laneX - 1.4f, cx1 = SceneryBuilder.SidewalkOuter - 0.2f, cy = 5.2f;
+            float cw = cx1 - cx0, cmx = (cx0 + cx1) / 2f;
+            b.Box("paint", white, cw, 0.18f, padLength + 2f, cmx, cy, 0);                 // roof slab
+            b.Box("paint", teal, cw + 0.1f, 0.55f, 0.12f, cmx, cy + 0.1f, -(padLength + 2f) / 2f); // fascia (front)
+            b.Box("paint", teal, cw + 0.1f, 0.55f, 0.12f, cmx, cy + 0.1f, (padLength + 2f) / 2f);
+            b.Box("paint", teal, 0.12f, 0.55f, padLength + 2f, cx0, cy + 0.1f, 0);
+            b.Box("glow", orange, cw + 0.12f, 0.12f, 0.13f, cmx, cy - 0.05f, -(padLength + 2f) / 2f); // lit stripe
+            b.Box("glow", orange, 0.13f, 0.12f, padLength + 2f, cx0 - 0.01f, cy - 0.05f, 0);
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 2; j++)
+                    b.Box("glow", "#FFFBEA", 1.0f, 0.04f, 1.4f, cx0 + 1.2f + j * (cw - 2.4f), cy - 0.11f, -hz + 2f + i * (padLength - 4f) / 2f); // light panels
+            foreach (float z in new[] { -hz + 1.2f, hz - 1.2f })
+            {
+                b.Box("paint", white, 0.4f, cy, 0.4f, rw + 0.6f, cy / 2f, z);          // columns on the sidewalk
+                b.Box("paint", teal, 0.44f, 0.6f, 0.44f, rw + 0.6f, sh + 0.3f, z);
+                b.Box("paint", white, 0.4f, cy, 0.4f, cx1 - 0.4f, cy / 2f, z);
+            }
+            // ---- pump island with two pumps facing the road
+            float px = rw + 1.0f;
+            b.Box("paint", "#C9CCCF", 1.1f, 0.25f, padLength - 3f, px, sh + 0.12f, 0);
+            b.Box("paint", "#FFD60A", 1.12f, 0.08f, padLength - 2.9f, px, sh + 0.04f, 0);
+            foreach (float z in new[] { -2.4f, 2.4f })
+            {
+                b.Box("paint", white, 0.7f, 1.7f, 0.9f, px, sh + 0.25f + 0.85f, z);
+                b.Box("paint", teal, 0.72f, 0.3f, 0.92f, px, sh + 0.25f + 1.55f, z);
+                b.Box("glow", "#7CFFB2", 0.04f, 0.32f, 0.5f, px - 0.37f, sh + 0.25f + 1.15f, z); // display
+                b.Box("glow", orange, 0.04f, 0.12f, 0.5f, px - 0.37f, sh + 0.25f + 0.8f, z);
+                b.Box("paint", "#222222", 0.08f, 0.3f, 0.12f, px - 0.38f, sh + 0.25f + 0.5f, z + 0.25f); // nozzle
+                b.CylinderZ("paint", "#222222", 0.025f, 0.6f, 6, px - 0.42f, sh + 0.25f + 0.35f, z + 0.25f);
+            }
+            // ---- price sign before the station, facing the oncoming jeepney (-Z)
+            float sx2 = SceneryBuilder.SidewalkOuter - 0.6f, sz = -hz - 9f;
+            b.Box("paint", grey, 0.25f, 6.2f, 0.25f, sx2, 3.1f, sz);
+            b.Box("paint", teal, 2.2f, 2.8f, 0.3f, sx2, 6.6f, sz);
+            b.Box("glow", orange, 2.0f, 0.5f, 0.05f, sx2, 7.6f, sz - 0.17f);
+            for (int r = 0; r < 3; r++)
+            {
+                b.Box("paint", "#111111", 1.9f, 0.45f, 0.05f, sx2, 6.95f - r * 0.6f, sz - 0.17f);
+                for (int d = 0; d < 4; d++) b.Box("glow", r == 0 ? "#FF5A3C" : "#FFE066", 0.2f, 0.3f, 0.03f, sx2 + 0.2f + d * 0.24f, 6.95f - r * 0.6f, sz - 0.2f);
+                b.Box("glow", "#FFFFFF", 0.5f, 0.1f, 0.03f, sx2 - 0.55f, 6.95f - r * 0.6f, sz - 0.2f);
+            }
+            // drum of a gas can on the corner – unmistakably a fuel stop
+            b.Cylinder("paint", "#D62828", 0.3f, 0.3f, 0.8f, 12, cx1 - 1.2f, sh + 0.4f, hz - 0.6f);
+            return b.Data;
+        }
+
         public static MeshData WaitingShed()
         {
             var b = new MeshBuilder();

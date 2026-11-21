@@ -567,6 +567,7 @@ namespace JeepneyRush
                 hearts.Add(h);
             }
             right.Add(hearts);
+            right.Add(BuildFuelGauge());
             top.Add(right);
             _hud.Add(top);
 
@@ -685,7 +686,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · swipe UP to honk", "Rain = slippery road · avoid floods (BAHA)", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · swipe UP to honk", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

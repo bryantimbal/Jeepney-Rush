@@ -69,6 +69,22 @@ namespace JeepneyRush.Logic
         /// <summary>Extra slack (m) around the painted PARA box that still counts as "in the zone".</summary>
         public float zoneSlack = 1.5f;
 
+        // --- fuel & gas stations
+        public float fuelCapacity = 100f;
+        /// <summary>Litres per metre at cruise (full tank ≈ 2.2 km); GAS burns <see cref="fuelGasFactor"/>× more.</summary>
+        public float fuelPerMetre = 0.045f;
+        public float fuelGasFactor = 1.35f;
+        public float fuelIdlePerSecond = 0.05f;
+        public float fuelLowFraction = 0.25f;
+        public float fuelPricePerLitre = 0.4f;
+        /// <summary>Broke drivers get topped up to this fraction on credit.</summary>
+        public float fuelCreditFraction = 0.7f;
+        public float refuelLitresPerSecond = 40f;
+        public float stationSpacingMin = 900f;
+        public float stationSpacingMax = 1300f;
+        public float firstStationAt = 650f;
+        public float stationZoneLength = 14f;
+
         // --- passengers (Phase 2: destinations, fares, delivery streaks)
         public int passengerCapacity = 5;
         public int minRideStops = 1;

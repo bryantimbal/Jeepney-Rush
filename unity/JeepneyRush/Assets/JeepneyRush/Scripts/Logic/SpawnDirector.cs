@@ -17,6 +17,7 @@ namespace JeepneyRush.Logic
         void SpawnCoins(CoinFormation formation, int lane, int lane2, float z, int count, float spacing);
         void SpawnStop(PassengerStop stop, float z);
         void SpawnPowerUp(PowerUpKind kind, int lane, float z);
+        void SpawnStation(GasStation station, float z);
     }
 
     /// <summary>
@@ -49,6 +50,11 @@ namespace JeepneyRush.Logic
         private readonly List<LaneInterval> _intervals = new List<LaneInterval>();
         private readonly List<Candidate> _cands = new List<Candidate>();
         private float _nextStopAt = 120f;
+        private readonly List<GasStation> _pendingStations = new List<GasStation>();
+        private int _stationIds;
+        /// <summary>World distance of the next gas station that has not been spawned or is still ahead.</summary>
+        public float NextStationAt { get; private set; }
+        public int StationsPlaced { get; private set; }
         private float _nextPowerUpAt;
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
@@ -69,7 +75,9 @@ namespace JeepneyRush.Logic
             _wetness = wetness ?? (_ => 0f);
             _traffic = Environments.TrafficWeights(environment);
             _nextPowerUpAt = 200f + _rng.Range(0, 150);
+            NextStationAt = cfg.firstStationAt + _rng.Range(0, 150);
             PlanStops();
+            PlanStation(NextStationAt);
         }
 
         public void Update(float distance, float speed)
@@ -86,9 +94,44 @@ namespace JeepneyRush.Logic
                     _pendingStops.RemoveAt(i);
                 }
             }
+            for (int i = _pendingStations.Count - 1; i >= 0; i--)
+            {
+                var st = _pendingStations[i];
+                if (st.At - _cfg.stationZoneLength / 2 - 10 < distance + _cfg.spawnAhead)
+                {
+                    _sink.SpawnStation(st, -(st.At - distance));
+                    _pendingStations.RemoveAt(i);
+                    StationsPlaced++;
+                }
+            }
+            // once the jeepney is past the current station, plan the next one
+            if (distance > NextStationAt + 20f)
+            {
+                NextStationAt += _rng.Range(_cfg.stationSpacingMin, _cfg.stationSpacingMax);
+                PlanStation(NextStationAt);
+            }
             int guard = 0;
             while (Cursor < distance + _cfg.spawnAhead && guard++ < 8) GenerateRow(distance, speed);
             _reservations.RemoveAll(r => r.To < distance - 20);
+        }
+
+        private bool Overlaps(int lane, float from, float to)
+        {
+            foreach (var r in _reservations) if (r.Lane == lane && from < r.To && to > r.From) return true;
+            return false;
+        }
+
+        /// <summary>Gas station in the right curb lane, shifted forward if a PARA stop is there.</summary>
+        private void PlanStation(float at)
+        {
+            int lane = _cfg.laneCount - 1;
+            float half = _cfg.stationZoneLength / 2;
+            int guard = 0;
+            while (Overlaps(lane, at - half - 30, at + half + 12) && guard++ < 20) at += 40f;
+            NextStationAt = at;
+            var st = new GasStation { Id = ++_stationIds, At = at, Lane = lane };
+            _pendingStations.Add(st);
+            _reservations.Add(new Reservation { Lane = lane, From = at - half - 22, To = at + half + 6 });
         }
 
         private void PlanStops()
@@ -97,6 +140,8 @@ namespace JeepneyRush.Logic
             {
                 int side = _rng.Chance(0.5) ? -1 : 1;
                 int lane = side < 0 ? 0 : _cfg.laneCount - 1;
+                int g = 0;
+                while (Overlaps(lane, _nextStopAt - _cfg.stopZoneLength / 2 - 30, _nextStopAt + _cfg.stopZoneLength / 2 + 12) && g++ < 20) _nextStopAt += 40f;
                 var stop = _route.Plan(_nextStopAt, side, lane, _rng.Int(1, 4));
                 _pendingStops.Add(stop);
                 _reservations.Add(new Reservation { Lane = lane, From = stop.At - _cfg.stopZoneLength / 2 - 22, To = stop.At + _cfg.stopZoneLength / 2 + 6 });

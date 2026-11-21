@@ -110,3 +110,15 @@ Tests: **68/68 pass**, and the zone test now covers straddling, bumper-on-the-li
 Your existing `Resources/GameBalance.asset` still holds the old 0.22 s lane change, so the game **upgrades it automatically** on load (`balanceVersion` 3). You don't have to edit it by hand.
 
 Tests: **68/68 pass** (the fairness bot uses the slower, smoothed lane change). The compile check has 0 errors.
+
+## Update 7 – fuel gauge and gas-station refuelling
+* **Fuel gauge** on the HUD under the hearts: an E–F bar that goes green → yellow → red, plus "GAS STATION 340 m" (distance to the next station). Below 25% it blinks, a warning sounds, the banner shows "MAHINA NA ANG GAS!", and passengers nag ("KUYA, MAGPA-GAS KA NA!").
+* **Consumption:** a full tank (100 L) lasts about 2.2 km at cruise, and about 1.6 km if you hold GAS the whole way. Idling and reversing burn a little too.
+* **Gas stations** (generic "gasolinahan", no real brand) appear on the **right curb** about every 0.9–1.3 km (first one at about 650–800 m). Each has a canopy over the curb lane, a pump island with two pumps, a price sign and an attendant waving you in. The station's lane is reserved like a PARA stop, so no traffic or obstacles are in it. Stations and PARA stops never overlap, and a full tank always reaches the next station (checked by tests).
+* **Refuelling:** stop on the striped pad (touching it is enough; you can also reverse back to it). The banner says "GAS STATION · HOLD BRAKE · FULL STOP". After a full stop, the attendant walks to the jeepney, you hear the pump, the gauge fills ("NAGPAPAGASOLINA… 64%"), and you pay with this run's coins (0.4 coin per litre, so a typical fill-up costs about 25 coins). Then "FULL TANK! +62 L · -25 COINS". If you can't afford enough, the attendant fills you up to 70% on credit ("UTANG MUNA!") so you're never stranded right after a station.
+* **Running out:** below 6% the engine coughs and sputters. At empty the engine dies ("UBOS ANG GAS!"), the jeepney coasts without power (brakes still work, no reversing), and if it stops anywhere other than a station pad, the run ends ("TIRIK! UBOS ANG GAS"). If you coast onto a pad, you can still refuel.
+* New daily mission: "Refuel at N gas stations".
+
+![Gas station](images/gas_station.png)
+
+Tests: **75/75 pass**. New fuel tests: burn rates, idle/reverse use, low/empty, tank range vs. station spacing, price and credit rules, pad size. The fairness test now also checks that station lanes stay empty and stations are spaced within tank range. The compile check has 0 errors.

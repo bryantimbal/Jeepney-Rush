@@ -108,9 +108,9 @@ namespace JeepneyRush.Logic
         /// lines, straddle two lanes or stop a little short / past the box (<see cref="BalanceConfig.zoneSlack"/>).
         /// <paramref name="zoneZ"/> = zone centre ahead of the jeepney's centre, x = lateral positions.
         /// </summary>
-        public static bool InZone(float zoneZ, float playerX, float zoneX, BalanceConfig cfg) =>
+        public static bool InZone(float zoneZ, float playerX, float zoneX, BalanceConfig cfg, float zoneLength = -1f) =>
             Math.Abs(playerX - zoneX) <= cfg.laneSpacing / 2f + cfg.playerHalfWidth &&
-            Math.Abs(zoneZ) <= cfg.stopZoneLength / 2f + cfg.playerHalfLength + cfg.zoneSlack;
+            Math.Abs(zoneZ) <= (zoneLength > 0 ? zoneLength : cfg.stopZoneLength) / 2f + cfg.playerHalfLength + cfg.zoneSlack;
 
         /// <summary>A stop only counts as missed once it is behind the jeepney and out of reversing reach.</summary>
         public static bool OutOfReach(float zoneZ, BalanceConfig cfg) =>

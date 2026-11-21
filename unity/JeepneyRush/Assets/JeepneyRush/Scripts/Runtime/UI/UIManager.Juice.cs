@@ -192,7 +192,61 @@ namespace JeepneyRush
             }
         }
 
-        private Label _weather;
+        private Label _weather, _fuelLabel, _fuelStation;
+        private VisualElement _fuelFill, _fuelBox;
+
+        /// <summary>Fuel gauge: "E ▕████░░▏ F" bar plus distance to the next gas station.</summary>
+        private VisualElement BuildFuelGauge()
+        {
+            _fuelBox = UiKit.Box("fuel");
+            _fuelBox.style.alignItems = Align.FlexEnd;
+            _fuelBox.style.marginTop = 12;
+            var row = UiKit.Box();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.75f);
+            UiKit.Border(row.style, 3, new Color(1, 1, 1, 0.25f), 22);
+            UiKit.Pad(row.style, 8, 16);
+            _fuelLabel = UiKit.Text("GAS", 26, Color.white, true, 1.5f);
+            _fuelLabel.style.marginRight = 10;
+            row.Add(_fuelLabel);
+            row.Add(UiKit.Text("E", 22, UiKit.Hex("#FF6B6B"), true, 1f));
+            var bar = UiKit.Box();
+            bar.style.width = 220;
+            bar.style.height = 22;
+            bar.style.marginLeft = 6;
+            bar.style.marginRight = 6;
+            bar.style.backgroundColor = new Color(0, 0, 0, 0.5f);
+            UiKit.Border(bar.style, 0, Color.clear, 8);
+            bar.style.overflow = Overflow.Hidden;
+            _fuelFill = UiKit.Box();
+            _fuelFill.style.height = Length.Percent(100);
+            _fuelFill.style.width = Length.Percent(100);
+            _fuelFill.style.backgroundColor = UiKit.Hex("#3EE07A");
+            bar.Add(_fuelFill);
+            row.Add(bar);
+            row.Add(UiKit.Text("F", 22, Color.white, true, 1f));
+            _fuelBox.Add(row);
+            _fuelStation = UiKit.Text("", 24, UiKit.Hex("#D8D3FF"), false, 1.5f);
+            _fuelStation.style.marginTop = 4;
+            _fuelBox.Add(_fuelStation);
+            return _fuelBox;
+        }
+
+        /// <summary>Updates the gauge (green → yellow → red, blinking when low).</summary>
+        public void SetFuel(float fraction, float stationMetres, bool low)
+        {
+            if (_fuelFill == null) return;
+            fraction = Mathf.Clamp01(fraction);
+            _fuelFill.style.width = Length.Percent(fraction * 100f);
+            var c = fraction > 0.5f ? Color.Lerp(UiKit.Hex("#FFD166"), UiKit.Hex("#3EE07A"), (fraction - 0.5f) * 2f)
+                                    : Color.Lerp(UiKit.Hex("#FF4D4D"), UiKit.Hex("#FFD166"), fraction * 2f);
+            _fuelFill.style.backgroundColor = c;
+            float blink = low ? 0.55f + 0.45f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) : 1f;
+            _fuelBox.style.opacity = blink;
+            _fuelLabel.style.color = low ? UiKit.Hex("#FF6B6B") : Color.white;
+            _fuelStation.text = stationMetres >= 0 ? $"GAS STATION {Mathf.CeilToInt(stationMetres):N0} m" : "";
+        }
         private VisualElement _lightning;
 
         /// <summary>Weather readout under the distance ("UMUULAN · madulas").</summary>

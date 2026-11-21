@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -142,6 +142,23 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Noise(b, 0, 0.03f, 0.4f, 6000, 6000, 1f, highpass: true);
                     Synth.Noise(b, 0.07f, 0.03f, 0.3f, 6000, 6000, 1f, highpass: true);
                     return Synth.Normalize(b, 0.55f);
+                case Sfx.Refuel:
+                    // pump motor whirr + fuel gurgling into the tank
+                    b = Synth.Buffer(1.2f);
+                    Synth.Tone(b, Synth.Wave.Saw, 0, 1.15f, 118, 124, 0.25f, 0.05f, 700);
+                    Synth.Noise(b, 0, 1.15f, 0.35f, 900, 600, 2.5f);
+                    for (int g = 0; g < 9; g++) Synth.Tone(b, Synth.Wave.Sine, 0.08f + g * 0.12f, 0.08f, 420 + (g % 3) * 90, 300, 0.25f, 0.005f);
+                    return Synth.Normalize(b, 0.5f);
+                case Sfx.Sputter:
+                    // engine coughing on the last drops of diesel
+                    b = Synth.Buffer(0.9f);
+                    foreach (float t0 in new[] { 0f, 0.22f, 0.5f })
+                    {
+                        Synth.Noise(b, t0, 0.12f, 0.9f, 500, 150, 1f, lowpassOnly: true);
+                        Synth.Tone(b, Synth.Wave.Square, t0, 0.1f, 70, 40, 0.6f, 0.002f, 600);
+                    }
+                    Synth.Drive(b, 2f);
+                    return Synth.Normalize(b, 0.7f);
                 case Sfx.ReverseBeep:
                     // truck-style reversing alarm "beep"
                     b = Synth.Buffer(0.4f);
