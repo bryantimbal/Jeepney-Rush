@@ -461,7 +461,7 @@ namespace JeepneyRush
 
             // ---- camera, audio, HUD
             _camera.Follow(_player.transform.position, _player.Lanes.VelocityX, s01, dt);
-            if (!_engineDead) Services.Audio.UpdateEngine(s01, _player.Braking, _player.GasHeld);
+            if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
             if (!_dying)
             {
                 Services.UI.UpdateHud(this);

@@ -79,3 +79,15 @@ server-side validation.** The game stays fully playable offline.
 Phase 4 (monetisation): AdMob (banner on menus, capped interstitials between selected runs, rewarded revive /
 double coins), IAP (coin bundles, premium skins, ad-free) with **server-side receipt validation** via a Supabase
 Edge Function, which builds on this phase's ledger.
+
+## Update – live jeepney engine sound
+The engine is no longer a pitched loop. It's **synthesised live** (`DieselEngineSynth`, played through `EngineAudio.OnAudioFilterRead`) and modelled on the surplus 4-cylinder diesel that powers most Manila jeepneys (Isuzu 4BC2 / 4BA1 class):
+* one combustion pulse per firing (4 per 2 revolutions, so 25 Hz at the 750 rpm idle), with one weak and one strong cylinder and timing jitter. That gives the lumpy, uneven idle of a tired engine.
+* diesel clatter (injector knock), strongest at idle
+* exhaust pulses through an open-pipe resonance, with throttle-dependent rasp
+* valve-train ticks and loose body-panel rattle excited by the pulses
+* a **5-speed manual gearbox** (`JeepneyDrivetrain`): revs climb on GAS, and at every upshift there's a short pause and a rev drop while the clutch is in. That's the familiar "rrRRAA… rrRRAA" of a jeepney pulling away. When standing still, GAS free-revs the engine (a quick blip); BRAKE and stops settle back to idle.
+
+Tests check the firing frequency at 750 and 1,500 rpm, louder sound on GAS, no clipping or DC offset, upshifts with audible rev drops, and idle / free-rev behaviour.
+
+**Use a real recording instead (optional):** record a real jeepney idling steadily (about 800 rpm, 3–10 s, seamless loop, no talking) and save it as `Assets/JeepneyRush/Resources/Audio/jeepney_engine.wav` (or `.ogg`). The game then pitches that recording with the revs instead of using the synthesiser. You can also add `Resources/Audio/jeepney_rev.wav`, which plays when you press GAS. Only use recordings you made yourself or have a licence for.
