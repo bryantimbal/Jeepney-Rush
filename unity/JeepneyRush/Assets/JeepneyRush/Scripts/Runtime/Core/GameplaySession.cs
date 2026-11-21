@@ -216,6 +216,7 @@ namespace JeepneyRush
             _score.Init(_cfg);
             _fx.Clear();
             _player.SetLivery(RunJeepney);
+            Services.Audio.SetSoundTrip(JeepneyCatalog.Get(RunJeepney).SoundSystem && Services.Save.Data.soundTrip);
             _revived = false;
             if (!string.IsNullOrEmpty(TrialJeepney)) Services.UI.Float("TRIAL RUN: " + JeepneyCatalog.Get(TrialJeepney).DisplayName.ToUpperInvariant(), UIManager.FloatKind.Info);
             _player.Configure(_cfg);

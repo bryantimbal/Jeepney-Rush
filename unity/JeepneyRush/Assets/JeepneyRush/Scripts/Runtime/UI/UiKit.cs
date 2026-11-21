@@ -143,6 +143,59 @@ namespace JeepneyRush
             return b;
         }
 
+        /// <summary>
+        /// Colourful jeepney-style menu button: painted body, glossy highlight, darker 3D lip,
+        /// icon and outlined white label. <paramref name="vertical"/> stacks the icon above the label
+        /// (for narrow buttons).
+        /// </summary>
+        public static Button MenuButton(string text, string icon, Color bg, Action onClick, float height = 140, bool vertical = false, float fontSize = 44)
+        {
+            var b = Button("", onClick, bg, Color.white, fontSize, height);
+            var s = b.style;
+            Color.RGBToHSV(bg, out float h, out float sat, out float v);
+            var lip = Color.HSVToRGB(h, Mathf.Min(1f, sat * 1.1f), v * 0.62f);
+            s.borderBottomColor = lip;
+            s.borderLeftColor = s.borderRightColor = s.borderTopColor = Ink;
+            s.overflow = Overflow.Hidden;
+            s.flexDirection = vertical ? FlexDirection.Column : FlexDirection.Row;
+            s.alignItems = Align.Center;
+            s.justifyContent = Justify.Center;
+            s.paddingLeft = s.paddingRight = 8;
+            // glossy highlight across the top half
+            var gloss = Box();
+            gloss.style.position = Position.Absolute;
+            gloss.style.left = 14; gloss.style.right = 14; gloss.style.top = 6;
+            gloss.style.height = Length.Percent(34);
+            gloss.style.backgroundColor = new Color(1, 1, 1, 0.22f);
+            Border(gloss.style, 0, Color.clear, 22);
+            b.Add(gloss);
+            // jeepney pinstripe (red / yellow / blue) along the bottom edge
+            var stripe = Box();
+            stripe.style.position = Position.Absolute;
+            stripe.style.left = 0; stripe.style.right = 0; stripe.style.bottom = 6;
+            stripe.style.height = 6;
+            stripe.style.flexDirection = FlexDirection.Row;
+            foreach (var c in new[] { Red, Yellow, Blue })
+            {
+                var seg = Box();
+                seg.style.flexGrow = 1;
+                seg.style.backgroundColor = new Color(c.r, c.g, c.b, 0.55f);
+                stripe.Add(seg);
+            }
+            b.Add(stripe);
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var ic = Icon(icon, vertical ? height * 0.38f : height * 0.5f);
+                if (vertical) ic.style.marginBottom = 2; else ic.style.marginRight = 14;
+                b.Add(ic);
+            }
+            var label = Text(text, fontSize, Color.white, true, 3.5f);
+            label.style.whiteSpace = WhiteSpace.NoWrap;
+            label.style.marginTop = 4; // the display font sits a bit high
+            b.Add(label);
+            return b;
+        }
+
         public static VisualElement Card(float width = 940)
         {
             var c = Box("card");

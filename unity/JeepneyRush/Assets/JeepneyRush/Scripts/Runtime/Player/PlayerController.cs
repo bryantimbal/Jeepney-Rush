@@ -31,6 +31,9 @@ namespace JeepneyRush
         /// <summary>Road slope under the jeepney (radians, + = uphill), set by the session.</summary>
         public float SlopePitch;
         private string _livery;
+        private bool _soundSystem;
+        private readonly System.Collections.Generic.List<GameObject> _disco = new System.Collections.Generic.List<GameObject>();
+        private int _discoBeat = int.MinValue;
 
         public bool Braking => _brakeT > 0 || BrakeHeld;
         /// <summary>Set every frame by the session from the GAS / BRAKE hold controls.</summary>
@@ -88,6 +91,7 @@ namespace JeepneyRush
             foreach (var w in _wheels) if (w != null) Destroy(w.gameObject);
             _bodyModel = ModelLibrary.Instantiate(ModelLibrary.Jeepney(liveryId), "Jeepney_" + liveryId, Body);
             BuildBlinkers();
+            BuildDisco();
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
@@ -95,6 +99,49 @@ namespace JeepneyRush
                 var w = ModelLibrary.Instantiate(ModelLibrary.WheelFor(liveryId), "Wheel" + i, transform);
                 w.transform.localPosition = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
                 _wheels[i] = w.transform;
+            }
+        }
+
+        /// <summary>Patok jeepneys: coloured disco lights under the roof that flash to the sound trip.</summary>
+        private void BuildDisco()
+        {
+            foreach (var g in _disco) if (g != null) Destroy(g);
+            _disco.Clear();
+            _soundSystem = JeepneyCatalog.Get(_livery).SoundSystem;
+            if (!_soundSystem) return;
+            string[] cols = { "#FF2E4D", "#00E5FF", "#FFC300", "#7B2FF7", "#18FF6D", "#FF4FD8" };
+            float[] zs = { 0.3f, -0.6f, -1.5f, -2.4f };
+            int k = 0;
+            foreach (float z in zs)
+                foreach (float x in new[] { -0.45f, 0.45f })
+                {
+                    string col = cols[k % cols.Length];
+                    var model = ModelLibrary.Get("disco_" + col, () =>
+                    {
+                        var b = new MeshBuilder();
+                        b.Sphere("glow", col, 0.07f, 0, 0, 0, 8);
+                        b.Sphere("bubble", col, 0.16f, 0, 0, 0, 8);
+                        return b.Data;
+                    });
+                    var g = ModelLibrary.Instantiate(model, "Disco" + k, Body, castShadows: false);
+                    g.transform.localPosition = new Vector3(x, JeepneyBuilder.RoofY - 0.12f, z);
+                    _disco.Add(g);
+                    k++;
+                }
+        }
+
+        private void UpdateDisco()
+        {
+            if (_disco.Count == 0) return;
+            int beat = Services.Audio != null ? Services.Audio.SoundTripBeat : -1;
+            // no music (menu preview, sound trip off): slow colour chase
+            if (beat < 0) beat = Mathf.FloorToInt(_time * 2f);
+            if (beat == _discoBeat) return;
+            _discoBeat = beat;
+            for (int i = 0; i < _disco.Count; i++)
+            {
+                bool on = ((i + beat) % 3) != 0;
+                if (_disco[i].activeSelf != on) _disco[i].SetActive(on);
             }
         }
 
@@ -235,7 +282,10 @@ namespace JeepneyRush
             float shake = Mathf.Sin(_time * 9f) * 0.008f + Mathf.Max(0, Mathf.Sin(_time * 3.1f)) * 0.015f;
             // wet road: the rear steps out a little during lane changes (fishtail)
             float fishtail = _slip * Mathf.Clamp(Lanes.VelocityX, -12f, 12f) * 0.55f;
-            Body.localPosition = new Vector3(0, shake + Mathf.Max(-0.05f, _bumpY), 0);
+            // patok sound trip: the whole body thumps with the bass
+            float bass = _soundSystem && Services.Audio != null ? Services.Audio.SoundTripPulse * 0.035f : 0f;
+            Body.localPosition = new Vector3(0, shake + bass + Mathf.Max(-0.05f, _bumpY), 0);
+            UpdateDisco();
             // the nose points into the turn (steering), the body leans gently outward
             Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.7f + fishtail, _lean);
             UpdateSignals(dt);

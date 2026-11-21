@@ -287,6 +287,8 @@ const textures = await page.evaluate(() => {
       { id: 'fiesta', body: '#EF476F', a1: '#FFD166', a2: '#118AB2', motif: 'fiesta', slogan: 'Fiesta!', route: 'PISTA SA NAYON', rear: 'MABUHAY!', plate: 'PISTA 7', sign: 'FIESTA!', signBg: '#FFD166', signFg: '#EF476F' },
       { id: 'neon', body: '#14112B', a1: '#00F5D4', a2: '#F15BB5', motif: 'neon', slogan: 'Neon Rush', route: 'MIDNIGHT RUN', rear: 'CATCH ME IF YOU CAN', plate: 'NEON 88', sign: 'NEON', signBg: '#14112B', signFg: '#00F5D4' },
       { id: 'flag', body: '#FFFFFF', a1: '#CE1126', a2: '#FCD116', motif: 'flag', slogan: 'Mabuhay!', route: 'LUZON - VISAYAS - MINDANAO', rear: 'PILIPINAS KONG MAHAL', plate: 'PH 1898', sign: 'MABUHAY', signBg: '#0038A8', signFg: '#FFFFFF' },
+      { id: 'cogeo', body: '#0E0E12', a1: '#FF2E4D', a2: '#FFC300', motif: 'patok', slogan: 'Sound Trip!', route: 'COGEO - CUBAO', rear: 'PATOK PA RIN, INGAT LANG!', plate: 'PTK 143', sign: 'COGEO', signBg: '#0A0A0A', signFg: '#FF2E4D', led: true },
+      { id: 'antipolo', body: '#EEF1F6', a1: '#7B2FF7', a2: '#00E5FF', motif: 'patok', slogan: 'Byaheng Langit', route: 'ANTIPOLO - CUBAO', rear: 'SAKAY NA, SOUNDTRIP NA!', plate: 'ANT 1591', sign: 'ANTIPOLO', signBg: '#0A0A0A', signFg: '#00E5FF', led: true },
       { id: 'gold', body: '#1A1A1A', a1: '#FFD700', a2: '#FFF3B0', motif: 'gold', slogan: 'VIP', route: 'VIP EXPRESS', rear: 'VERY IMPORTANT PASAHERO', plate: 'VIP 1', sign: 'VIP', signBg: '#1A1A1A', signFg: '#FFD700' },
     ];
     const goldGrad = (x, y0, y1) => { const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#FFF3B0'); g.addColorStop(0.5, '#FFD700'); g.addColorStop(1, '#B8860B'); return g; };
@@ -328,18 +330,31 @@ const textures = await page.evaluate(() => {
           sun(x, 90, 128, 30, '#FCD116'); star(x, 22, 26, 14, '#FCD116'); star(x, 22, 230, 14, '#FCD116'); star(x, 250, 128, 14, '#FCD116');
           break;
         }
+        case 'patok': {
+          // racing stripes, checkered flag band, speaker + music-note stickers and an LED glow line
+          const dark = j.body !== '#EEF1F6';
+          x.fillStyle = j.a1; x.beginPath(); x.moveTo(0, 150); x.lineTo(1024, 40); x.lineTo(1024, 90); x.lineTo(0, 200); x.fill();
+          x.fillStyle = j.a2; x.beginPath(); x.moveTo(0, 210); x.lineTo(1024, 100); x.lineTo(1024, 116); x.lineTo(0, 226); x.fill();
+          for (let k = 0; k < 64; k++) { x.fillStyle = (k + (k >> 5)) % 2 ? (dark ? '#FFFFFF' : '#111111') : (dark ? '#111111' : '#FFFFFF'); x.fillRect((k % 32) * 32, 232 + (k >> 5) * 12, 32, 12); }
+          const speaker = (cx, cy, r) => { x.fillStyle = '#111114'; x.beginPath(); x.roundRect(cx - r, cy - r * 1.3, r * 2, r * 2.6, 8); x.fill(); x.fillStyle = '#2A2A30'; x.beginPath(); x.arc(cx, cy + r * 0.35, r * 0.75, 0, Math.PI * 2); x.fill(); x.fillStyle = '#C9CED6'; x.beginPath(); x.arc(cx, cy + r * 0.35, r * 0.25, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(cx, cy - r * 0.75, r * 0.28, 0, Math.PI * 2); x.fill(); };
+          speaker(110, 100, 46); speaker(914, 100, 46);
+          const note = (nx, ny, col) => { x.fillStyle = col; x.beginPath(); x.ellipse(nx, ny, 12, 9, -0.4, 0, Math.PI * 2); x.fill(); x.fillRect(nx + 8, ny - 46, 5, 46); x.fillRect(nx + 8, ny - 46, 22, 7); };
+          note(200, 70, j.a2); note(830, 60, j.a1); note(250, 190, j.a1); note(780, 200, j.a2);
+          x.shadowColor = j.a2; x.shadowBlur = 16; x.strokeStyle = j.a2; x.lineWidth = 5; x.beginPath(); x.moveTo(0, 18); x.lineTo(1024, 18); x.stroke(); x.shadowBlur = 0;
+          break;
+        }
         case 'gold':
           x.strokeStyle = goldGrad(x, 0, 256); x.lineWidth = 4;
           for (let k = 0; k < 6; k++) { x.beginPath(); for (let px = 0; px <= 1024; px += 12) x.lineTo(px, 30 + k * 40 + Math.sin(px / 40 + k) * 8); x.stroke(); }
           x.fillStyle = 'rgba(26,26,26,0.75)'; x.fillRect(250, 50, 524, 140);
           break;
       }
-      const fill = j.motif === 'gold' ? goldGrad(x, 60, 170) : j.motif === 'neon' ? j.a1 : '#FFFFFF';
-      const stroke = j.motif === 'flag' || j.motif === 'gold' || j.motif === 'neon' ? '#000000' : j.a1 === '#FFFFFF' ? '#1B1033' : Palette(j.a1);
-      if (j.motif === 'neon') { x.shadowColor = j.a1; x.shadowBlur = 20; }
+      const fill = j.motif === 'gold' ? goldGrad(x, 60, 170) : j.motif === 'neon' ? j.a1 : j.motif === 'patok' ? j.a2 : '#FFFFFF';
+      const stroke = j.motif === 'flag' || j.motif === 'gold' || j.motif === 'neon' || j.motif === 'patok' ? '#000000' : j.a1 === '#FFFFFF' ? '#1B1033' : Palette(j.a1);
+      if (j.motif === 'neon' || j.motif === 'patok') { x.shadowColor = j.motif === 'patok' ? j.a1 : j.a1; x.shadowBlur = 20; }
       outlined(x, j.slogan, 600, 110, 560, 110, fill, stroke, 12);
       x.shadowBlur = 0;
-      x.fillStyle = j.motif === 'neon' ? j.a2 : '#FFFFFF'; fit(x, j.route, 0, 0, 520, 24, (z) => `900 ${z}px ${B}`); x.fillText(j.route, 600, 190);
+      x.fillStyle = j.motif === 'neon' ? j.a2 : j.motif === 'patok' ? (j.body === '#EEF1F6' ? j.a1 : '#FFFFFF') : '#FFFFFF'; fit(x, j.route, 0, 0, 520, 24, (z) => `900 ${z}px ${B}`); x.fillText(j.route, 600, 190);
       gloss(x, 1024, 256);
       save('jeepney_side_' + j.id, c);
       // ---- rear 512x416
@@ -442,6 +457,18 @@ const textures = await page.evaluate(() => {
     icon('ui_check', 128, 128, (x) => { disc(x, '#18C06A'); x.strokeStyle = '#fff'; x.lineWidth = 16; x.lineCap = 'round'; x.beginPath(); x.moveTo(38, 66); x.lineTo(56, 86); x.lineTo(92, 44); x.stroke(); });
     icon('ui_trophy', 128, 128, (x) => { x.fillStyle = '#FFC928'; x.strokeStyle = '#1b1033'; x.lineWidth = 6; x.beginPath(); x.moveTo(34, 20); x.lineTo(94, 20); x.lineTo(90, 60); x.quadraticCurveTo(64, 84, 38, 60); x.closePath(); x.fill(); x.stroke(); x.fillRect(56, 76, 16, 20); x.beginPath(); x.roundRect(36, 96, 56, 16, 4); x.fill(); x.stroke(); x.beginPath(); x.arc(28, 36, 12, 0.5 * Math.PI, 1.6 * Math.PI); x.stroke(); x.beginPath(); x.arc(100, 36, 12, 1.4 * Math.PI, 0.5 * Math.PI); x.stroke(); });
     icon('ui_star', 128, 128, (x) => { star(x, 64, 66, 54, '#1b1033'); star(x, 64, 66, 44, '#FFD23F'); });
+    // ---- menu button icons (white with ink outline, sit on coloured buttons)
+    const ink = '#1b1033';
+    const pen = (x, w = 10) => { x.strokeStyle = ink; x.lineWidth = w; x.lineJoin = 'round'; x.lineCap = 'round'; };
+    icon('ui_m_play', 128, 128, (x) => { pen(x, 10); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(36, 20); x.lineTo(108, 64); x.lineTo(36, 108); x.closePath(); x.stroke(); x.fill(); });
+    icon('ui_m_garage', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(10, 56); x.lineTo(64, 16); x.lineTo(118, 56); x.lineTo(118, 112); x.lineTo(10, 112); x.closePath(); x.stroke(); x.fill(); x.fillStyle = '#FFD23F'; x.beginPath(); x.roundRect(30, 62, 68, 50, 4); x.fill(); x.stroke(); x.lineWidth = 5; for (const y of [76, 90]) { x.beginPath(); x.moveTo(32, y); x.lineTo(96, y); x.stroke(); } });
+    icon('ui_m_missions', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.roundRect(22, 18, 84, 100, 12); x.fill(); x.stroke(); x.fillStyle = '#FFD23F'; x.beginPath(); x.roundRect(44, 8, 40, 20, 6); x.fill(); x.stroke(); x.strokeStyle = '#18C06A'; x.lineWidth = 9; for (const y of [52, 84]) { x.beginPath(); x.moveTo(36, y); x.lineTo(46, y + 10); x.lineTo(62, y - 8); x.stroke(); } pen(x, 7); for (const y of [56, 88]) { x.beginPath(); x.moveTo(72, y); x.lineTo(92, y); x.stroke(); } });
+    icon('ui_m_routes', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(64, 118); x.bezierCurveTo(20, 70, 20, 14, 64, 12); x.bezierCurveTo(108, 14, 108, 70, 64, 118); x.closePath(); x.fill(); x.stroke(); x.fillStyle = '#FF5A5F'; x.beginPath(); x.arc(64, 50, 16, 0, Math.PI * 2); x.fill(); x.stroke(); });
+    icon('ui_m_shop', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(18, 42); x.lineTo(110, 42); x.lineTo(100, 116); x.lineTo(28, 116); x.closePath(); x.fill(); x.stroke(); x.beginPath(); x.arc(64, 42, 22, Math.PI, 0); x.stroke(); x.fillStyle = '#B565F2'; x.save(); x.translate(64, 80); x.rotate(Math.PI / 4); x.fillRect(-13, -13, 26, 26); x.strokeRect(-13, -13, 26, 26); x.restore(); });
+    icon('ui_m_settings', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; const r = i % 2 ? 42 : 56; x.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } x.closePath(); x.fill(); x.stroke(); x.fillStyle = '#8A8199'; x.beginPath(); x.arc(64, 64, 16, 0, Math.PI * 2); x.fill(); x.stroke(); });
+    icon('ui_m_daily', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.roundRect(14, 24, 100, 92, 12); x.fill(); x.stroke(); x.fillStyle = '#FF5A5F'; x.beginPath(); x.roundRect(14, 24, 100, 28, [12, 12, 0, 0]); x.fill(); x.stroke(); x.fillStyle = ink; x.fillRect(36, 12, 10, 24); x.fillRect(82, 12, 10, 24); x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `52px ${D}`; x.fillText('1', 64, 92); });
+    icon('ui_m_rank', 128, 128, (x) => { pen(x, 7); const bar = (bx, h, col) => { x.fillStyle = col; x.beginPath(); x.roundRect(bx, 116 - h, 34, h, 4); x.fill(); x.stroke(); }; bar(10, 50, '#C0C7D1'); bar(47, 80, '#FFD23F'); bar(84, 36, '#E59866'); star(x, 64, 22, 18, ink); star(x, 64, 22, 13, '#fff'); });
+    icon('ui_m_account', 128, 128, (x) => { pen(x, 8); x.fillStyle = '#fff'; x.beginPath(); x.arc(64, 40, 24, 0, Math.PI * 2); x.fill(); x.stroke(); x.beginPath(); x.moveTo(18, 118); x.bezierCurveTo(18, 70, 110, 70, 110, 118); x.closePath(); x.fill(); x.stroke(); });
     // route thumbnails 360x200
     icon('ui_route_manila', 360, 200, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9fd3f7'); g.addColorStop(1, '#ffe3b8'); x.fillStyle = g; x.fillRect(0, 0, w, h); const cols = ['#F6BD60', '#F28482', '#BDE0FE', '#CDB4DB', '#84A59D']; for (let i = 0; i < 9; i++) { x.fillStyle = cols[i % 5]; const bh = 60 + (i * 37) % 90; x.fillRect(i * 40, h - 40 - bh, 38, bh); x.fillStyle = 'rgba(30,50,80,0.6)'; for (let r = 0; r < bh / 22 - 1; r++) x.fillRect(i * 40 + 8, h - 40 - bh + 10 + r * 22, 22, 10); } x.fillStyle = '#45474e'; x.fillRect(0, h - 40, w, 40); x.fillStyle = '#fff'; for (let i = 0; i < 9; i++) x.fillRect(i * 44 + 10, h - 22, 22, 4); });
     icon('ui_route_provincial', 360, 200, (x, w, h) => { x.fillStyle = '#b8e0f6'; x.fillRect(0, 0, w, h); x.fillStyle = '#6C9A8B'; for (const [mx, mh] of [[60, 90], [170, 120], [290, 80]]) { x.beginPath(); x.moveTo(mx - 90, 130); x.lineTo(mx, 130 - mh); x.lineTo(mx + 90, 130); x.fill(); } x.fillStyle = '#7CB518'; x.fillRect(0, 120, w, 80); x.strokeStyle = '#5C9E1F'; x.lineWidth = 3; for (let i = 0; i < 12; i++) { x.beginPath(); x.moveTo(0, 130 + i * 6); x.lineTo(w, 126 + i * 6); x.stroke(); } x.fillStyle = '#8D6E4F'; x.fillRect(270, 70, 8, 70); x.fillStyle = '#2D6A4F'; for (let i = 0; i < 6; i++) { x.save(); x.translate(274, 70); x.rotate(i * 1.05); x.fillRect(0, -4, 40, 8); x.restore(); } x.fillStyle = '#D4A373'; x.fillRect(60, 100, 50, 30); x.fillStyle = '#9C7A3C'; x.beginPath(); x.moveTo(50, 102); x.lineTo(85, 75); x.lineTo(120, 102); x.fill(); });
@@ -472,7 +499,10 @@ const textures = await page.evaluate(() => {
   return out;
 });
 
+// ONLY=regex writes just the matching textures (others contain random noise and would change)
+const only = process.env.ONLY ? new RegExp(process.env.ONLY) : null;
 for (const [name, url] of Object.entries(textures)) {
+  if (only && !only.test(name)) continue;
   writeFileSync(join(out, name + '.png'), Buffer.from(url.split(',')[1], 'base64'));
   console.log('wrote', name + '.png');
 }

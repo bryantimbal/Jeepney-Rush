@@ -20,6 +20,8 @@ namespace JeepneyRush.Logic
         public bool music = true;
         public bool sfx = true;
         public bool vibration = true;
+        /// <summary>Patok jeepneys play their loud "sound trip" while driving (instead of the route music).</summary>
+        public bool soundTrip = true;
         /// <summary>0.5 (needs long swipes) .. 1.5 (very sensitive).</summary>
         public float swipeSensitivity = 1f;
         public int graphicsQuality = 1; // 0 low, 1 medium, 2 high

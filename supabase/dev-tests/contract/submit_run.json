@@ -7,7 +7,7 @@
         "xp": 1430,
         "gems": 0,
         "runs": 4,
-        "coins": 5969,
+        "coins": 5965,
         "level": 4,
         "owned": [
             "pilipinas",
@@ -15,32 +15,32 @@
             "manila"
         ],
         "ad_free": false,
-        "day_key": 20261121,
+        "day_key": 20261122,
         "user_id": "11111111-1111-1111-1111-111111111111",
         "missions": [
             {
                 "slot": 0,
-                "text": "Drive 700 m without crashing",
-                "type": "CleanDistanceInRun",
+                "text": "Refuel at 3 gas stations",
+                "type": "TotalRefuels",
                 "period": "daily",
-                "reward": 137,
-                "target": 700
+                "reward": 133,
+                "target": 3
             },
             {
                 "slot": 1,
-                "text": "Pick up 11 passengers in one run",
-                "type": "PassengersInRun",
+                "text": "Play 3 runs",
+                "type": "Runs",
                 "period": "daily",
-                "reward": 125,
-                "target": 11
+                "reward": 100,
+                "target": 3
             },
             {
                 "slot": 2,
-                "text": "Deliver 13 passengers in one run",
+                "text": "Deliver 5 passengers in one run",
                 "type": "DeliveriesInRun",
                 "period": "daily",
-                "reward": 180,
-                "target": 13
+                "reward": 100,
+                "target": 5
             },
             {
                 "slot": 0,
@@ -70,9 +70,9 @@
         "week_key": 151,
         "best_clean": 2500,
         "best_score": 20419,
-        "friend_code": "M85KK6PF",
+        "friend_code": "UUFD6PM7",
         "total_coins": 4632,
-        "display_name": "Driver-M85K",
+        "display_name": "Driver-UUFD",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [
@@ -82,9 +82,9 @@
         ],
         "total_refuels": 4,
         "daily_progress": [
-            700,
-            10,
-            6
+            3,
+            3,
+            5
         ],
         "owned_products": [
         ],

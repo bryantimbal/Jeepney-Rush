@@ -3,7 +3,7 @@ using System;
 namespace JeepneyRush.Logic
 {
     public enum JeepneyStyle { Classic, Modern }
-    public enum ArtMotif { SunStars, Sunburst, Flowers, Waves, Mountains, Eagle, Neon, Fiesta, Flag, Gold, Manila }
+    public enum ArtMotif { SunStars, Sunburst, Flowers, Waves, Mountains, Eagle, Neon, Fiesta, Flag, Gold, Manila, Patok }
 
     /// <summary>Identity, paint, art, price and stats of a jeepney. Colours are hex strings (engine-free).</summary>
     public sealed class JeepneyLivery
@@ -36,6 +36,11 @@ namespace JeepneyRush.Logic
         public bool BeadedAntennas;
         public bool Neon;        // glowing underbody / stripe lights
         public bool Fiesta;      // banderitas (bunting) strung on the roof
+        /// <summary>
+        /// "Patok" jeepney (Cogeo–Antipolo style): roof speakers, LED strips, disco lights inside,
+        /// fog-light bar and a loud original "sound trip" mix that plays while you drive.
+        /// </summary>
+        public bool SoundSystem;
 
         // stats (added on top of the base balance & upgrades)
         public int CapacityBonus;
@@ -133,6 +138,22 @@ namespace JeepneyRush.Logic
                 Body = "#FFFFFF", Hood = "#0038A8", Accent1 = "#CE1126", Accent2 = "#FCD116", Roof = "#0038A8", Trim = "#CE1126",
                 RoofSign = "MABUHAY", Route = "LUZON - VISAYAS - MINDANAO", Slogan = "Mabuhay!", RearText = "PILIPINAS KONG MAHAL", Plate = "PH 1898",
                 ChromeLowerBody = true, SpareTire = true, CapacityBonus = 1, HealthBonus = 1,
+            },
+            new JeepneyLivery
+            {
+                Id = "cogeo", GemPrice = 420, DisplayName = "Patok Cogeo", Price = 6500, Motif = ArtMotif.Patok,
+                Description = "Cogeo–Cubao patok: LED lights, roof speakers and a loud sound trip while you drive.",
+                Body = "#0E0E12", Hood = "#0E0E12", Accent1 = "#FF2E4D", Accent2 = "#FFC300", Roof = "#16161C", Trim = "#FF2E4D", Mudflap = "#FFC300",
+                RoofSign = "COGEO", Route = "COGEO - CUBAO", Slogan = "Sound Trip!", RearText = "PATOK PA RIN, INGAT LANG!", Plate = "PTK 143",
+                ChromeLowerBody = true, BeadedAntennas = true, SoundSystem = true, SpeedBonus = 1.5f, HandlingBonus = 0.02f,
+            },
+            new JeepneyLivery
+            {
+                Id = "antipolo", GemPrice = 460, DisplayName = "Patok Antipolo", Price = 7500, Motif = ArtMotif.Patok,
+                Description = "Antipolo–Cubao patok in chrome white with purple LEDs and a bass-heavy sound system.",
+                Body = "#EEF1F6", Hood = "#7B2FF7", Accent1 = "#7B2FF7", Accent2 = "#00E5FF", Roof = "#7B2FF7", Trim = "#00E5FF", Mudflap = "#7B2FF7",
+                RoofSign = "ANTIPOLO", Route = "ANTIPOLO - CUBAO", Slogan = "Byaheng Langit", RearText = "SAKAY NA, SOUNDTRIP NA!", Plate = "ANT 1591",
+                ChromeLowerBody = true, SpareTire = true, SoundSystem = true, CapacityBonus = 1, SpeedBonus = 1.5f, HandlingBonus = 0.01f,
             },
             new JeepneyLivery
             {

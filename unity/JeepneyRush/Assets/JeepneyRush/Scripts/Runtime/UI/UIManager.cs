@@ -204,6 +204,8 @@ namespace JeepneyRush
         private Label _menuLevel;
         private VisualElement _menuXpFill, _missionDot;
 
+        private Label _playSub;
+
         private void BuildMenu()
         {
             _menu = MakeScreen("menu");
@@ -266,10 +268,33 @@ namespace JeepneyRush
             var buttons = UiKit.Box();
             buttons.style.width = 900;
             buttons.style.marginBottom = 24;
-            buttons.Add(UiKit.Button("PLAY", () => Services.Game.Play(), UiKit.Yellow, UiKit.Ink, 96, 200));
-            Button Small(string text, System.Action a, VisualElement row, bool last = false)
+            // PLAY: big, glossy and gently "breathing" so it's the obvious thing to tap
+            var playWrap = UiKit.Box();
+            var play = UiKit.MenuButton("PLAY", "ui_m_play", UiKit.Yellow, () => Services.Game.Play(), 210, false, 104);
+            play.Q<Label>().style.color = UiKit.Ink;
+            play.Q<Label>().style.unityTextOutlineWidth = 0f;
+            var playCol = UiKit.Box();
+            playCol.style.alignItems = Align.FlexStart;
+            var playLabel = play.Q<Label>();
+            play.Remove(playLabel);
+            playCol.Add(playLabel);
+            _playSub = UiKit.Text("", 28, UiKit.Ink, false);
+            _playSub.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _playSub.style.whiteSpace = WhiteSpace.NoWrap;
+            _playSub.style.opacity = 0.8f;
+            playCol.Add(_playSub);
+            play.Add(playCol);
+            playWrap.Add(play);
+            float t0 = Time.realtimeSinceStartup;
+            playWrap.schedule.Execute(() =>
             {
-                var b = UiKit.Button(text, a, Color.white, UiKit.Ink, 44, 130);
+                float k = 1f + 0.022f * Mathf.Sin((Time.realtimeSinceStartup - t0) * 3.2f);
+                playWrap.style.scale = new Scale(new Vector3(k, k, 1));
+            }).Every(33);
+            buttons.Add(playWrap);
+            Button Small(string text, string icon, Color col, System.Action a, VisualElement row, bool last = false, bool three = false)
+            {
+                var b = UiKit.MenuButton(text, icon, col, a, three ? 150 : 140, three, three ? 36 : 46);
                 b.style.flexGrow = 1;
                 b.style.flexBasis = 0;
                 if (!last) b.style.marginRight = 14;
@@ -278,8 +303,8 @@ namespace JeepneyRush
             }
             var row1 = UiKit.Box();
             row1.style.flexDirection = FlexDirection.Row;
-            Small("GARAGE", OpenGarage, row1);
-            var missions = Small("MISSIONS", OpenMissions, row1, true);
+            Small("GARAGE", "ui_m_garage", UiKit.Hex("#E63946"), OpenGarage, row1);
+            var missions = Small("MISSIONS", "ui_m_missions", UiKit.Hex("#2A9D8F"), OpenMissions, row1, true);
             _missionDot = UiKit.Box();
             _missionDot.style.position = Position.Absolute;
             _missionDot.style.right = 10;
@@ -291,16 +316,16 @@ namespace JeepneyRush
             buttons.Add(row1);
             var row2 = UiKit.Box();
             row2.style.flexDirection = FlexDirection.Row;
-            Small("ROUTES", OpenRoutes, row2);
-            Small("SHOP", OpenShop, row2);
-            Small("SETTINGS", () => OpenModal(_settings), row2, true);
+            Small("ROUTES", "ui_m_routes", UiKit.Hex("#3A86FF"), OpenRoutes, row2, false, true);
+            Small("SHOP", "ui_m_shop", UiKit.Hex("#9B5DE5"), OpenShop, row2, false, true);
+            Small("SETTINGS", "ui_m_settings", UiKit.Hex("#5C677D"), () => OpenModal(_settings), row2, true, true);
             buttons.Add(row2);
             // Phase 3: online
             var row3 = UiKit.Box();
             row3.style.flexDirection = FlexDirection.Row;
-            Small("DAILY", OpenDaily, row3);
-            Small("RANKINGS", () => OpenRanks(), row3);
-            Small("ACCOUNT", OpenAccount, row3, true);
+            Small("DAILY", "ui_m_daily", UiKit.Hex("#FF8C42"), OpenDaily, row3, false, true);
+            Small("RANKINGS", "ui_m_rank", UiKit.Hex("#E0A100"), () => OpenRanks(), row3, false, true);
+            Small("ACCOUNT", "ui_m_account", UiKit.Hex("#06AED5"), OpenAccount, row3, true, true);
             buttons.Add(row3);
             _menu.Add(buttons);
             var ver = UiKit.Text($"v{Application.version} · Beep beep! Tap the horn on the road.", 26, new Color(1, 1, 1, 0.85f), false);
@@ -328,6 +353,12 @@ namespace JeepneyRush
             _menuXpFill.style.width = Length.Percent(Mathf.Clamp01((d.xp - a) / (float)Mathf.Max(1, b - a)) * 100f);
             Show(_missionDot, HasClaimable());
             RefreshGems();
+            if (_playSub != null)
+            {
+                var env = Logic.Environments.Get((Logic.EnvironmentKind)d.selectedEnvironment);
+                var jeep = JeepneyCatalog.Get(d.selectedJeepney);
+                _playSub.text = $"{env.Name.ToUpperInvariant()} · {jeep.DisplayName}{(jeep.SoundSystem && d.soundTrip ? " · SOUND TRIP" : "")}";
+            }
         }
 
         // ======================================================================= modals
@@ -450,6 +481,7 @@ namespace JeepneyRush
             var d = (System.Func<SaveData>)(() => Services.Save.Data);
             card.Add(Toggle("Music", () => d().music, v => { d().music = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
+            card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => d().vibration = v));
             card.Add(Segmented("Swipe sensitivity", new[] { "Low", "Normal", "High" },
                 () => d().swipeSensitivity < 0.85f ? 0 : d().swipeSensitivity > 1.15f ? 2 : 1,
@@ -869,6 +901,7 @@ namespace JeepneyRush
             var d = (System.Func<SaveData>)(() => Services.Save.Data);
             card.Add(Toggle("Music", () => d().music, v => { d().music = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
+            card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
         }
 
         // ======================================================================= game over

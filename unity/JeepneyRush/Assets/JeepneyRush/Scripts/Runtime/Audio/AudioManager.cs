@@ -14,9 +14,12 @@ namespace JeepneyRush
     public sealed class AudioManager : MonoBehaviour
     {
         private readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
-        private AudioClip _menuMusic, _engine, _rain;
+        private AudioClip _menuMusic, _engine, _rain, _soundTrip;
+        private bool _soundTripOn;
+        private float _speed, _musicLevel = 0.55f;
+        private bool _fading;
         private readonly AudioClip[] _runMusicByRoute = new AudioClip[JeepneyRush.Logic.Environments.All.Length];
-        private AudioClip _runMusic => _runMusicByRoute[Mathf.Clamp(_route, 0, _runMusicByRoute.Length - 1)];
+        private AudioClip _runMusic => _soundTripOn && _soundTrip != null ? _soundTrip : _runMusicByRoute[Mathf.Clamp(_route, 0, _runMusicByRoute.Length - 1)];
         private int _route;
         private AudioSource _musicA, _musicB, _engineSrc, _rainSrc;
         private EngineAudio _engineAudio;
@@ -82,7 +85,7 @@ namespace JeepneyRush
         {
             if (Loaded) { progress?.Invoke(1); yield break; }
             var all = new List<Sfx>(SoundBank.AllSfx);
-            int total = all.Count + 5, done = 0;
+            int total = all.Count + 6, done = 0;
             foreach (var s in all)
             {
                 _clips[s] = Clip(s.ToString(), SoundBank.Make(s));
@@ -94,6 +97,9 @@ namespace JeepneyRush
             progress?.Invoke(++done / (float)total);
             yield return null;
             _menuMusic = Clip("MenuMusic", MusicComposer.RenderMenu(), true);
+            progress?.Invoke(++done / (float)total);
+            yield return null;
+            _soundTrip = Clip("PatokSoundTrip", MusicComposer.RenderSoundTrip(), true);
             progress?.Invoke(++done / (float)total);
             yield return null;
             for (int e = 0; e < _runMusicByRoute.Length; e++)
@@ -148,6 +154,29 @@ namespace JeepneyRush
         /// <summary>Selects the run music for a route (each route has its own arrangement).</summary>
         public void SetRoute(JeepneyRush.Logic.EnvironmentKind env) => _route = (int)env;
 
+        /// <summary>
+        /// Patok jeepneys: the run music becomes the loud "sound trip" coming from the jeepney's
+        /// own speakers. It gets louder as you speed up and drops back when you stop at a PARA.
+        /// </summary>
+        public void SetSoundTrip(bool on) => _soundTripOn = on;
+
+        /// <summary>True while the sound trip is what's playing.</summary>
+        public bool SoundTripPlaying => _soundTrip != null && _musicA != null && _musicA.clip == _soundTrip && _musicA.isPlaying && _musicOn;
+
+        /// <summary>Kick-drum pulse of the sound trip (1 on the beat, decaying to 0): drives the bass bounce.</summary>
+        public float SoundTripPulse
+        {
+            get
+            {
+                if (!SoundTripPlaying) return 0f;
+                float beats = _musicA.time * MusicComposer.SoundTripBpm / 60f;
+                return Mathf.Exp(-(beats - Mathf.Floor(beats)) * 7f);
+            }
+        }
+
+        /// <summary>Beat counter of the sound trip (for the disco lights), -1 when it isn't playing.</summary>
+        public int SoundTripBeat => SoundTripPlaying ? Mathf.FloorToInt(_musicA.time * MusicComposer.SoundTripBpm / 60f) : -1;
+
         public void PlayMusic(bool run)
         {
             _wantRunMusic = run; // remembered so music starts as soon as loading finishes
@@ -160,21 +189,24 @@ namespace JeepneyRush
             _musicA.volume = 0f;
             _musicA.Play();
             if (_fade != null) StopCoroutine(_fade);
+            _musicLevel = clip == _soundTrip ? 0.7f : 0.55f;
             _fade = StartCoroutine(Fade());
         }
 
         private IEnumerator Fade()
         {
             float t = 0;
+            _fading = true;
             float startB = _musicB.volume;
             while (t < 1f)
             {
                 t += Time.unscaledDeltaTime / 0.8f;
-                _musicA.volume = Mathf.Lerp(0, 0.55f, t);
+                _musicA.volume = Mathf.Lerp(0, _musicLevel, t);
                 _musicB.volume = Mathf.Lerp(startB, 0, t);
                 yield return null;
             }
             _musicB.Stop();
+            _fading = false;
         }
 
         // ------------------------------------------------------------------ engine
@@ -189,6 +221,7 @@ namespace JeepneyRush
         /// </summary>
         public void UpdateEngine(float speed, bool gas, bool braking)
         {
+            _speed = speed;
             if (_engineAudio == null || !_engineAudio.Running) return;
             _engineAudio.Drive(Time.deltaTime, speed, gas, braking);
         }
@@ -216,6 +249,12 @@ namespace JeepneyRush
         private void Update()
         {
             if (_rainSrc == null) return;
+            // sound trip: louder at speed, quieter while stopped at a PARA stop
+            if (!_fading && _musicA != null && _musicA.clip == _soundTrip && _soundTrip != null)
+            {
+                float target = Mathf.Lerp(0.5f, 0.95f, Mathf.Clamp01(_speed / 14f));
+                _musicA.volume = Mathf.MoveTowards(_musicA.volume, target, Time.unscaledDeltaTime * 0.6f);
+            }
             _rainSrc.volume = Mathf.MoveTowards(_rainSrc.volume, _rainTarget * 0.55f, Time.unscaledDeltaTime * 0.4f);
             if (_rainTarget <= 0 && _rainSrc.isPlaying && _rainSrc.volume <= 0.001f) _rainSrc.Stop();
         }

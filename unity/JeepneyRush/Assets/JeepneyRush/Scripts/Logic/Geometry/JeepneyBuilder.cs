@@ -263,6 +263,7 @@ namespace JeepneyRush.Logic.Geometry
             }
             if (L.Neon) NeonLights(b, L);
             if (L.Fiesta) Banderitas(b, L);
+            if (L.SoundSystem) PatokKit(b, L);
             return b.Data;
         }
 
@@ -325,6 +326,50 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("glow", L.Accent1, 0.03f, 0.04f, 4.6f, sx * 1.09f, RoofY + 0.12f, -0.4f);
             }
             b.Box("glow", L.Accent2, 1.9f, 0.04f, 0.03f, 0, 0.42f, BodyRearZ - 0.05f);
+        }
+
+        /// <summary>
+        /// Patok kit (Cogeo–Antipolo style): two big speaker boxes on the roof rack, a fog-light
+        /// bar over the windshield, LED strips along the body and roof, LED underglow, tinted
+        /// rear window strip and extra chrome mirrors. Disco lights inside are added at runtime.
+        /// </summary>
+        private static void PatokKit(MeshBuilder b, JeepneyLivery L)
+        {
+            // roof speakers facing backwards and sideways (the "sound trip")
+            foreach (float sx in new[] { -0.55f, 0.55f })
+            {
+                b.Box("paint", "#111114", 0.7f, 0.46f, 0.55f, sx, RoofY + 0.6f, -2.35f);
+                b.Box("chrome", L.Chrome, 0.74f, 0.04f, 0.59f, sx, RoofY + 0.85f, -2.35f);
+                // woofer cone on the back face + tweeter
+                b.Push(new V3(sx, RoofY + 0.6f, -2.63f), new Rot((float)(Math.PI / 2), 0, 0));
+                b.Cylinder("paint", "#2A2A30", 0.19f, 0.19f, 0.03f, 14, 0, 0, 0);
+                b.Cylinder("chrome", L.Chrome, 0.07f, 0.07f, 0.05f, 10, 0, 0.01f, 0);
+                b.Pop();
+                b.Box("glow", L.Accent2, 0.6f, 0.03f, 0.03f, sx, RoofY + 0.36f, -2.63f);
+            }
+            // fog-light bar above the windshield
+            b.Box("chrome", L.Chrome, 1.7f, 0.06f, 0.06f, 0, RoofY + 0.12f, 1.75f);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = -0.6f + i * 0.4f;
+                b.Push(new V3(x, RoofY + 0.24f, 1.78f), new Rot((float)(Math.PI / 2), 0, 0));
+                b.Cylinder("chrome", L.Chrome, 0.11f, 0.11f, 0.08f, 12, 0, 0, 0);
+                b.Pop();
+                b.Sphere("glow", "#FFF6D0", 0.085f, x, RoofY + 0.24f, 1.83f, 8);
+            }
+            // LED strips: belt line, roof edge, wheel arches, underglow (two colours)
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                b.Box("glow", L.Accent1, 0.03f, 0.04f, BodyFrontZ - BodyRearZ, sx * 1.05f, BeltY - 0.04f, (BodyFrontZ + BodyRearZ) / 2);
+                b.Box("glow", L.Accent2, 0.03f, 0.035f, BodyFrontZ - BodyRearZ, sx * 1.05f, SillY + 0.1f, (BodyFrontZ + BodyRearZ) / 2);
+                b.Box("glow", L.Accent1, 0.03f, 0.04f, 4.6f, sx * 1.09f, RoofY + 0.12f, -0.4f);
+                b.Box("glow", L.Accent2, 0.04f, 0.05f, 5.6f, sx * 1.0f, 0.36f, 0f);
+                // extra chrome mirrors on stalks
+                b.Cylinder("chrome", L.Chrome, 0.014f, 0.014f, 0.5f, 6, sx * 1.18f, 1.7f, 0.95f, new Rot(0, 0, -sx * 0.8f));
+                b.Box("chrome", L.Chrome, 0.06f, 0.24f, 0.16f, sx * 1.36f, 1.88f, 0.95f);
+            }
+            b.Box("glow", L.Accent1, 1.9f, 0.04f, 0.03f, 0, 0.4f, BodyRearZ - 0.05f);
+            b.Box("glow", L.Accent2, 1.9f, 0.04f, 0.03f, 0, RoofY + 0.05f, BodyRearZ - 0.04f);
         }
 
         /// <summary>Fiesta Edition: strings of colourful banderitas over the roof.</summary>
