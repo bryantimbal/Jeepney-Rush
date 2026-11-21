@@ -139,7 +139,7 @@ const textures = await page.evaluate(() => {
     const W = 512, H = 512, roadW = 11.2;
     const [c, x] = cv(W, H);
     x.fillStyle = '#45474e'; x.fillRect(0, 0, W, H);
-    noise(x, W, H, 9000, 0.35); noise(x, W, H, 2500, 0.15, true);
+    noise(x, W, H, 3500, 0.18); noise(x, W, H, 900, 0.08, true);
     for (let i = 0; i < 4; i++) { x.fillStyle = `rgba(20,20,24,${0.1 + Math.random() * 0.1})`; x.beginPath(); x.ellipse(Math.random() * W, Math.random() * H, 20 + Math.random() * 40, 30 + Math.random() * 60, Math.random(), 0, Math.PI * 2); x.fill(); }
     const px = (m) => W / 2 + (m / roadW) * W;
     for (const lx of [-3.2, 0, 3.2]) { x.fillStyle = 'rgba(25,25,30,0.2)'; x.fillRect(px(lx - 0.8) - 10, 0, 20, H); x.fillRect(px(lx + 0.8) - 10, 0, 20, H); }
@@ -150,7 +150,7 @@ const textures = await page.evaluate(() => {
   }
   {
     const [c, x] = cv(256, 256);
-    x.fillStyle = '#bdb6aa'; x.fillRect(0, 0, 256, 256); noise(x, 256, 256, 3000, 0.25);
+    x.fillStyle = '#bdb6aa'; x.fillRect(0, 0, 256, 256); noise(x, 256, 256, 1200, 0.12);
     x.strokeStyle = 'rgba(80,70,60,0.45)'; x.lineWidth = 3;
     for (let i = 0; i <= 2; i++) { x.beginPath(); x.moveTo(0, i * 128); x.lineTo(256, i * 128); x.moveTo(i * 128, 0); x.lineTo(i * 128, 256); x.stroke(); }
     save('sidewalk', c);
@@ -384,7 +384,7 @@ const textures = await page.evaluate(() => {
     save('grass', c);
     [c, x] = cv(256, 256);
     x.fillStyle = '#E9D8A6'; x.fillRect(0, 0, 256, 256);
-    noise(x, 256, 256, 6000, 0.25, true); noise(x, 256, 256, 2000, 0.12);
+    noise(x, 256, 256, 2200, 0.14, true); noise(x, 256, 256, 800, 0.08);
     for (let i = 0; i < 14; i++) { x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.arc(Math.random() * 256, Math.random() * 256, 2, 0, Math.PI * 2); x.fill(); }
     save('sand', c);
   }
@@ -408,6 +408,27 @@ const textures = await page.evaluate(() => {
     icon('ui_route_manila', 360, 200, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9fd3f7'); g.addColorStop(1, '#ffe3b8'); x.fillStyle = g; x.fillRect(0, 0, w, h); const cols = ['#F6BD60', '#F28482', '#BDE0FE', '#CDB4DB', '#84A59D']; for (let i = 0; i < 9; i++) { x.fillStyle = cols[i % 5]; const bh = 60 + (i * 37) % 90; x.fillRect(i * 40, h - 40 - bh, 38, bh); x.fillStyle = 'rgba(30,50,80,0.6)'; for (let r = 0; r < bh / 22 - 1; r++) x.fillRect(i * 40 + 8, h - 40 - bh + 10 + r * 22, 22, 10); } x.fillStyle = '#45474e'; x.fillRect(0, h - 40, w, 40); x.fillStyle = '#fff'; for (let i = 0; i < 9; i++) x.fillRect(i * 44 + 10, h - 22, 22, 4); });
     icon('ui_route_provincial', 360, 200, (x, w, h) => { x.fillStyle = '#b8e0f6'; x.fillRect(0, 0, w, h); x.fillStyle = '#6C9A8B'; for (const [mx, mh] of [[60, 90], [170, 120], [290, 80]]) { x.beginPath(); x.moveTo(mx - 90, 130); x.lineTo(mx, 130 - mh); x.lineTo(mx + 90, 130); x.fill(); } x.fillStyle = '#7CB518'; x.fillRect(0, 120, w, 80); x.strokeStyle = '#5C9E1F'; x.lineWidth = 3; for (let i = 0; i < 12; i++) { x.beginPath(); x.moveTo(0, 130 + i * 6); x.lineTo(w, 126 + i * 6); x.stroke(); } x.fillStyle = '#8D6E4F'; x.fillRect(270, 70, 8, 70); x.fillStyle = '#2D6A4F'; for (let i = 0; i < 6; i++) { x.save(); x.translate(274, 70); x.rotate(i * 1.05); x.fillRect(0, -4, 40, 8); x.restore(); } x.fillStyle = '#D4A373'; x.fillRect(60, 100, 50, 30); x.fillStyle = '#9C7A3C'; x.beginPath(); x.moveTo(50, 102); x.lineTo(85, 75); x.lineTo(120, 102); x.fill(); });
     icon('ui_route_beach', 360, 200, (x, w, h) => { x.fillStyle = '#7fd6f7'; x.fillRect(0, 0, w, h); x.fillStyle = '#FFF3B0'; x.beginPath(); x.arc(290, 50, 26, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1F7EA1'; x.fillRect(0, 100, w, 60); x.fillStyle = '#4CC9F0'; x.fillRect(0, 140, w, 20); x.fillStyle = '#E9D8A6'; x.fillRect(0, 160, w, 40); x.fillStyle = '#fff'; x.fillRect(90, 120, 60, 10); x.fillStyle = '#EF476F'; x.fillRect(95, 112, 50, 10); x.fillStyle = '#8D6E4F'; x.fillRect(40, 90, 8, 80); x.fillStyle = '#40916C'; for (let i = 0; i < 6; i++) { x.save(); x.translate(44, 90); x.rotate(i * 1.05); x.fillRect(0, -4, 38, 8); x.restore(); } });
+  }
+  // -------------------------------------------------- soft particle dot + MMDA sign + speech bubble
+  {
+    let [c, x] = cv(64, 64);
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(255,255,255,0.75)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    save('particle_dot', c);
+    [c, x] = cv(64, 64);
+    x.translate(32, 32); x.fillStyle = '#fff'; x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 9 : 31; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.fill();
+    save('particle_star', c);
+    [c, x] = cv(512, 256);
+    x.fillStyle = '#0038A8'; x.fillRect(0, 0, 512, 256); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.strokeRect(8, 8, 496, 240);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = '#FFFFFF'; fit(x, 'MMDA', 0, 0, 440, 110, (z) => `${z}px ${D}`); x.fillText('MMDA', 256, 96);
+    x.fillStyle = '#FCD116'; fit(x, 'CHECKPOINT', 0, 0, 460, 64, (z) => `${z}px ${D}`); x.fillText('CHECKPOINT', 256, 186);
+    save('mmda_sign', c);
+    [c, x] = cv(256, 128);
+    x.fillStyle = '#FFFFFF'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.beginPath(); x.roundRect(6, 6, 244, 96, 36); x.fill(); x.stroke();
+    x.beginPath(); x.moveTo(60, 98); x.lineTo(48, 124); x.lineTo(92, 98); x.closePath(); x.fill(); x.stroke();
+    x.fillStyle = '#FFFFFF'; x.fillRect(56, 92, 32, 9);
+    save('ui_bubble', c);
   }
   return out;
 });

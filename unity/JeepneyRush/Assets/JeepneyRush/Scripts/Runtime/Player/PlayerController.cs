@@ -136,13 +136,14 @@ namespace JeepneyRush
             float targetPitch = Jumper.Grounded ? (Braking ? 2.5f : GasHeld ? -1.5f : 0f) : -Jumper.Phase * 6f;
             if (landed) _pitch = 3f;
             _pitch = Mathf.Lerp(_pitch, targetPitch, 1f - Mathf.Exp(-dt * 8f));
-            float shake = Jumper.Grounded ? Mathf.Sin(_time * 38f) * 0.012f + Mathf.Max(0, Mathf.Sin(_time * 7.3f)) * 0.02f : 0f;
+            float shake = Jumper.Grounded ? Mathf.Sin(_time * 9f) * 0.008f + Mathf.Max(0, Mathf.Sin(_time * 3.1f)) * 0.015f : 0f;
             Body.localPosition = new Vector3(0, shake, 0);
             Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.25f, _lean);
             _wheelSpin += speed * dt / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg;
             foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_wheelSpin, 0, 0);
             // invulnerability blink
-            bool visible = !Collisions.Invulnerable || Mathf.FloorToInt(Collisions.InvulnerableTime * 12f) % 2 == 1;
+            // gentle blink: mostly visible, short off-beats at 5 Hz (avoids a strobe/flicker look)
+            bool visible = !Collisions.Invulnerable || (Collisions.InvulnerableTime * 5f) % 1f > 0.3f;
             if (_bodyModel.activeSelf != visible) _bodyModel.SetActive(visible);
             return landed;
         }

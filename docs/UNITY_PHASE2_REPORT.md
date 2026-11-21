@@ -49,3 +49,16 @@ Your existing coins, best score and settings carry over: the save migrates from 
 * Extra game modes (Passenger Challenge, Time Attack, City Tour).
 * Online features: Supabase login, cloud save, leaderboards and server-checked rewards (Phase 3).
 * "Fuel efficiency" upgrade: this version has no fuel mechanic, so it was replaced by **Power-up Duration**.
+
+## Update 2 – visual fixes and game-feel features (from phone testing)
+| Reported | Change |
+|---|---|
+| Grainy screen | Native-resolution rendering (removed the 85% resolution scale), MSAA 4x (2x on Low), forced anisotropic filtering, URP render scale 1, and camera post-processing **off** so template film grain/vignette volumes no longer apply. Particles use a soft round sprite instead of hard squares, speed lines are fewer and subtler, and the road and sidewalk textures are less noisy. |
+| Flickering jeepney | The body's engine-shake animation ran at 38 Hz, which strobes at 30–60 fps; it's now a gentle 9 Hz sway. The damage blink is a soft 5 Hz pulse instead of a hard 12 Hz strobe. Shadow bias was raised and shadows use a single cascade to stop acne and shimmer. |
+| Garage preview | The garage is now a showroom: the selected model spins on a turntable above the shop card, and switching models makes it pop in with confetti. |
+| Passengers visible inside | The jeepney cabin is hollow now: floor, inner walls, ceiling lamps and grab rails. Passengers on the benches are visible through the windows and the **open rear doorway**, and up to 10 seats are shown. |
+| Addictive coin effects | Coins fly into the coin counter, which bumps. The coin sound rises in pitch with your **COMBO** (counter on screen, changing colour at 10/20/30). Every 10-coin combo triggers **COIN RUSH**, a bonus coin payout with a golden fountain, its own sound and a light haptic tick. Coin sparkle bursts are bigger. |
+| Passengers complain | Comic speech bubbles: crash → "ARAY KO!", "KUYA, INGAT!"… with a 60% chance a rider storms out ("BABABA NA AKO!", -1 passenger, delivery streak resets). Hard landings → "SUSMARYOSEP!". Boarding → "BAYAD PO!", alighting → "PARA PO!". |
+| MMDA enforcer | After a crash, an **MMDA CHECKPOINT** sets up 140 m ahead on the sidewalk: an enforcer with a STOP paddle, a patrol bike with flashing red/blue sirens, an A-frame sign and cones. A banner says "BRAKE!" with the distance. Pass at no more than 62% of normal speed (hold BRAKE) for +150 score; speed past and you get a **TICKET** (15% of this run's coins, at least 10) plus a whistle. There's a 25 s cooldown, and the enforcer never blocks a lane. |
+
+Tests: **57/57 pass** (adds coin combo, enforcer fine rules, angry-passenger logic). The compile check is clean.

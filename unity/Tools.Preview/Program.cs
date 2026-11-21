@@ -19,6 +19,21 @@ foreach (var l in JeepneyCatalog.All)
 }
 models.Add(("wheel", JeepneyBuilder.BuildWheel()));
 foreach (var (name, mesh) in ModelCatalog.Preview()) models.Add((name, mesh));
+{
+    // jeepney with passengers seated inside (rotation baked: left bench faces +X, right faces -X)
+    var full = JeepneyBuilder.Build(JeepneyCatalog.Get("sanjuan"));
+    foreach (var wp in JeepneyBuilder.WheelPositions) MeshOps.Append(full, JeepneyBuilder.BuildWheel(), wp);
+    for (int i = 0; i < 8; i++)
+    {
+        var seat = JeepneyBuilder.Seats[i];
+        var mb = new MeshBuilder();
+        mb.Push(seat, new Rot(0, seat.X < 0 ? (float)(Math.PI / 2) : -(float)(Math.PI / 2), 0));
+        PropBuilder.AddPerson(mb, i, true);
+        mb.Pop();
+        MeshOps.Append(full, mb.Data, V3.Zero);
+    }
+    models.Add(("jeepney_pax", full));
+}
 
 string F(float v) => v.ToString("0.####", CultureInfo.InvariantCulture);
 var sb = new StringBuilder();

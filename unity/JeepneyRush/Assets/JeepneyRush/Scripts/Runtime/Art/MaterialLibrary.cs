@@ -161,6 +161,9 @@ namespace JeepneyRush
         {
             if (Cache.TryGetValue("particle", out var m) && m != null) return m;
             m = Base("JR_Particle", "Universal Render Pipeline/Particles/Unlit", "Particles/Standard Unlit", "Sprites/Default");
+            var dot = LoadTexture("particle_dot");
+            if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", dot);
+            if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", dot);
             m.name = "JR_particle";
             Cache["particle"] = m;
             return m;

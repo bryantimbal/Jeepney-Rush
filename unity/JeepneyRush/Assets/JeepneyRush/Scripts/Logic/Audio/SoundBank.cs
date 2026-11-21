@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -96,6 +96,36 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Noise(b, 0, 0.85f, 1f, 300, 3500, 1.2f);
                     Synth.Tone(b, Synth.Wave.Saw, 0, 0.8f, 90, 400, 0.4f, 0.02f, 2000);
                     return Synth.Normalize(b, 0.7f);
+                case Sfx.Whistle:
+                    // traffic enforcer's whistle: two sharp trilled blasts
+                    b = Synth.Buffer(0.75f);
+                    foreach (var (st, dur) in new[] { (0f, 0.18f), (0.26f, 0.42f) })
+                    {
+                        int s0 = (int)(st * Synth.Rate), n = (int)(dur * Synth.Rate);
+                        double ph = 0;
+                        for (int i = 0; i < n && s0 + i < b.Length; i++)
+                        {
+                            double t = i / (double)Synth.Rate;
+                            ph += (2900 + 140 * Math.Sin(2 * Math.PI * 38 * t)) / Synth.Rate; // pea trill
+                            float env = (float)(Math.Min(1, t / 0.01) * Math.Min(1, (dur - t) / 0.03));
+                            b[s0 + i] += (float)Math.Sin(ph * 2 * Math.PI) * env * 0.6f;
+                        }
+                    }
+                    Synth.Noise(b, 0, 0.7f, 0.08f, 5000, 5000, 1f, highpass: true);
+                    return Synth.Normalize(b, 0.6f);
+                case Sfx.CoinRush:
+                    b = Synth.Buffer(0.9f);
+                    float[] rush = { 1047, 1319, 1568, 2093, 2637, 3136 };
+                    for (int i = 0; i < rush.Length; i++) Synth.Tone(b, Synth.Wave.Square, i * 0.06f, 0.3f, rush[i], rush[i], 0.22f, 0.002f, 7000);
+                    for (int i = 0; i < 4; i++) Synth.Tone(b, Synth.Wave.Sine, 0.38f + i * 0.08f, 0.4f, 2637 + i * 220, 2637 + i * 220, 0.15f);
+                    return Synth.Normalize(b, 0.65f);
+                case Sfx.Complain:
+                    // grumbly "hmph!" murmur of the passengers
+                    b = Synth.Buffer(0.5f);
+                    Synth.Tone(b, Synth.Wave.Saw, 0, 0.22f, 220, 160, 0.3f, 0.01f, 900);
+                    Synth.Tone(b, Synth.Wave.Saw, 0.2f, 0.25f, 260, 180, 0.3f, 0.01f, 900);
+                    Synth.Noise(b, 0, 0.45f, 0.15f, 700, 400, 1.5f);
+                    return Synth.Normalize(b, 0.5f);
                 case Sfx.Horn:
                 case Sfx.Start:
                     return Horn();

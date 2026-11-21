@@ -84,7 +84,11 @@ namespace JeepneyRush
             Burst(_smoke, pos, 10, new Vector3(0, 1.5f, -4), 1.5f);
         }
 
-        public void CoinSparkle(Vector3 pos) => Burst(_sparkle, pos, 8, Vector3.up * 2, 3f);
+        public void CoinSparkle(Vector3 pos)
+        {
+            Burst(_sparkle, pos, 10, Vector3.up * 2.5f, 4f, new Color(1f, 0.82f, 0.2f));
+            Burst(_sparkle, pos, 5, Vector3.up * 4f, 2f, Color.white);
+        }
 
         public void Confetti(Vector3 pos, int n = 30)
         {
@@ -94,6 +98,17 @@ namespace JeepneyRush
         /// <summary>Turbo flames from the tail pipe.</summary>
         public void Turbo(Vector3 playerPos) =>
             Burst(_sparks, playerPos + new Vector3(0.55f, 0.5f, -3.2f), 2, new Vector3(0, 1f, -12f), 1.5f, new Color(1f, 0.55f, 0.1f));
+
+        /// <summary>COIN RUSH celebration: a golden fountain of sparkles.</summary>
+        public void CoinRush(Vector3 pos)
+        {
+            for (int i = 0; i < 40; i++)
+            {
+                float a = i / 40f * Mathf.PI * 2f;
+                Burst(_sparkle, pos, 1, new Vector3(Mathf.Cos(a) * 6f, 7f, Mathf.Sin(a) * 6f), 1.5f, new Color(1f, 0.85f, 0.2f));
+            }
+            Confetti(pos, 20);
+        }
 
         public void Dust(Vector3 pos) => Burst(_dust, pos, 10, new Vector3(0, 0.5f, -4), 2f);
 
@@ -106,7 +121,7 @@ namespace JeepneyRush
                 _exhaustTimer = 0.12f;
                 Burst(_exhaust, playerPos + new Vector3(0.55f, 0.45f, -3.2f), 1, new Vector3(0, 0.6f, -worldSpeed * 0.5f - 2f), 0.4f);
             }
-            if (speed01 > 0.55f && Random.value < (speed01 - 0.5f) * dt * 40f)
+            if (speed01 > 0.7f && Random.value < (speed01 - 0.65f) * dt * 18f)
             {
                 float side = Random.value < 0.5f ? -1 : 1;
                 var pos = new Vector3(side * Random.Range(3.5f, 7f), Random.Range(0.5f, 5f), Random.Range(15f, 35f));

@@ -40,6 +40,11 @@ namespace JeepneyRush
             _scoreFloat += value * _cfg.scorePerCoin;
         }
 
+        /// <summary>MMDA ticket: deduct coins earned this run.</summary>
+        public void SpendCoins(int value) => Coins = Mathf.Max(0, Coins - value);
+
+        public void AddScore(int value) => _scoreFloat += value;
+
         public void AddPickup(PickupResult r)
         {
             Passengers += r.Boarded; // boarded passengers (deliveries are tracked by the route)

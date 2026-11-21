@@ -56,6 +56,7 @@ namespace JeepneyRush
             _root.RegisterCallback<GeometryChangedEvent>(_ => ApplySafeArea());
 
             BuildHud();
+            BuildJuice();
             BuildMenu();
             BuildPause();
             BuildGameOver();
@@ -337,7 +338,14 @@ namespace JeepneyRush
         {
             if (_modals.Count == 0) return false;
             Services.Audio?.Click();
+            bool garage = _modals.Peek() == _garage;
             CloseModal();
+            if (garage)
+            {
+                Services.Game.Menu?.SetGarageMode(false);
+                Services.Game.Menu?.ShowLivery(Services.Save.Data.selectedJeepney);
+                ShowMainMenu();
+            }
             return true;
         }
 
@@ -690,6 +698,7 @@ namespace JeepneyRush
             tutorial |= controlsTutorial;
             Show(_tutorial, tutorial);
             foreach (var c in _powerCells) if (c.cell != null) Show(c.cell, false);
+            ClearJuice();
             _lastHealth = _lastScore = _lastCoins = _lastPax = _lastDist = _lastSpeed = -1;
             _lastStop = null;
             _floats.Clear();
@@ -872,6 +881,7 @@ namespace JeepneyRush
 
         public void ShowGameOver(RunResult r)
         {
+            ClearJuice();
             Show(_hud, false);
             Show(_gameOver, true);
             Show(_goBadge, r.NewBestScore);

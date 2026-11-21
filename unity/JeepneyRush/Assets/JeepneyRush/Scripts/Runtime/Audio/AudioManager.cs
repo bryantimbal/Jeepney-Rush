@@ -21,8 +21,6 @@ namespace JeepneyRush
         private AudioSource _musicA, _musicB, _engineSrc;
         private readonly List<AudioSource> _voices = new List<AudioSource>();
         private int _nextVoice;
-        private float _lastCoinTime;
-        private int _coinChain;
         private bool _musicOn = true, _sfxOn = true;
         private bool? _wantRunMusic;
         public bool Loaded { get; private set; }
@@ -33,7 +31,7 @@ namespace JeepneyRush
             _musicB = NewSource("MusicB", true);
             _engineSrc = NewSource("Engine", true);
             for (int i = 0; i < 10; i++) _voices.Add(NewSource("Voice" + i, false));
-            GameEvents.CoinCollected += _ => PlayCoin();
+            // coin sounds are played by the session with the combo pitch (PlayCoin)
             GameEvents.Jumped += () => Play(Sfx.Jump);
             GameEvents.Landed += () => Play(Sfx.Land, 0.8f);
             GameEvents.LaneChanged += _ => Play(Sfx.Lane, 0.6f);
@@ -200,13 +198,8 @@ namespace JeepneyRush
             v.PlayOneShot(clip, volume);
         }
 
-        private void PlayCoin()
-        {
-            float now = Time.unscaledTime;
-            _coinChain = now - _lastCoinTime < 0.35f ? Mathf.Min(_coinChain + 1, 8) : 0;
-            _lastCoinTime = now;
-            Play(Sfx.Coin, 0.7f, Mathf.Pow(2f, _coinChain / 12f)); // rising pitch on coin chains
-        }
+        /// <summary>Coin blip whose pitch rises with the coin combo – satisfying on long trails.</summary>
+        public void PlayCoin(float pitch) => Play(Sfx.Coin, 0.7f, Mathf.Clamp(pitch, 0.5f, 2.2f));
 
         public void Click() => Play(Sfx.Click, 0.6f);
 

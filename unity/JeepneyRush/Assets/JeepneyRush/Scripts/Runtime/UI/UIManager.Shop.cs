@@ -58,7 +58,7 @@ namespace JeepneyRush
             nav.Add(_garageName);
             nav.Add(UiKit.IconButton("ui_arrow_right", () => CycleGarage(1), 110, Color.white));
             _garageJeepPage.Add(nav);
-            _garageDesc = UiKit.Text("", 32, UiKit.Grey, false);
+            _garageDesc = UiKit.Text("", 28, UiKit.Grey, false);
             _garageDesc.style.marginTop = 6;
             _garageJeepPage.Add(_garageDesc);
             _garageStats = UiKit.Box();
@@ -78,6 +78,7 @@ namespace JeepneyRush
             card.Add(UiKit.Button("BACK", () =>
             {
                 CloseModal();
+                Services.Game.Menu?.SetGarageMode(false);
                 Services.Game.Menu?.ShowLivery(Services.Save.Data.selectedJeepney);
                 ShowMainMenu();
             }, Color.white, UiKit.Ink, 44, 110));
@@ -89,6 +90,7 @@ namespace JeepneyRush
             for (int i = 0; i < JeepneyCatalog.All.Length; i++) if (JeepneyCatalog.All[i].Id == Services.Save.Data.selectedJeepney) _garageIndex = i;
             _garageUpgrades = false;
             Show(_menu, false);
+            Services.Game.Menu?.SetGarageMode(true);
             OpenModal(_garage);
             RefreshGarage();
         }

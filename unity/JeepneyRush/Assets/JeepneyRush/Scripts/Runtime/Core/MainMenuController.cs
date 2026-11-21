@@ -17,7 +17,20 @@ namespace JeepneyRush
         private GameObject _body;
         private Transform[] _wheels;
         private string _livery;
-        private float _t;
+        private float _t, _swapT = 1f, _yaw;
+        private bool _garage;
+        private Camera _cam;
+
+        /// <summary>
+        /// Garage showroom: the jeepney spins on a turntable in the upper part of the screen
+        /// (above the garage card) and pops in whenever another model is selected.
+        /// </summary>
+        public void SetGarageMode(bool on)
+        {
+            _garage = on;
+            _yaw = 0;
+            _jeepRoot.localRotation = Quaternion.identity;
+        }
 
         private void Awake()
         {
@@ -58,6 +71,7 @@ namespace JeepneyRush
             if (_body != null) Destroy(_body);
             if (_wheels != null) foreach (var w in _wheels) Destroy(w.gameObject);
             _body = ModelLibrary.Instantiate(ModelLibrary.Jeepney(id), "Body", _jeepRoot);
+            if (_wheels != null) { _swapT = 0f; _fx?.Confetti(_jeepRoot.position + Vector3.up * 2.5f, 30); }
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
@@ -82,9 +96,28 @@ namespace JeepneyRush
             const float cruise = 5f;
             _road.Scroll(cruise * dt);
             foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_t * cruise / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg, 0, 0);
-            _body.transform.localPosition = new Vector3(0, Mathf.Sin(_t * 38f) * 0.01f, 0);
+            _body.transform.localPosition = new Vector3(0, Mathf.Sin(_t * 9f) * 0.008f, 0);
             _fx.Tick(dt, _jeepRoot.position, cruise, 0);
-            _camera.Orbit(_jeepRoot.position, _t);
+            // pop-in when a new model is shown (ease-out-back)
+            if (_swapT < 1f)
+            {
+                _swapT = Mathf.Min(1f, _swapT + dt * 2.5f);
+                float k = _swapT - 1f;
+                float s = 1f + 2.2f * k * k * k + 1.2f * k * k;
+                _jeepRoot.localScale = Vector3.one * Mathf.LerpUnclamped(0.7f, 1f, s);
+            }
+            if (_garage)
+            {
+                _yaw += dt * 28f;
+                _jeepRoot.localRotation = Quaternion.Euler(0, _yaw + 150f, 0);
+                if (_cam == null) _cam = _camera.GetComponent<Camera>();
+                var focus = _jeepRoot.position;
+                _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + new Vector3(0, 3.4f, -12.5f), 1f - Mathf.Exp(-dt * 4f));
+                // aim below the jeepney so it sits in the upper part of the screen, above the garage card
+                _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + new Vector3(0, -2.9f, 0) - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
+                _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, 62f, 1f - Mathf.Exp(-dt * 4f));
+            }
+            else _camera.Orbit(_jeepRoot.position, _t);
         }
     }
 }

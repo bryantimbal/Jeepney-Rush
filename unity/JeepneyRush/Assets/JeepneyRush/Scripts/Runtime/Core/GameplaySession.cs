@@ -24,6 +24,9 @@ namespace JeepneyRush
         private CoinManager _coins;
         private PassengerManager _passengers;
         private PowerUpManager _powerUps;
+        private EnforcerManager _enforcer;
+        private readonly CoinCombo _combo = new CoinCombo();
+        private float _enforcerBase;
         private EffectsManager _fx;
         private DifficultyManager _difficulty;
         private ScoreManager _score;
@@ -102,6 +105,9 @@ namespace JeepneyRush
             _passengers.Missed = OnMissed;
             _powerUps = GetOrAdd<PowerUpManager>(Child("PowerUpManager"));
             _powerUps.Init(_cfg, _player.transform);
+            _enforcer = GetOrAdd<EnforcerManager>(Child("EnforcerManager"));
+            _enforcer.Init();
+            _enforcer.Passed = OnEnforcerPassed;
             _spawner = new LevelSpawner(_traffic, _obstacles, _coins, _passengers, _powerUps);
             _traffic.CollectAll = _spawner.CollectBlockers;
             _traffic.PlayerLanes = () => _spawner.PlayerLanes;
@@ -150,6 +156,8 @@ namespace JeepneyRush
             _passengers.ResetRun(route);
             _powerUps.ResetRun(_cfg, Upgrades.PowerUpDurationScale(save.UpgradeLevel(UpgradeKind.PowerUpDuration)));
             _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env);
+            _enforcer.ResetRun();
+            _combo.Reset();
             _input.Sensitivity = save.swipeSensitivity;
             _player.ResetRun();
             _road.Layout();
@@ -225,7 +233,10 @@ namespace JeepneyRush
                 GameEvents.RaiseLand();
                 _fx.Dust(_player.transform.position + new Vector3(0, 0.1f, -1.5f));
                 _camera.AddShake(0.06f);
+                if (_passengers.Route.Count > 0 && _rng.Chance(0.35)) Services.UI.Say(Lines.Pick(Lines.Landing, _rng), _passengers.RandomRiderHead);
             }
+            _combo.Tick(dt);
+            Services.UI.SetCombo(_combo.Count);
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
@@ -249,6 +260,10 @@ namespace JeepneyRush
             _coins.Tick(dt, _speed);
             _passengers.Tick(dt, _speed);
             _powerUps.Tick(dt, _speed);
+            _enforcer.Tick(dt, _speed);
+            if (_enforcer.Active && _enforcer.Z > 0)
+                Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+            else Services.UI.SetEnforcerBanner(null);
             float s01 = Mathf.Clamp01(Speed01 + (pu.IsActive(PowerUpKind.Turbo) ? 0.6f : _player.GasHeld ? 0.25f : 0f));
             _fx.Tick(dt, _player.transform.position, _speed, s01);
             if (pu.IsActive(PowerUpKind.Turbo))
@@ -300,8 +315,53 @@ namespace JeepneyRush
             _camera.AddShake(h.Def.Jumpable ? 0.25f : 0.55f);
             GameEvents.RaiseHit(c.Health, h.Kind);
             Services.UI.FlashDamage();
+            ReactToBump();
             if (c.Dead) BeginDeath();
             else Services.UI.Float(h.Def.Jumpable ? "ARAY!" : "BANGGA!", UIManager.FloatKind.Bad);
+        }
+
+        /// <summary>Passengers complain about a bump; one may storm off; MMDA sets up a checkpoint.</summary>
+        private void ReactToBump()
+        {
+            var route = _passengers.Route;
+            if (route.Count > 0)
+            {
+                Services.UI.Say(Lines.Pick(Lines.Bump, _rng), _passengers.RandomRiderHead, true);
+                Services.Audio.Play(Logic.Audio.Sfx.Complain);
+                if (_rng.Chance(0.6) && route.EjectAngry() > 0)
+                {
+                    _passengers.AngryHopOut();
+                    Services.UI.Say(Lines.Pick(Lines.Leave, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
+                    Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
+                }
+            }
+            if (_enforcer.CanSpawn)
+            {
+                int side = _player.Lanes.Lane <= (_cfg.laneCount - 1) / 2 ? -1 : 1;
+                _enforcer.Spawn(side, EnforcerRules.SpawnAhead);
+                Services.Audio.Play(Logic.Audio.Sfx.Whistle);
+                Services.UI.Say("PRRRT! TABI, KUYA!", () => _enforcer.HeadPosition, true, 2.5f);
+            }
+        }
+
+        private void OnEnforcerPassed()
+        {
+            if (_dying) return;
+            if (EnforcerRules.PassedSafely(_speed, _difficulty.BaseSpeed))
+            {
+                _score.AddScore(EnforcerRules.PoliteBonusScore);
+                Services.UI.Say(Lines.Pick(Lines.Polite, _rng), () => _enforcer.HeadPosition);
+                Services.UI.Float($"MABAGAL! +{EnforcerRules.PoliteBonusScore}", UIManager.FloatKind.Good);
+            }
+            else
+            {
+                int fine = EnforcerRules.Fine(_score.Coins);
+                _score.SpendCoins(fine);
+                Services.Audio.Play(Logic.Audio.Sfx.Whistle);
+                Services.UI.Say(Lines.Pick(Lines.Ticket, _rng), () => _enforcer.HeadPosition, true, 2.2f);
+                Services.UI.Float(fine > 0 ? $"TICKET! -{fine} COINS" : "WARNING!", UIManager.FloatKind.Bad);
+                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA NAMAN!", _passengers.RandomRiderHead, true);
+            }
         }
 
         private void OnCoinTouched(Coin coin)
@@ -310,7 +370,19 @@ namespace JeepneyRush
             int v = _coins.Collect(coin) * _powerUps.State.CoinMultiplier;
             if (v <= 0) return;
             _score.AddCoins(v);
-            _fx.CoinSparkle(coin.transform.position);
+            var pos = coin.transform.position;
+            _fx.CoinSparkle(pos);
+            int rush = _combo.Add();
+            Services.Audio.PlayCoin(_combo.Pitch);
+            Services.UI.CoinFly(pos);
+            if (_combo.Count % 5 == 0) Haptics.Pulse(8);
+            if (rush > 0)
+            {
+                _score.AddCoins(rush);
+                Services.UI.Float($"COIN RUSH! +{rush}", UIManager.FloatKind.Big);
+                Services.Audio.Play(Logic.Audio.Sfx.CoinRush);
+                _fx.CoinRush(_player.transform.position + Vector3.up * 2f);
+            }
             GameEvents.RaiseCoin(v);
         }
 
@@ -338,6 +410,7 @@ namespace JeepneyRush
             _score.AddPickup(r);
             if (r.Alighted > 0)
             {
+                Services.UI.Say(Lines.Pick(Lines.Alight, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f));
                 Services.UI.Float($"{r.Alighted} BABA · +{r.Coins}", UIManager.FloatKind.Good);
                 if (r.Streak > 1) Services.UI.Float($"SUNOD-SUNOD x{_passengers.Route.StreakMultiplier:0.##}!", UIManager.FloatKind.Info);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 20 + r.Alighted * 6);
@@ -345,6 +418,7 @@ namespace JeepneyRush
             if (r.Boarded > 0)
             {
                 if (r.Alighted == 0) Services.UI.Float($"+{r.Boarded} SAKAY!", UIManager.FloatKind.Good);
+                Services.UI.Say(Lines.Pick(Lines.Board, _rng), _passengers.RandomRiderHead);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
             }
             if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);

@@ -150,6 +150,19 @@ namespace JeepneyRush.Logic
             return lost;
         }
 
+        /// <summary>
+        /// A rider fed up with rough driving gets off immediately (no fare). Returns 1 if
+        /// someone left, 0 if the jeepney is empty. Breaks the delivery streak.
+        /// </summary>
+        public int EjectAngry()
+        {
+            if (_aboard.Count == 0) return 0;
+            _aboard.RemoveAt(_rng.Int(0, _aboard.Count - 1));
+            Streak = 0;
+            Missed++;
+            return 1;
+        }
+
         private int Remove(int stopId)
         {
             int n = 0;

@@ -160,6 +160,75 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>
+        /// MMDA traffic enforcer at a checkpoint: blue uniform, white cap, reflective vest,
+        /// raising a STOP paddle, next to a patrol motorcycle and a CHECKPOINT A-frame sign.
+        /// Origin on the ground; the enforcer faces +Z (toward the oncoming jeepney).
+        /// Siren lights are separate meshes (<see cref="Siren"/>) so they can flash.
+        /// </summary>
+        public static MeshData Enforcer()
+        {
+            var b = new MeshBuilder();
+            const string blue = "#1F3FBF", pants = "#1B1F3B", vest = "#C6FF00", skin = "#A86B3C";
+            foreach (float s in new[] { -1f, 1f })
+            {
+                b.Box("paint", pants, 0.16f, 0.78f, 0.17f, s * 0.11f, 0.39f, 0);
+                b.Box("paint", "#111111", 0.18f, 0.08f, 0.26f, s * 0.11f, 0.04f, 0.04f); // boots
+            }
+            b.Box("paint", blue, 0.46f, 0.6f, 0.28f, 0, 1.08f, 0);
+            b.Box("paint", vest, 0.48f, 0.42f, 0.3f, 0, 1.12f, 0);
+            foreach (float y in new[] { 1.02f, 1.2f }) b.Box("chrome", "#E6EBF2", 0.49f, 0.04f, 0.31f, 0, y, 0); // reflective stripes
+            b.Box("paint", blue, 0.12f, 0.5f, 0.13f, -0.3f, 1.08f, 0);                                     // left arm down
+            b.Box("paint", blue, 0.12f, 0.5f, 0.13f, 0.33f, 1.5f, 0.05f, new Rot(0, 0, 0.35f));           // right arm raised
+            b.Box("paint", skin, 0.1f, 0.12f, 0.1f, 0.42f, 1.78f, 0.05f);
+            b.Sphere("paint", skin, 0.16f, 0, 1.55f, 0, 8);
+            b.Cylinder("paint", "#FFFFFF", 0.19f, 0.17f, 0.12f, 12, 0, 1.68f, 0);                         // cap
+            b.Cylinder("paint", blue, 0.195f, 0.195f, 0.04f, 12, 0, 1.64f, 0);
+            b.Box("paint", "#111111", 0.3f, 0.03f, 0.18f, 0, 1.62f, 0.14f);                                // visor
+            b.Cylinder("paint", "#FFFFFF", 0.015f, 0.015f, 0.35f, 5, 0.47f, 1.95f, 0.05f);                // paddle stick
+            b.Cylinder("paint", "#D62828", 0.2f, 0.2f, 0.03f, 8, 0.47f, 2.22f, 0.06f, new Rot((float)(Math.PI / 2), 0, 0));
+            b.Box("paint", "#FFFFFF", 0.26f, 0.06f, 0.035f, 0.47f, 2.22f, 0.08f);
+            // patrol motorcycle (behind, angled)
+            b.Push(new V3(-0.9f, 0, -1.4f), new Rot(0, 0.5f, 0));
+            b.CylinderX("paint", "#16161A", 0.32f, 0.12f, 12, 0, 0.32f, 0.72f, true);
+            b.CylinderX("paint", "#16161A", 0.32f, 0.14f, 12, 0, 0.32f, -0.72f, true);
+            b.Box("paint", "#F8F9FA", 0.4f, 0.4f, 1.2f, 0, 0.68f, 0);
+            b.Box("paint", blue, 0.42f, 0.12f, 1.22f, 0, 0.62f, 0);
+            b.Box("paint", "#111111", 0.32f, 0.12f, 0.6f, 0, 0.94f, -0.25f);
+            b.Box("chrome", "#E6EBF2", 0.7f, 0.04f, 0.04f, 0, 1.12f, 0.55f);
+            b.Box("glass", "#A0C4FF", 0.4f, 0.3f, 0.04f, 0, 1.25f, 0.62f, new Rot(-0.3f, 0, 0));
+            b.Box("paint", "#333333", 0.06f, 0.5f, 0.06f, 0, 1.25f, -0.55f);                                // siren mast
+            b.Pop();
+            // A-frame "MMDA CHECKPOINT" sign facing the oncoming traffic (+Z)
+            b.Push(new V3(0.9f, 0, 0.6f), Rot.None);
+            b.Box("paint", "#444444", 0.05f, 1.2f, 0.05f, -0.55f, 0.6f, -0.1f, new Rot(0.15f, 0, 0));
+            b.Box("paint", "#444444", 0.05f, 1.2f, 0.05f, 0.55f, 0.6f, -0.1f, new Rot(0.15f, 0, 0));
+            b.Box("paint", "#222222", 1.24f, 0.66f, 0.04f, 0, 0.95f, 0, new Rot(0.15f, 0, 0));
+            b.Push(new V3(0, 0.95f, 0.025f), new Rot(0.15f, 0, 0));
+            // seen from the front (+Z looking -Z): -X is on the viewer's right
+            b.Quad("tex:mmda_sign", new V3(0.6f, -0.3f, 0), new V3(-0.6f, -0.3f, 0), new V3(-0.6f, 0.3f, 0), new V3(0.6f, 0.3f, 0), new V3(0, 0, 1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            b.Pop();
+            b.Pop();
+            // traffic cones in front of the checkpoint
+            foreach (float z in new[] { 1.8f, 3.2f })
+            {
+                b.Cylinder("paint", "#FF6D00", 0.04f, 0.18f, 0.55f, 10, -0.2f, 0.3f, z, default, true);
+                b.Cylinder("paint", "#FFFFFF", 0.1f, 0.13f, 0.1f, 10, -0.2f, 0.32f, z, default, true);
+            }
+            return b.Data;
+        }
+
+        /// <summary>Flashing siren light for the patrol bike (red or blue), matches the bike's mast.</summary>
+        public static MeshData Siren(bool red)
+        {
+            var b = new MeshBuilder();
+            b.Push(new V3(-0.9f, 0, -1.4f), new Rot(0, 0.5f, 0));
+            b.Box("glow", red ? "#FF2A2A" : "#2A6BFF", 0.14f, 0.14f, 0.14f, red ? -0.1f : 0.1f, 1.55f, -0.55f);
+            b.Pop();
+            return b.Data;
+        }
+
         /// <summary>UV rect of a cell in a cols x rows atlas (row 0 at the top of the image).</summary>
         public static (float u0, float v0, float u1, float v1) AtlasCell(int index, int cols, int rows)
         {

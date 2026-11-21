@@ -24,6 +24,7 @@ namespace JeepneyRush
             cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = new Color(0.62f, 0.83f, 0.97f);
             if (cam.GetComponent<CameraController>() == null) cam.gameObject.AddComponent<CameraController>();
+            GraphicsQuality.ConfigureCamera(cam);
             return cam;
         }
 

@@ -222,6 +222,28 @@ namespace JeepneyRush
             return r;
         }
 
+        /// <summary>An angry rider jumps out of the rear doorway and stomps off to the curb.</summary>
+        public void AngryHopOut()
+        {
+            int variant = Random.Range(0, PropBuilder.PersonVariants);
+            var t = Services.Pools.Get("person" + variant, transform).transform;
+            var from = new Vector3(_player.position.x, 0.8f, -3.2f);
+            t.position = from;
+            t.localRotation = Quaternion.identity;
+            float side = _player.position.x >= 0 ? 1f : -1f;
+            _flying.Add((t, variant, from, 0f, false, side * (SceneryBuilder.RoadHalfWidth + 1.2f)));
+            UpdateSeats();
+        }
+
+        /// <summary>World position of a random seated passenger's head (speech-bubble anchor).</summary>
+        public Vector3 RandomRiderHead()
+        {
+            int n = Mathf.Min(_route != null ? _route.Count : 0, _seated.Count);
+            if (n == 0) return _player.position + new Vector3(0, 2.6f, -1f);
+            var s = _seated[Random.Range(0, n)];
+            return s != null ? s.transform.position + new Vector3(0, 1.1f, 0) : _player.position + Vector3.up * 2.6f;
+        }
+
         public void UpdateSeats()
         {
             int n = _route != null ? _route.Count : 0;

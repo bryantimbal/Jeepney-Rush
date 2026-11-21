@@ -1,0 +1,79 @@
+using System;
+
+namespace JeepneyRush.Logic
+{
+    /// <summary>
+    /// Coin combo: coins collected in quick succession build a combo. Every
+    /// <see cref="MilestoneEvery"/> coins in one combo pays a "COIN RUSH" bonus that grows
+    /// with the combo, which makes chasing coin trails feel rewarding.
+    /// </summary>
+    public sealed class CoinCombo
+    {
+        public const float Window = 0.6f;     // seconds between coins to keep the combo
+        public const int MilestoneEvery = 10;
+
+        private float _sinceLast = float.MaxValue;
+        public int Count { get; private set; }
+        public int Best { get; private set; }
+
+        /// <summary>Registers a coin. Returns bonus coins if a milestone was reached (else 0).</summary>
+        public int Add()
+        {
+            Count = _sinceLast <= Window ? Count + 1 : 1;
+            _sinceLast = 0;
+            Best = Math.Max(Best, Count);
+            return Count % MilestoneEvery == 0 ? MilestoneBonus(Count) : 0;
+        }
+
+        public static int MilestoneBonus(int combo) => 5 * (combo / MilestoneEvery);
+
+        public void Tick(float dt)
+        {
+            if (_sinceLast < float.MaxValue) _sinceLast += dt;
+            if (_sinceLast > Window) Count = 0;
+        }
+
+        public void Reset()
+        {
+            Count = 0;
+            Best = 0;
+            _sinceLast = float.MaxValue;
+        }
+
+        /// <summary>Pitch for the coin sound: rises a semitone per combo step, capped.</summary>
+        public float Pitch => (float)Math.Pow(2, Math.Min(Count - 1, 12) / 12.0);
+    }
+
+    /// <summary>
+    /// MMDA checkpoint: after reckless driving (a crash) a traffic enforcer sets up ahead.
+    /// Slow down (hold BRAKE) when passing to be waved through with a small bonus;
+    /// speed past and you get a ticket (coins deducted from the run).
+    /// </summary>
+    public static class EnforcerRules
+    {
+        /// <summary>Passing speed must be at or below this fraction of the current base speed.</summary>
+        public const float SlowFraction = 0.62f;
+        public const float SpawnAhead = 140f;
+        public const float Cooldown = 25f;      // seconds between checkpoints
+        public const int PoliteBonusScore = 150;
+
+        public static bool PassedSafely(float passingSpeed, float baseSpeed) => passingSpeed <= baseSpeed * SlowFraction + 0.01f;
+
+        /// <summary>Fine: 15% of the coins earned this run, at least 10, never more than you have.</summary>
+        public static int Fine(int runCoins) => Math.Min(runCoins, Math.Max(10, (int)Math.Round(runCoins * 0.15)));
+    }
+
+    /// <summary>Lines spoken by passengers and enforcers (Filipino / Taglish flavour).</summary>
+    public static class Lines
+    {
+        public static readonly string[] Bump = { "ARAY KO!", "DAHAN-DAHAN PO!", "KUYA, INGAT!", "ANO BA 'YAN?!", "NAKU PO!", "SAN KA NATUTONG MAGMANEHO?!" };
+        public static readonly string[] Leave = { "BABABA NA AKO!", "LALAKAD NA LANG AKO!", "IBANG JEEP NA LANG!" };
+        public static readonly string[] Landing = { "WHOA!", "SUSMARYOSEP!", "PARANG RIDE!" };
+        public static readonly string[] Board = { "BAYAD PO!", "ISANG QUIAPO PO!", "PAKIABOT PO!", "SAKAY PO!" };
+        public static readonly string[] Alight = { "PARA PO!", "SALAMAT PO!", "DITO NA LANG PO!" };
+        public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };
+        public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!" };
+
+        public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
+    }
+}

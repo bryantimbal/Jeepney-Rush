@@ -147,8 +147,16 @@ namespace JeepneyRush.Logic.Geometry
 
             // ---------------------------------------------------------------- passenger body
             float bodyLen = BodyFrontZ - BodyRearZ, bodyMidZ = (BodyFrontZ + BodyRearZ) / 2;
-            // inner core (interior colour) so the open windows look into a dark cabin
-            b.Box("paint", Interior, 1.9f, RoofY - SillY - 0.05f, bodyLen - 0.05f, 0, (RoofY + SillY) / 2, bodyMidZ);
+            // hollow cabin (no solid core) so seated passengers are visible through the
+            // open windows and the rear doorway: floor, inner walls, ceiling, partition, lamps
+            b.Box("paint", "#3A2E36", 1.9f, 0.06f, bodyLen - 0.05f, 0, SillY + 0.03f, bodyMidZ);
+            foreach (float sx in new[] { -1f, 1f })
+                b.Box("paint", Interior, 0.04f, BeltY - SillY, bodyLen - 0.05f, sx * 0.955f, (BeltY + SillY) / 2, bodyMidZ);
+            b.Box("paint", "#E8E1D0", 1.9f, 0.04f, bodyLen - 0.05f, 0, RoofY - 0.02f, bodyMidZ);
+            b.Box("paint", Interior, 1.9f, RoofY - SillY, 0.05f, 0, (RoofY + SillY) / 2, BodyFrontZ - 0.03f);
+            for (int i = 0; i < 3; i++) b.Box("glow", "#FFF1C1", 0.5f, 0.03f, 0.12f, 0, RoofY - 0.05f, BodyFrontZ - 0.6f - i * 1.2f);
+            // overhead grab rails over each bench
+            foreach (float sx in new[] { -1f, 1f }) b.CylinderZ("chrome", C, 0.02f, bodyLen - 0.3f, 6, sx * 0.55f, RoofY - 0.18f, bodyMidZ);
             // painted art panels (textured) on both sides of the lower body
             float pz0 = BodyRearZ, pz1 = BodyFrontZ;
             var side = "tex:" + L.SideTexture;
@@ -159,9 +167,26 @@ namespace JeepneyRush.Logic.Geometry
             b.Quad(side, new V3(1.0f, SillY, pz0), new V3(1.0f, SillY, pz1), new V3(1.0f, BeltY, pz1), new V3(1.0f, BeltY, pz0), new V3(1, 0, 0),
                 new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
             // rear panel art (includes plate, slogan and the doorway look)
+            // rear panel: left + right panels and a header, leaving the doorway OPEN so you can
+            // see the passengers inside. Texture layout: doorway spans u 0.293-0.707, v 0-0.808.
             var rear = "tex:" + L.RearTexture;
-            b.Quad(rear, new V3(1.0f, SillY, BodyRearZ), new V3(-1.0f, SillY, BodyRearZ), new V3(-1.0f, RoofY, BodyRearZ), new V3(1.0f, RoofY, BodyRearZ), new V3(0, 0, -1),
-                new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1)); // seen from behind, +X is on the viewer's right
+            const float du0 = 0.293f, du1 = 0.707f, dv = 0.808f;
+            float dx = 1.0f - du0 * 2f;                       // doorway half-width in metres (0.414)
+            float dy = SillY + dv * (RoofY - SillY);          // top of the doorway
+            void RearQuad(float x0, float x1, float y0, float y1)
+            {
+                // seen from behind, +X is on the viewer's right: u = (x + 1) / 2
+                float u0 = (x0 + 1f) / 2f, u1 = (x1 + 1f) / 2f;
+                float v0 = (y0 - SillY) / (RoofY - SillY), v1 = (y1 - SillY) / (RoofY - SillY);
+                b.Quad(rear, new V3(x1, y0, BodyRearZ), new V3(x0, y0, BodyRearZ), new V3(x0, y1, BodyRearZ), new V3(x1, y1, BodyRearZ), new V3(0, 0, -1),
+                    new V2(u1, v0), new V2(u0, v0), new V2(u0, v1), new V2(u1, v1));
+            }
+            RearQuad(-1.0f, -dx, SillY, RoofY);
+            RearQuad(dx, 1.0f, SillY, RoofY);
+            RearQuad(-dx, dx, dy, RoofY);
+            // doorway frame
+            foreach (float sx in new[] { -1f, 1f }) b.Box("paint", L.Trim, 0.05f, dy - SillY, 0.08f, sx * dx, (dy + SillY) / 2, BodyRearZ - 0.01f);
+            b.Box("paint", L.Trim, dx * 2 + 0.05f, 0.05f, 0.08f, 0, dy, BodyRearZ - 0.01f);
             // belt-line chrome trims
             foreach (float sx in new[] { -1f, 1f })
             {
