@@ -102,32 +102,40 @@ namespace JeepneyRush
 
         /// <summary>
         /// Text input styled by hand: the game's panel has no default theme, so an unstyled
-        /// TextField has a zero-size, invisible input box that can't be tapped.
+        /// TextField has a zero-size input box. The caption is a separate label ABOVE the box
+        /// (the field's built-in label overlapped the box and got cut in half).
         /// </summary>
-        private TextField Field(string label, bool password = false)
+        private TextField Field(string label, bool password = false) => Field(label, password, out _);
+
+        private TextField Field(string label, bool password, out VisualElement wrapper)
         {
-            var f = new TextField(label) { isPasswordField = password, maskChar = '*' };
+            wrapper = UiKit.Box("fieldWrap");
+            wrapper.style.marginTop = 6;
+            wrapper.style.marginBottom = 14;
+            wrapper.style.alignItems = Align.Stretch;
+            var caption = UiKit.Text(label, 30, UiKit.Ink, false);
+            caption.style.unityTextAlign = TextAnchor.MiddleLeft;
+            caption.style.marginBottom = 8;
+            caption.style.marginLeft = 6;
+            caption.style.minHeight = 40;
+            caption.style.whiteSpace = WhiteSpace.Normal;
+            wrapper.Add(caption);
+
+            var f = new TextField { isPasswordField = password, maskChar = '*' };
             f.AddToClassList(InteractiveClass);
             f.pickingMode = PickingMode.Position;
-            f.style.flexDirection = FlexDirection.Column; // label above the box
-            f.style.alignItems = Align.Stretch;
-            f.style.marginBottom = 12;
-            var lbl = f.labelElement;
-            lbl.style.fontSize = 30;
-            lbl.style.color = UiKit.Ink;
-            lbl.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
-            lbl.style.marginBottom = 6;
-            lbl.style.minWidth = 0;
+            f.style.marginLeft = f.style.marginRight = f.style.marginTop = f.style.marginBottom = 0;
+            f.labelElement.style.display = DisplayStyle.None;
             var input = f.Q(TextField.textInputUssName) ?? f.Q(className: "unity-base-text-field__input");
             if (input != null)
             {
                 input.pickingMode = PickingMode.Position;
                 input.AddToClassList(InteractiveClass);
                 input.style.flexGrow = 1;
-                input.style.minHeight = 92;
+                input.style.minHeight = 96;
                 input.style.backgroundColor = Color.white;
                 UiKit.Border(input.style, 4, UiKit.Ink, 20);
-                UiKit.Pad(input.style, 10, 20);
+                UiKit.Pad(input.style, 10, 22);
                 input.style.fontSize = 38;
                 input.style.color = UiKit.Ink;
                 input.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
@@ -138,11 +146,30 @@ namespace JeepneyRush
                     t.style.color = UiKit.Ink;
                     t.style.unityFontDefinition = FontDefinition.FromFont(UiKit.Body);
                 }
-                // highlight the focused box so the player sees where they type
-                f.RegisterCallback<FocusInEvent>(_ => input.style.borderTopColor = input.style.borderBottomColor = input.style.borderLeftColor = input.style.borderRightColor = UiKit.Blue);
-                f.RegisterCallback<FocusOutEvent>(_ => input.style.borderTopColor = input.style.borderBottomColor = input.style.borderLeftColor = input.style.borderRightColor = UiKit.Ink);
+                void Edge(Color c) { input.style.borderTopColor = input.style.borderBottomColor = input.style.borderLeftColor = input.style.borderRightColor = c; }
+                f.RegisterCallback<FocusInEvent>(_ => Edge(UiKit.Blue));
+                f.RegisterCallback<FocusOutEvent>(_ => Edge(UiKit.Ink));
             }
+            wrapper.Add(f);
             return f;
+        }
+
+        /// <summary>Adds a field (with its caption) to a container.</summary>
+        private TextField AddField(VisualElement parent, string label, bool password = false)
+        {
+            var f = Field(label, password, out var wrap);
+            parent.Add(wrap);
+            return f;
+        }
+
+        /// <summary>Section heading with breathing room above and below.</summary>
+        private Label Heading(string text)
+        {
+            var h = UiKit.Text(text, 42, UiKit.Red);
+            h.style.marginTop = 30;
+            h.style.marginBottom = 10;
+            h.style.minHeight = 52;
+            return h;
         }
 
         private Button SmallButton(string text, System.Action a, Color bg, Color fg) 
@@ -191,10 +218,8 @@ namespace JeepneyRush
             if (!o.SignedIn)
             {
                 body.Add(Note("Sign in to save your progress in the cloud and appear on the rankings."));
-                var email = Field("Email");
-                var pass = Field("Password", true);
-                body.Add(email);
-                body.Add(pass);
+                var email = AddField(body, "Email");
+                var pass = AddField(body, "Password", true);
                 body.Add(SmallButton("SIGN IN", () => o.SignIn(email.value, pass.value, (ok, msg) => { Toast(ok ? "Welcome back!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
                 body.Add(SmallButton("CREATE ACCOUNT", () => o.CreateEmailAccount(email.value, pass.value, (ok, msg) => { Toast(ok ? "Account created!" : msg); RefreshAccount(); }), Color.white, UiKit.Ink));
                 body.Add(SmallButton("PLAY AS GUEST", () => { o.PlayAsGuest(); Toast("Creating guest account…"); }, Color.white, UiKit.Ink));
@@ -203,10 +228,9 @@ namespace JeepneyRush
 
             var snap = o.Snapshot;
             // ---- profile
-            body.Add(UiKit.Text("PROFILE", 40, UiKit.Red));
-            var name = Field("Display name");
+            body.Add(Heading("PROFILE"));
+            var name = AddField(body, "Display name");
             name.value = snap?.display_name ?? "";
-            body.Add(name);
             body.Add(SmallButton("SAVE NAME", () =>
             {
                 var clean = OnlineText.CleanName(name.value);
@@ -220,6 +244,10 @@ namespace JeepneyRush
                 var codeRow = UiKit.Box();
                 codeRow.style.flexDirection = FlexDirection.Row;
                 codeRow.style.alignItems = Align.Center;
+                codeRow.style.justifyContent = Justify.Center;
+                codeRow.style.marginTop = 8;
+                codeRow.style.marginBottom = 8;
+                codeRow.style.minHeight = 110;
                 codeRow.Add(UiKit.Text($"Friend code: {snap.friend_code}", 40, UiKit.Blue));
                 var copy = SmallButton("COPY", () => { GUIUtility.systemCopyBuffer = snap.friend_code; Toast("Code copied!"); }, Color.white, UiKit.Ink);
                 copy.style.width = 180;
@@ -229,14 +257,12 @@ namespace JeepneyRush
             }
 
             // ---- account type
-            body.Add(UiKit.Text(o.IsGuest ? "GUEST ACCOUNT" : "EMAIL ACCOUNT", 40, UiKit.Red));
+            body.Add(Heading(o.IsGuest ? "GUEST ACCOUNT" : "EMAIL ACCOUNT"));
             if (o.IsGuest)
             {
                 body.Add(Note("Guest progress lives only on this phone's account. Add an email to keep it if you change or reset your phone."));
-                var email = Field("Email");
-                var pass = Field("Password (6+ characters)", true);
-                body.Add(email);
-                body.Add(pass);
+                var email = AddField(body, "Email");
+                var pass = AddField(body, "Password (6+ characters)", true);
                 body.Add(SmallButton("SAVE PROGRESS WITH EMAIL", () => o.CreateEmailAccount(email.value, pass.value, (ok, msg) => { Toast(ok ? "Progress saved to your email!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
                 body.Add(SmallButton("SIGN IN TO ANOTHER ACCOUNT", () => Confirm("Switch account?", "This phone will show the other account's progress. Your guest progress stays on the guest account and can't be recovered without an email.",
                     () => o.SignIn(email.value, pass.value, (ok, msg) => { Toast(ok ? "Signed in!" : msg); RefreshAccount(); })), Color.white, UiKit.Ink));
@@ -249,9 +275,8 @@ namespace JeepneyRush
             }
 
             // ---- friends
-            body.Add(UiKit.Text("FRIENDS", 40, UiKit.Red));
-            var code = Field("Friend's code");
-            body.Add(code);
+            body.Add(Heading("FRIENDS"));
+            var code = AddField(body, "Friend's code");
             var list = UiKit.Box("friends");
             body.Add(SmallButton("ADD FRIEND", () => o.AddFriend(code.value, (ok, msg) => { Toast(ok ? "Friend added!" : msg); if (ok) LoadFriends(list); }), UiKit.Yellow, UiKit.Ink));
             body.Add(list);
