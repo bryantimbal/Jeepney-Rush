@@ -18,6 +18,7 @@ namespace JeepneyRush.Logic
         void SpawnStop(PassengerStop stop, float z);
         void SpawnPowerUp(PowerUpKind kind, int lane, float z);
         void SpawnStation(GasStation station, float z);
+        void SpawnIntersection(Intersection intersection, float z);
     }
 
     /// <summary>
@@ -55,6 +56,10 @@ namespace JeepneyRush.Logic
         /// <summary>World distance of the next gas station that has not been spawned or is still ahead.</summary>
         public float NextStationAt { get; private set; }
         public int StationsPlaced { get; private set; }
+        private readonly List<Intersection> _pendingCrossings = new List<Intersection>();
+        private float _nextCrossingAt;
+        private int _crossingIds;
+        public int IntersectionsPlaced { get; private set; }
         private float _nextPowerUpAt;
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
@@ -76,8 +81,10 @@ namespace JeepneyRush.Logic
             _traffic = Environments.TrafficWeights(environment);
             _nextPowerUpAt = 200f + _rng.Range(0, 150);
             NextStationAt = cfg.firstStationAt + _rng.Range(0, 150);
+            _nextCrossingAt = cfg.firstIntersectionAt + _rng.Range(0, 120);
             PlanStops();
             PlanStation(NextStationAt);
+            PlanCrossings(0);
         }
 
         public void Update(float distance, float speed)
@@ -104,6 +111,17 @@ namespace JeepneyRush.Logic
                     StationsPlaced++;
                 }
             }
+            PlanCrossings(distance);
+            for (int i = _pendingCrossings.Count - 1; i >= 0; i--)
+            {
+                var x = _pendingCrossings[i];
+                if (x.At - 20 < distance + _cfg.spawnAhead)
+                {
+                    _sink.SpawnIntersection(x, -(x.At - distance));
+                    _pendingCrossings.RemoveAt(i);
+                    IntersectionsPlaced++;
+                }
+            }
             // once the jeepney is past the current station, plan the next one
             if (distance > NextStationAt + 20f)
             {
@@ -119,6 +137,28 @@ namespace JeepneyRush.Logic
         {
             foreach (var r in _reservations) if (r.Lane == lane && from < r.To && to > r.From) return true;
             return false;
+        }
+
+        private bool OverlapsAny(float from, float to)
+        {
+            for (int l = 0; l < _cfg.laneCount; l++) if (Overlaps(l, from, to)) return true;
+            return false;
+        }
+
+        /// <summary>Signalised intersections: every lane is kept clear from the approach to the far side.</summary>
+        private void PlanCrossings(float distance)
+        {
+            while (_nextCrossingAt < distance + _cfg.spawnAhead + 600f)
+            {
+                float at = _nextCrossingAt;
+                int guard = 0;
+                while (OverlapsAny(at - TrafficLightRules.StopLineOffset - 40, at + TrafficLightRules.HalfBox + 15) && guard++ < 20) at += 40f;
+                var x = new Intersection { Id = ++_crossingIds, At = at, Phase = _rng.Range(0, 30f) };
+                _pendingCrossings.Add(x);
+                for (int l = 0; l < _cfg.laneCount; l++)
+                    _reservations.Add(new Reservation { Lane = l, From = at - TrafficLightRules.StopLineOffset - 22, To = at + TrafficLightRules.HalfBox + 6 });
+                _nextCrossingAt = at + _rng.Range(_cfg.intersectionSpacingMin, _cfg.intersectionSpacingMax);
+            }
         }
 
         /// <summary>Gas station in the right curb lane, shifted forward if a PARA stop is there.</summary>

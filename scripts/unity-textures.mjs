@@ -202,15 +202,16 @@ const textures = await page.evaluate(() => {
     });
     save('shop_signs', c);
   }
-  // -------------------------------------------------- stop name signs (4 x 8 cells of 256 x 128)
+  // -------------------------------------------------- stop name signs (4 x 11 cells of 256 x 128)
   {
-    // must match StopNames.All in Environments.cs (Manila 0-19, Provincial 20-25, Beach 26-31)
+    // must match StopNames.All in Environments.cs (Manila 0-19, Provincial 20-31, Beach 32-43)
     const names = ['QUIAPO', 'CUBAO', 'DIVISORIA', 'RECTO', 'LAWTON', 'ESPANA', 'TAFT', 'MONUMENTO', 'BACLARAN', 'BLUMENTRITT', 'KALAW', 'PACO', 'STA. MESA', 'PEDRO GIL', 'VITO CRUZ', 'LIBERTAD', 'SAMPALOC', 'ERMITA', 'MALATE', 'TONDO',
-      'POBLACION', 'SAN ISIDRO', 'PALENGKE', 'SIMBAHAN', 'MUNISIPYO', 'BRGY. MALIGAYA', 'WHITE BEACH', 'PUERTO', 'BAYBAYIN', 'PIER', 'LIGHTHOUSE', 'RESORT'];
-    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 8);
+      'POBLACION', 'SAN ISIDRO', 'PALENGKE', 'SIMBAHAN', 'MUNISIPYO', 'BRGY. MALIGAYA', 'BAYAN', 'PLAZA', 'CROSSING', 'SAN ROQUE', 'KAPITOLYO', 'TERMINAL',
+      'WHITE BEACH', 'PUERTO', 'BAYBAYIN', 'PIER', 'LIGHTHOUSE', 'RESORT', 'DAUNGAN', 'FISHPORT', 'BOULEVARD', 'COVE', 'LAGUNDI', 'DIVE SHOP'];
+    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 11);
     names.forEach((n, i) => {
       const ox = (i % 4) * CW, oy = Math.floor(i / 4) * CH;
-      x.fillStyle = i < 20 ? '#0b6e4f' : i < 26 ? '#7a4e2d' : '#0077b6'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
+      x.fillStyle = i < 20 ? '#0b6e4f' : i < 32 ? '#7a4e2d' : '#0077b6'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
       x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillStyle = '#ffd100'; fit(x, 'SAKAYAN', 0, 0, CW - 30, 24, (z) => `900 ${z}px ${B}`); x.fillText('SAKAYAN', ox + CW / 2, oy + CH * 0.27);
       x.fillStyle = '#fff'; fit(x, n, 0, 0, CW - 30, 52, (z) => `${z}px ${D}`); x.fillText(n, ox + CW / 2, oy + CH * 0.65);

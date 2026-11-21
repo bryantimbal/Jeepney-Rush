@@ -72,7 +72,15 @@ namespace JeepneyRush.Logic
         public static readonly string[] Hump = { "ARAY! ANG HUMP!", "KUYA, MAY HUMP!", "TUMALBOG AKO!", "ANG SAKIT NG PWET KO!" };
         public static readonly string[] Smooth = { "AYOS, KUYA!", "SMOOTH!", "GALING MAG-DRIVE!" };
         public static readonly string[] Flood = { "BAHA! BAHA!", "BASA PAA KO!", "LUSONG NA, KUYA!", "LUBOG NA TAYO!" };
-        public static readonly string[] Board = { "BAYAD PO!", "ISANG QUIAPO PO!", "PAKIABOT PO!", "SAKAY PO!" };
+        public static readonly string[] Board = { "BAYAD PO!", "PAKIABOT PO!", "SAKAY PO!" };
+
+        /// <summary>Boarding line; "ISANG ___ PO!" always names a stop on the current route (no Quiapo on the beach).</summary>
+        public static string BoardFor(EnvironmentKind env, GameRandom rng)
+        {
+            if (rng.Chance(0.5)) return Pick(Board, rng);
+            var names = StopNames.ForEnvironment(env);
+            return $"ISANG {StopNames.All[names[rng.Int(0, names.Count - 1)]]} PO!";
+        }
         public static readonly string[] Alight = { "PARA PO!", "SALAMAT PO!", "DITO NA LANG PO!" };
         public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };
         public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!" };

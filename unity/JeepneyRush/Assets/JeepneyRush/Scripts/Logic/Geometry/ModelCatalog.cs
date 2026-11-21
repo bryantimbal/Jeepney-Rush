@@ -27,6 +27,7 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("person_seated", PropBuilder.Person(2, true));
             yield return ("coin", PropBuilder.Coin());
             yield return ("shed", PropBuilder.WaitingShed());
+            yield return ("intersection", PropBuilder.Intersection());
             yield return ("gas_station", PropBuilder.GasStation(3.2f, 2.7f, 14f));
             yield return ("stop_sign", PropBuilder.StopSign(0));
             yield return ("chunk", SceneryBuilder.ManilaChunk(1000, true));

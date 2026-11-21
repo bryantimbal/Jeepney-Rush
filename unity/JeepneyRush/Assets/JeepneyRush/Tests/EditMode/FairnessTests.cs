@@ -45,6 +45,8 @@ namespace JeepneyRush.Tests
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => PowerUps++;
             public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
             public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
+            public readonly List<(Intersection x, float z)> Crossings = new List<(Intersection, float)>();
+            public void SpawnIntersection(Intersection x, float z) => Crossings.Add((x, z));
         }
 
         private static (List<string> hits, int stops, int coins, int passengers, int powerUps, List<string> zoneIntrusions, MockWorld world) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
@@ -109,6 +111,20 @@ namespace JeepneyRush.Tests
                             if (!intrusions.Contains(tag)) intrusions.Add(tag);
                         }
                     }
+                }
+                for (int i = 0; i < world.Crossings.Count; i++)
+                {
+                    var (xs, z) = world.Crossings[i];
+                    z += speed * dt;
+                    world.Crossings[i] = (xs, z);
+                    if (z < -110 || z > TrafficLightRules.HalfBox + 2) continue;
+                    // nothing may stand or drive inside the intersection or on its approach while the jeepney comes
+                    foreach (var o in world.Objs)
+                        if (o.Z > z - TrafficLightRules.HalfBox - HazardCatalog.Get(o.Kind).HalfLength && o.Z < z + TrafficLightRules.StopLineOffset + HazardCatalog.Get(o.Kind).HalfLength)
+                        {
+                            string tag = $"{o.Kind}@crossing{xs.Id}";
+                            if (!intrusions.Contains(tag)) intrusions.Add(tag);
+                        }
                 }
                 distance += speed * dt;
 
@@ -193,6 +209,7 @@ namespace JeepneyRush.Tests
             Assert.Greater(world.Spawned.TryGetValue(HazardKind.SpeedHump, out var humps) ? humps : 0, 0, "no speed humps in 4 km");
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
+            Assert.GreaterOrEqual(world.Crossings.Count, 4, "too few intersections in 4 km");
             var cfg = new BalanceConfig();
             for (int i = 0; i < world.Stations.Count; i++)
             {

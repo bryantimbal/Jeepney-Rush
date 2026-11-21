@@ -43,6 +43,8 @@ namespace JeepneyRush
         private PassengerStopView _inZone;
         // ---- fuel & gas stations
         private StationManager _stations;
+        private IntersectionManager _crossings;
+        private float _hornCooldown;
         private FuelTank _fuel;
         private StationView _stationZone;
         private RefuelQuote _quote;
@@ -131,13 +133,16 @@ namespace JeepneyRush
             _spawner = new LevelSpawner(_traffic, _obstacles, _coins, _passengers, _powerUps);
             _stations = GetOrAdd<StationManager>(Child("StationManager"));
             _spawner.Stations = _stations;
+            _crossings = GetOrAdd<IntersectionManager>(Child("IntersectionManager"));
+            _spawner.Intersections = _crossings;
+            _crossings.RanRed = OnRanRed;
             _traffic.CollectAll = _spawner.CollectBlockers;
             _traffic.PlayerLanes = () => _spawner.PlayerLanes;
 
             // hills & bends are applied for rendering only (gameplay stays in straight lanes)
             _bender = GetOrAdd<RoadBender>(Child("RoadBender"));
             _bender.Road = _road;
-            foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _road.SegmentRoot })
+            foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _crossings.transform, _road.SegmentRoot })
                 _bender.AddRoot(root);
             _weather = GetOrAdd<WeatherManager>(Child("Weather"));
             _weather.Init(_camera.GetComponent<Camera>(), _road);
@@ -179,6 +184,8 @@ namespace JeepneyRush
             _obstacles.Clear();
             _stations.Clear();
             _stations.Init(_cfg);
+            _crossings.Clear();
+            _crossings.Init(_cfg);
             _coins.Clear();
             _traffic.Init(_cfg, _rng);
             _obstacles.Init(_cfg, _rng);
@@ -241,7 +248,21 @@ namespace JeepneyRush
             }
         }
 
-        public void Honk() => GameEvents.RaiseHonk();
+        /// <summary>BUSINA: the jeepney horn. The car ahead in your lane moves over (if safe) or hurries up.</summary>
+        public void Honk()
+        {
+            if (_hornCooldown > 0) return;
+            _hornCooldown = _cfg.hornCooldown;
+            GameEvents.RaiseHonk();
+            Haptics.Pulse(10);
+            if (_dying || _traffic == null || Services.Game.State != GameState.Playing) return;
+            var car = _traffic.Honk(_player.Lanes.X, _speed);
+            if (car != null && _rng.Chance(0.5))
+            {
+                var t = car.transform;
+                Services.UI.Say(_rng.Chance(0.5) ? "OO NA, OO NA!" : "SANDALI LANG!", () => t.position + Vector3.up * 2.2f);
+            }
+        }
 
         private void Update()
         {
@@ -268,6 +289,7 @@ namespace JeepneyRush
             _player.GasHeld = gasHeld && !brakeHeld;
             _player.BrakeHeld = brakeHeld;
             _revCooldown -= dt;
+            _hornCooldown -= dt;
             if (_player.GasHeld && !_gasWas && _revCooldown <= 0 && !_fuel.Empty)
             {
                 _revCooldown = 0.7f;
@@ -366,12 +388,15 @@ namespace JeepneyRush
             _enforcer.Tick(dt, _speed);
             if (!_dying) UpdateStops(dt);
             _stations.Tick(dt, _speed, _player.transform.localPosition);
+            _crossings.Tick(dt, _speed);
             if (!_dying) UpdateStations(dt);
             float hump = NextHumpZ();
             var next = _passengers.NextStop();
             float nextZ = next != null ? next.transform.localPosition.z - _cfg.stopZoneLength / 2f : -1f;
             if (_enforcer.Active && _enforcer.Z > 0)
                 Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+            else if (LightBanner(out string light))
+                Services.UI.SetEnforcerBanner(light);
             else if (_refuelling)
                 Services.UI.SetEnforcerBanner(_refuelWalk > 0 ? "GAS STATION · PA-FULL TANK PO!" : $"NAGPAPAGASOLINA... {Mathf.RoundToInt(_fuel.Fraction * 100)}%");
             else if (_fuel.Empty)
@@ -620,6 +645,48 @@ namespace JeepneyRush
             GameEvents.RaisePowerUp(p.Kind);
         }
 
+        // ---------------------------------------------------------------- traffic lights
+        /// <summary>Banner for the next traffic light: countdown on yellow/red, nothing on green.</summary>
+        private bool LightBanner(out string text)
+        {
+            text = null;
+            var v = _crossings.Next();
+            if (v == null) return false;
+            float d = v.StopLineZ - _cfg.playerHalfLength;
+            if (d < -0.5f || d > 90f) return false;
+            int secs = Mathf.CeilToInt(v.Light.Remaining);
+            switch (v.Light.Color)
+            {
+                case LightColor.Red:
+                    text = Mathf.Abs(_speed) < 0.5f && d < 15f ? $"PULA · HINTAY LANG... {secs}" : $"PULA! STOP SA LINYA · {Mathf.CeilToInt(Mathf.Max(0, d))} m · {secs}";
+                    return true;
+                case LightColor.Yellow:
+                    text = $"DILAW! · {secs}";
+                    return true;
+                default:
+                    if (d < 25f && v.Light.Remaining < 3f) { text = $"BERDE · {secs}"; return true; }
+                    return false;
+            }
+        }
+
+        /// <summary>Ran a red light: whistle, MMDA ticket, shaken passengers.</summary>
+        private void OnRanRed(IntersectionView v)
+        {
+            if (_dying) return;
+            int fine = EnforcerRules.Fine(_score.Coins);
+            _score.SpendCoins(fine);
+            _cleanDistance = 0;
+            Services.Audio.Play(Logic.Audio.Sfx.Whistle);
+            Haptics.Pulse(40);
+            _camera.AddShake(0.15f);
+            Services.UI.Float(fine > 0 ? $"BEATING THE RED LIGHT! -{fine} COINS" : "BEATING THE RED LIGHT!", UIManager.FloatKind.Bad);
+            var head = v.transform;
+            Services.UI.Say("PRRRT! PULA NA, BOSS!", () => head.position + new Vector3(SceneryBuilderRoadEdge(), 2.4f, -6.5f), true, 2.2f);
+            if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, PULA NA!", _passengers.RandomRiderHead, true);
+        }
+
+        private static float SceneryBuilderRoadEdge() => Logic.Geometry.SceneryBuilder.RoadHalfWidth + 0.5f;
+
         // ---------------------------------------------------------------- fuel
         private bool NextStationAhead(out float metres)
         {
@@ -637,7 +704,7 @@ namespace JeepneyRush
             if (_fuel.Low && !_lowWarned)
             {
                 _lowWarned = true;
-                Services.UI.Float("MAHINA NA ANG GAS!", UIManager.FloatKind.Bad);
+                Services.UI.Float("PAUBOS NA ANG GAS!", UIManager.FloatKind.Bad);
                 Services.Audio.Play(Logic.Audio.Sfx.Full, 0.9f);
                 if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, MAGPA-GAS KA NA!", _passengers.RandomRiderHead);
             }
@@ -789,7 +856,7 @@ namespace JeepneyRush
             if (r.Boarded > 0)
             {
                 if (r.Alighted == 0) Services.UI.Float($"+{r.Boarded} SAKAY!", UIManager.FloatKind.Good);
-                Services.UI.Say(Lines.Pick(Lines.Board, _rng), _passengers.RandomRiderHead);
+                Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RandomRiderHead);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
             }
             if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);

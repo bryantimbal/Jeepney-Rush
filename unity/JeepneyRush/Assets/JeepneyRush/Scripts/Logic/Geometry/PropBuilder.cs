@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using JeepneyRush.Logic;
 
 namespace JeepneyRush.Logic.Geometry
@@ -122,6 +123,84 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+/// <summary>Lamp centres (red, yellow, green) of the two signal heads, matching <see cref="Intersection"/>.</summary>
+        public static V3[] SignalLamps()
+        {
+            var list = new List<V3>();
+            foreach (var h in SignalHeads)
+                for (int k = 0; k < 3; k++) list.Add(new V3(h.X, h.Y + 0.42f - k * 0.42f, h.Z - 0.2f));
+            return list.ToArray();
+        }
+
+        /// <summary>Signal head centres: one hanging over the road on a mast arm, one on the left pole.</summary>
+        public static readonly V3[] SignalHeads =
+        {
+            new V3(1.6f, 5.0f, -6.5f),
+            new V3(-SceneryBuilder.RoadHalfWidth - 0.5f, 3.3f, -6.6f),
+        };
+
+        /// <summary>
+        /// Signalised intersection centred at the origin (jeepney approaches from -Z): side
+        /// streets, zebra crossings, the stop line and two traffic-light poles. The lit lamps
+        /// are separate objects switched at runtime; this mesh has the dark lenses.
+        /// </summary>
+        public static MeshData Intersection()
+        {
+            var b = new MeshBuilder();
+            float rw = SceneryBuilder.RoadHalfWidth, so = SceneryBuilder.SidewalkOuter, sh = SceneryBuilder.SidewalkHeight;
+            const float half = 5f;
+            const string asphalt = "#3C3C42", white = "#F2F2F2";
+            // side streets crossing the sidewalks (left and right)
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                float cx = sx * (rw + so) / 2f;
+                b.Box("paint", asphalt, so - rw, 0.04f, half * 2, cx, sh + 0.01f, 0);
+                for (int i = 0; i < 2; i++) b.Box("paint", "#FFD60A", 0.9f, 0.012f, 0.14f, cx + (i - 0.5f) * 1.6f, sh + 0.035f, 0);
+            }
+            // zebra crossings before and after the box
+            foreach (float z in new[] { -7.4f, 7.4f })
+                for (float x = -rw + 0.5f; x <= rw - 0.4f; x += 1.0f)
+                    b.Box("paint", white, 0.55f, 0.012f, 2.8f, x, 0.008f, z);
+            // stop line across the jeepney's lanes
+            b.Box("paint", white, rw * 2 - 0.4f, 0.014f, 0.45f, 0, 0.009f, -9.5f);
+            // "yellow box" hatch inside the intersection (keep clear)
+            b.Box("paint", "#FFD60A", rw * 2 - 0.6f, 0.01f, 0.18f, 0, 0.007f, -half + 0.2f);
+            b.Box("paint", "#FFD60A", rw * 2 - 0.6f, 0.01f, 0.18f, 0, 0.007f, half - 0.2f);
+            // ---- mast arm pole on the right, head hanging over the road
+            var h0 = SignalHeads[0];
+            float px = rw + 0.5f;
+            b.Cylinder("paint", "#5A6068", 0.12f, 0.15f, 5.8f, 10, px, 2.9f, h0.Z);
+            b.Box("paint", "#5A6068", px - h0.X + 0.4f, 0.14f, 0.14f, (px + h0.X) / 2f, h0.Y + 0.85f, h0.Z);
+            Head(b, h0);
+            // ---- left post-mounted signal
+            var h1 = SignalHeads[1];
+            b.Cylinder("paint", "#5A6068", 0.1f, 0.12f, h1.Y + 0.6f, 10, h1.X, (h1.Y + 0.6f) / 2f, h1.Z);
+            Head(b, h1);
+            // pedestrian signal boxes on the right pole
+            b.Box("paint", "#1A1A1A", 0.32f, 0.32f, 0.2f, px, 2.6f, h0.Z - 0.18f);
+            return b.Data;
+        }
+
+        private static void Head(MeshBuilder b, V3 h)
+        {
+            b.Box("paint", "#1E1E22", 0.5f, 1.4f, 0.36f, h.X, h.Y, h.Z);
+            b.Box("paint", "#FFD60A", 0.66f, 1.56f, 0.04f, h.X, h.Y, h.Z + 0.2f); // reflective backplate edge
+            for (int k = 0; k < 3; k++)
+            {
+                float y = h.Y + 0.42f - k * 0.42f;
+                b.Cylinder("paint", "#26282C", 0.16f, 0.16f, 0.04f, 12, h.X, y, h.Z - 0.19f, new Rot((float)(Math.PI / 2), 0, 0));
+                b.Box("paint", "#111111", 0.38f, 0.05f, 0.22f, h.X, y + 0.18f, h.Z - 0.3f); // visor
+            }
+        }
+
+        public static MeshData SignalLamp(string color)
+        {
+            var b = new MeshBuilder();
+            b.Cylinder("glow", color, 0.165f, 0.165f, 0.05f, 12, 0, 0, 0, new Rot((float)(Math.PI / 2), 0, 0));
+            b.Sphere("bubble", color, 0.34f, 0, 0, -0.04f, 10); // glow halo
+            return b.Data;
+        }
+
         public static MeshData WaitingShed()
         {
             var b = new MeshBuilder();
@@ -140,7 +219,7 @@ namespace JeepneyRush.Logic.Geometry
             var b = new MeshBuilder();
             b.Cylinder("paint", "#888888", 0.06f, 0.06f, 3.3f, 6, 0, 1.65f, 0);
             b.Box("paint", "#222222", 2.1f, 1.08f, 0.06f, 0, 3.4f, -0.04f);
-            var (u0, v0, u1, v1) = AtlasCell(nameIndex, 4, 8);
+            var (u0, v0, u1, v1) = AtlasCell(nameIndex, StopNames.AtlasColumns, StopNames.AtlasRows);
             // seen from the front (+Z looking toward -Z), -X is on the viewer's right
             b.Quad("tex:stop_signs", new V3(1.0f, 2.9f, 0), new V3(-1.0f, 2.9f, 0), new V3(-1.0f, 3.9f, 0), new V3(1.0f, 3.9f, 0), new V3(0, 0, 1),
                 new V2(u0, v0), new V2(u1, v0), new V2(u1, v1), new V2(u0, v1));

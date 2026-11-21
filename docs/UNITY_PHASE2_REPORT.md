@@ -112,7 +112,7 @@ Your existing `Resources/GameBalance.asset` still holds the old 0.22 s lane chan
 Tests: **68/68 pass** (the fairness bot uses the slower, smoothed lane change). The compile check has 0 errors.
 
 ## Update 7 – fuel gauge and gas-station refuelling
-* **Fuel gauge** on the HUD under the hearts: an E–F bar that goes green → yellow → red, plus "GAS STATION 340 m" (distance to the next station). Below 25% it blinks, a warning sounds, the banner shows "MAHINA NA ANG GAS!", and passengers nag ("KUYA, MAGPA-GAS KA NA!").
+* **Fuel gauge** on the HUD under the hearts: an E–F bar that goes green → yellow → red, plus "GAS STATION 340 m" (distance to the next station). Below 25% it blinks, a warning sounds, the banner shows "PAUBOS NA ANG GAS!", and passengers nag ("KUYA, MAGPA-GAS KA NA!").
 * **Consumption:** a full tank (100 L) lasts about 2.2 km at cruise, and about 1.6 km if you hold GAS the whole way. Idling and reversing burn a little too.
 * **Gas stations** (generic "gasolinahan", no real brand) appear on the **right curb** about every 0.9–1.3 km (first one at about 650–800 m). Each has a canopy over the curb lane, a pump island with two pumps, a price sign and an attendant waving you in. The station's lane is reserved like a PARA stop, so no traffic or obstacles are in it. Stations and PARA stops never overlap, and a full tank always reaches the next station (checked by tests).
 * **Refuelling:** stop on the striped pad (touching it is enough; you can also reverse back to it). The banner says "GAS STATION · HOLD BRAKE · FULL STOP". After a full stop, the attendant walks to the jeepney, you hear the pump, the gauge fills ("NAGPAPAGASOLINA… 64%"), and you pay with this run's coins (0.4 coin per litre, so a typical fill-up costs about 25 coins). Then "FULL TANK! +62 L · -25 COINS". If you can't afford enough, the attendant fills you up to 70% on credit ("UTANG MUNA!") so you're never stranded right after a station.
@@ -122,3 +122,15 @@ Tests: **68/68 pass** (the fairness bot uses the slower, smoothed lane change). 
 ![Gas station](images/gas_station.png)
 
 Tests: **75/75 pass**. New fuel tests: burn rates, idle/reverse use, low/empty, tank range vs. station spacing, price and credit rules, pad size. The fairness test now also checks that station lanes stay empty and stations are spaced within tank range. The compile check has 0 errors.
+
+## Update 8 – BUSINA horn button, traffic lights, wording and route-specific names
+| Request | Change |
+|---|---|
+| Jeepney horn button | The small horn icon is now a big yellow **BUSINA** button above GAS. It honks the moment you press it, even while holding GAS with the other thumb (swipe up still honks too). Honking now **does something**: the nearest vehicle ahead in your lane signals and moves over if that's safe for you, or speeds up if it can't ("OO NA, OO NA!"). |
+| Traffic lights at intersections | Every 650–1,000 m (first at about 420 m) there's an **intersection**: side streets, zebra crossings, a stop line and two traffic lights (one on a mast arm over the road). The lights cycle **green 7 s → yellow 3 s → red 6 s**. A banner shows the countdown ("PULA! STOP SA LINYA · 24 m · 5", then "PULA · HINTAY LANG... 3", and "DILAW! · 2"). On red, **people cross** on the zebra in front of you. Crossing the stop line on **red** gets you a whistle and a ticket ("BEATING THE RED LIGHT! -N COINS"), the pedestrians rush back, and the passengers complain. Yellow is never a violation, and the yellow light is long enough that if you're too close to stop when it turns yellow you'll clear the line before red (tested up to top speed with GAS). The whole intersection is kept free of obstacles and traffic, so stopping for a red is always safe. |
+| Wording | "MAHINA NA ANG GAS!" → **"PAUBOS NA ANG GAS!"** |
+| No Quiapo outside the city | PARA stop names were already per route, but passengers said "ISANG QUIAPO PO!" on every route. Boarding lines now name a stop **on the current route** (e.g. "ISANG PLAZA PO!" on the provincial road, "ISANG PIER PO!" on the beach). Province and Beach also get twice as many local stop names: **Bayan, Plaza, Crossing, San Roque, Kapitolyo, Terminal** and **Daungan, Fishport, Boulevard, Cove, Lagundi, Dive Shop**. The stop-sign texture was regenerated. The default jeepney's internal route label no longer says Quiapo. |
+
+Tests: **80/80 pass**. New tests: light cycle and countdown, yellow fairness at every speed, red-only violations and stop-line crossing, route-specific stop names and boarding lines. The fairness test now also requires intersections to be clear. The compile check has 0 errors.
+
+**Update note:** this update changes `Resources/Textures/stop_signs.png` (it's taller now: 4×11 signs). Copy the folder with **Replace** as usual. No Setup Project needed.

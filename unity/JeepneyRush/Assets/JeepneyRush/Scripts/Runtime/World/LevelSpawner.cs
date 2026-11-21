@@ -16,6 +16,7 @@ namespace JeepneyRush
         private readonly PassengerManager _passengers;
         private readonly PowerUpManager _powerUps;
         public StationManager Stations;
+        public IntersectionManager Intersections;
         private readonly int[] _one = new int[1];
         private readonly int[] _two = new int[2];
         private IReadOnlyList<int> _lanes;
@@ -54,5 +55,7 @@ namespace JeepneyRush
         public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => _powerUps.Spawn(kind, lane, -z);
 
         public void SpawnStation(GasStation station, float z) { if (Stations != null) Stations.Spawn(station, -z); }
+
+        public void SpawnIntersection(Intersection x, float z) { if (Intersections != null) Intersections.Spawn(x, -z); }
     }
 }

@@ -58,7 +58,7 @@ namespace JeepneyRush.Logic
                 Id = "pilipinas", DisplayName = "Pilipinas Classic", Price = 0, Motif = ArtMotif.SunStars,
                 Description = "Chrome fenders, sun-and-stars art and a proud PILIPINAS roof sign.",
                 Body = "#C8102E", Hood = "#1F3FBF", Accent1 = "#FCD116", Accent2 = "#FFFFFF", Roof = "#1F3FBF", Trim = "#FCD116",
-                RoofSign = "PILIPINAS", Route = "QUIAPO - CUBAO", Slogan = "Pilipinas", ChromeLowerBody = true, SpareTire = true,
+                RoofSign = "PILIPINAS", Route = "PILIPINAS", Slogan = "Pilipinas", ChromeLowerBody = true, SpareTire = true,
             },
             new JeepneyLivery
             {

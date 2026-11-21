@@ -39,7 +39,7 @@ namespace JeepneyRush.Logic
         }
     }
 
-    /// <summary>All stop names. The stop-sign texture atlas is drawn in this exact order (4 x 8 cells).</summary>
+    /// <summary>All stop names. The stop-sign texture atlas is drawn in this exact order (4 x 11 cells).</summary>
     public static class StopNames
     {
         public static readonly string[] All =
@@ -48,17 +48,22 @@ namespace JeepneyRush.Logic
             "QUIAPO", "CUBAO", "DIVISORIA", "RECTO", "LAWTON", "ESPANA", "TAFT", "MONUMENTO", "BACLARAN",
             "BLUMENTRITT", "KALAW", "PACO", "STA. MESA", "PEDRO GIL", "VITO CRUZ", "LIBERTAD", "SAMPALOC",
             "ERMITA", "MALATE", "TONDO",
-            // Provincial (20..25)
+            // Provincial (20..31) – town and barangay landmarks, no Metro Manila names
             "POBLACION", "SAN ISIDRO", "PALENGKE", "SIMBAHAN", "MUNISIPYO", "BRGY. MALIGAYA",
-            // Beach (26..31)
+            "BAYAN", "PLAZA", "CROSSING", "SAN ROQUE", "KAPITOLYO", "TERMINAL",
+            // Beach (32..43) – coastal stops
             "WHITE BEACH", "PUERTO", "BAYBAYIN", "PIER", "LIGHTHOUSE", "RESORT",
+            "DAUNGAN", "FISHPORT", "BOULEVARD", "COVE", "LAGUNDI", "DIVE SHOP",
         };
+
+        public const int AtlasColumns = 4, AtlasRows = 11;
+        public const int ManilaFrom = 0, ManilaTo = 19, ProvincialFrom = 20, ProvincialTo = 31, BeachFrom = 32, BeachTo = 43;
 
         public static IReadOnlyList<int> ForEnvironment(EnvironmentKind k)
         {
             var l = new List<int>();
-            int from = k == EnvironmentKind.Provincial ? 20 : k == EnvironmentKind.Beach ? 26 : 0;
-            int to = k == EnvironmentKind.Provincial ? 25 : k == EnvironmentKind.Beach ? 31 : 19;
+            int from = k == EnvironmentKind.Provincial ? ProvincialFrom : k == EnvironmentKind.Beach ? BeachFrom : ManilaFrom;
+            int to = k == EnvironmentKind.Provincial ? ProvincialTo : k == EnvironmentKind.Beach ? BeachTo : ManilaTo;
             for (int i = from; i <= to; i++) l.Add(i);
             return l;
         }

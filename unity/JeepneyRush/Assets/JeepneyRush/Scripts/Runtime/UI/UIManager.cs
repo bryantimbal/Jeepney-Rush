@@ -662,10 +662,12 @@ namespace JeepneyRush
             bottom.Add(speedCol);
             var controls = UiKit.Box();
             controls.style.alignItems = Align.FlexEnd;
-            var horn = UiKit.IconButton("ui_horn", () => Services.Game.Session?.Honk(), 130, UiKit.Hex("#E9EDF2"));
+            // BUSINA: big yellow horn button, honks the instant it is pressed (works while holding GAS)
+            var horn = HoldButton("BUSINA", "ui_horn", UiKit.Hex("#FFD60A"), v => { if (v) Services.Game.Session?.Honk(); });
             horn.name = "horn";
-            UiKit.Border(horn.style, 7, UiKit.Ink, 65);
-            horn.style.borderBottomWidth = 12;
+            horn.style.width = horn.style.height = 170;
+            UiKit.Border(horn.style, 7, UiKit.Ink, 85);
+            horn.style.borderBottomWidth = 16;
             horn.style.marginBottom = 18;
             controls.Add(horn);
             // one pedal per thumb: BRAKE bottom-left (under the speedometer), GAS bottom-right (under the horn)
@@ -686,7 +688,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · swipe UP to honk", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

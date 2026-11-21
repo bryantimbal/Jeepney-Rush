@@ -163,7 +163,7 @@ namespace JeepneyRush.Tests
             for (int i = 0; i < 10; i++)
             {
                 var s = r.Plan(i * 300, 1, 2, 1);
-                Assert.That(s.NameIndex, Is.InRange(26, 31));
+                Assert.That(s.NameIndex, Is.InRange(StopNames.BeachFrom, StopNames.BeachTo));
                 Assert.AreEqual(StopNames.All[s.NameIndex], s.Name);
                 r.Miss(s);
             }

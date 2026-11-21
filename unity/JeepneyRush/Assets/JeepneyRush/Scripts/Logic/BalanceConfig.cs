@@ -85,6 +85,15 @@ namespace JeepneyRush.Logic
         public float firstStationAt = 650f;
         public float stationZoneLength = 14f;
 
+        // --- intersections & traffic lights
+        public float intersectionSpacingMin = 650f;
+        public float intersectionSpacingMax = 1000f;
+        public float firstIntersectionAt = 420f;
+        public float lightGreen = 7f;
+        public float lightYellow = 3f;
+        public float lightRed = 6f;
+        public float hornCooldown = 0.35f;
+
         // --- passengers (Phase 2: destinations, fares, delivery streaks)
         public int passengerCapacity = 5;
         public int minRideStops = 1;
