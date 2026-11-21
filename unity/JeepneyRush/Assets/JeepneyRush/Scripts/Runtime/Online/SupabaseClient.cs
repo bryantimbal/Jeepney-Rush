@@ -68,7 +68,11 @@ namespace JeepneyRush
             req.SetRequestHeader("apikey", _cfg.anonKey.Trim());
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("Accept", "application/json");
-            req.SetRequestHeader("Authorization", "Bearer " + (auth && _session != null ? _session.access_token : _cfg.anonKey.Trim()));
+            // Only a signed-in user's token goes in Authorization. The project key travels in
+            // "apikey" – that works with both the legacy anon key (eyJ…) and the new
+            // publishable key (sb_publishable_…), which is not a JWT.
+            if (auth && _session != null && !string.IsNullOrEmpty(_session.access_token))
+                req.SetRequestHeader("Authorization", "Bearer " + _session.access_token);
             return req;
         }
 

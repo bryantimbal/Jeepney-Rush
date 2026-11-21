@@ -53,14 +53,18 @@ supabase db push
 Both files can be run again safely (e.g. after an update).
 
 ## 4. Connect the game
-1. In Supabase: **Project Settings ▸ API**. Copy the **Project URL** and the **anon public** key.
+1. In Supabase, click **Connect** (top bar) or open **Project Settings ▸ API Keys**:
+   * **Project URL**: `https://<ref>.supabase.co` (just the domain; if you copy `…/rest/v1/` the game strips it).
+   * **Public key**: either the **Publishable key** (`sb_publishable_…`) or, under the **Legacy API Keys** tab,
+     the **anon public** key (`eyJ…`). Both work.
 2. In Unity: run **Jeepney Rush ▸ Setup Project** once (it creates `Assets/JeepneyRush/Resources/OnlineConfig.asset`).
 3. Select **OnlineConfig** and paste:
    * **Supabase Url**: `https://<ref>.supabase.co`
-   * **Anon Key**: the *anon public* key
+   * **Anon Key**: the publishable key or the legacy *anon public* key
 4. Press Play. After the splash, the menu chip shows **"ONLINE · Driver-XXXX (guest)"**.
 
-> **Never** paste the `service_role` key into the game. It bypasses all security. The game
+> **Never** paste the **secret** key (`sb_secret_…`) or the legacy `service_role` key into the game – the game
+> refuses to connect with them. It bypasses all security. The game
 > only needs the anon key, and the database protects everything else.
 
 ## 5. Check it works
