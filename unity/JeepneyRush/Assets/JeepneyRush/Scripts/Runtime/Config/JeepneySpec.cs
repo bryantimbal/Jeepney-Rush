@@ -4,8 +4,8 @@ using UnityEngine;
 namespace JeepneyRush
 {
     /// <summary>
-    /// Specification of a playable jeepney. Phase 1 ships two free liveries; the Phase 2
-    /// garage adds price, unlock requirements and upgrade stats to this asset.
+    /// Inspector-visible mirror of a jeepney in <see cref="JeepneyCatalog"/> (the catalog in
+    /// code is the source of truth for prices, stats and art; these assets document it for designers).
     /// </summary>
     [CreateAssetMenu(menuName = "Jeepney Rush/Jeepney Spec", fileName = "JeepneySpec")]
     public sealed class JeepneySpec : ScriptableObject
@@ -32,7 +32,9 @@ namespace JeepneyRush
                 var s = CreateInstance<JeepneySpec>();
                 s.liveryId = JeepneyCatalog.All[i].Id;
                 s.displayName = JeepneyCatalog.All[i].DisplayName;
-                s.description = i == 0 ? "Chrome fenders, sun-and-stars art and a PILIPINAS roof sign." : "Purple pride of the San Juan route, with beaded antennas.";
+                s.description = JeepneyCatalog.All[i].Description;
+                s.passengerCapacity = 5 + JeepneyCatalog.All[i].CapacityBonus;
+                s.health = 3 + JeepneyCatalog.All[i].HealthBonus;
                 list[i] = s;
             }
             return list;

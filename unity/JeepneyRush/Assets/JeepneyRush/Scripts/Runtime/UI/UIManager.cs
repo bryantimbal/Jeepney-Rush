@@ -10,13 +10,13 @@ namespace JeepneyRush
     /// garage, settings, gameplay HUD, pause, game over, tutorial and floating feedback.
     /// Portrait reference resolution 1080x1920, safe-area aware.
     /// </summary>
-    public sealed class UIManager : MonoBehaviour
+    public sealed partial class UIManager : MonoBehaviour
     {
         public enum FloatKind { Good, Bad, Info, Big }
 
         private UIDocument _doc;
         private VisualElement _root, _safe;
-        private VisualElement _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _tutorial, _floats, _flash;
+        private VisualElement _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _tutorial, _floats, _flash, _missions, _routes;
         private VisualElement _splashBar, _loadingBar, _splashJeep;
         private Label _splashText, _menuCoins, _menuBest;
         private Label _score, _distance, _coins, _pax, _stopName, _stopMeta, _speed, _debug;
@@ -27,11 +27,6 @@ namespace JeepneyRush
         private readonly Stack<VisualElement> _modals = new Stack<VisualElement>();
         private System.Action _confirmYes;
         private Label _confirmTitle, _confirmText;
-        private int _garageIndex;
-        private JeepneySpec[] _specs;
-        private Label _garageName, _garageDesc, _garageStatus;
-        private VisualElement _garageStats;
-        private Button _garageSelect;
         private bool _showDebug;
 
         // ======================================================================= setup
@@ -66,6 +61,8 @@ namespace JeepneyRush
             BuildGameOver();
             BuildSettings();
             BuildGarage();
+            BuildMissions();
+            BuildRoutes();
             BuildConfirm();
             BuildLoading();
             BuildSplash();
@@ -108,7 +105,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading })
+            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes })
                 e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -205,6 +202,9 @@ namespace JeepneyRush
         }
 
         // ======================================================================= main menu
+        private Label _menuLevel;
+        private VisualElement _menuXpFill, _missionDot;
+
         private void BuildMenu()
         {
             _menu = MakeScreen("menu");
@@ -212,55 +212,109 @@ namespace JeepneyRush
             var top = UiKit.Box();
             top.style.flexDirection = FlexDirection.Row;
             top.style.justifyContent = Justify.SpaceBetween;
+            top.style.alignItems = Align.Center;
             top.style.alignSelf = Align.Stretch;
-            UiKit.Pad(top.style, 30, 36);
-            _menuCoins = UiKit.Text("0", 50, Color.white);
-            _menuBest = UiKit.Text("0 m", 50, Color.white);
-            top.Add(UiKit.Pill(UiKit.Icon("ui_coin", 64), _menuCoins));
-            var bestLabel = UiKit.Box();
-            bestLabel.style.flexDirection = FlexDirection.Row;
-            bestLabel.style.alignItems = Align.Center;
-            bestLabel.Add(UiKit.Text("BEST", 30, UiKit.Yellow, false));
-            top.Add(UiKit.Pill(bestLabel, _menuBest));
+            UiKit.Pad(top.style, 26, 30);
+            // level badge with XP bar
+            var lvl = UiKit.Box();
+            lvl.style.flexDirection = FlexDirection.Row;
+            lvl.style.alignItems = Align.Center;
+            lvl.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.82f);
+            UiKit.Border(lvl.style, 4, new Color(1, 1, 1, 0.25f), 60);
+            UiKit.Pad(lvl.style, 8, 22);
+            lvl.style.paddingLeft = 8;
+            lvl.Add(UiKit.Icon("ui_star", 62));
+            var lvlCol = UiKit.Box();
+            lvlCol.style.marginLeft = 10;
+            _menuLevel = UiKit.Text("LV 1", 38, Color.white);
+            _menuLevel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            lvlCol.Add(_menuLevel);
+            var xpBar = UiKit.Box();
+            xpBar.style.width = 150;
+            xpBar.style.height = 14;
+            xpBar.style.backgroundColor = new Color(1, 1, 1, 0.2f);
+            UiKit.Border(xpBar.style, 0, Color.clear, 7);
+            xpBar.style.overflow = Overflow.Hidden;
+            _menuXpFill = UiKit.Box();
+            _menuXpFill.style.height = Length.Percent(100);
+            _menuXpFill.style.backgroundColor = UiKit.Yellow;
+            xpBar.Add(_menuXpFill);
+            lvlCol.Add(xpBar);
+            lvl.Add(lvlCol);
+            top.Add(lvl);
+            _menuCoins = UiKit.Text("0", 46, Color.white);
+            top.Add(UiKit.Pill(UiKit.Icon("ui_coin", 60), _menuCoins));
             _menu.Add(top);
-            var logo = UiKit.Icon("logo", 820);
-            logo.style.height = 420;
-            logo.style.marginTop = 10;
+            var bestRow = UiKit.Box();
+            bestRow.style.flexDirection = FlexDirection.Row;
+            bestRow.style.alignSelf = Align.FlexEnd;
+            bestRow.style.marginRight = 30;
+            var bestLabel = UiKit.Text("BEST", 28, UiKit.Yellow, false);
+            _menuBest = UiKit.Text("0 m", 40, Color.white);
+            bestRow.Add(UiKit.Pill(bestLabel, _menuBest));
+            _menu.Add(bestRow);
+            var logo = UiKit.Icon("logo", 780);
+            logo.style.height = 400;
             _menu.Add(logo);
             var spacer = UiKit.Box();
             spacer.style.flexGrow = 1;
             _menu.Add(spacer);
             var buttons = UiKit.Box();
-            buttons.style.width = 860;
-            buttons.style.marginBottom = 30;
-            var play = UiKit.Button("PLAY", () => Services.Game.Play(), UiKit.Yellow, UiKit.Ink, 96, 210);
-            buttons.Add(play);
-            var row = UiKit.Box();
-            row.style.flexDirection = FlexDirection.Row;
-            var garage = UiKit.Button("GARAGE", OpenGarage, Color.white, UiKit.Ink, 50, 140);
-            garage.style.flexGrow = 1;
-            garage.style.marginRight = 14;
-            var settings = UiKit.Button("SETTINGS", () => OpenModal(_settings), Color.white, UiKit.Ink, 50, 140);
-            settings.style.flexGrow = 1;
-            row.Add(garage);
-            row.Add(settings);
-            buttons.Add(row);
-            var honk = UiKit.Button("BEEP BEEP!", () => Services.Audio.Play(Logic.Audio.Sfx.Horn), UiKit.Hex("#E9EDF2"), UiKit.Ink, 40, 110);
-            buttons.Add(honk);
+            buttons.style.width = 900;
+            buttons.style.marginBottom = 24;
+            buttons.Add(UiKit.Button("PLAY", () => Services.Game.Play(), UiKit.Yellow, UiKit.Ink, 96, 200));
+            Button Small(string text, System.Action a, VisualElement row, bool last = false)
+            {
+                var b = UiKit.Button(text, a, Color.white, UiKit.Ink, 44, 130);
+                b.style.flexGrow = 1;
+                b.style.flexBasis = 0;
+                if (!last) b.style.marginRight = 14;
+                row.Add(b);
+                return b;
+            }
+            var row1 = UiKit.Box();
+            row1.style.flexDirection = FlexDirection.Row;
+            Small("GARAGE", OpenGarage, row1);
+            var missions = Small("MISSIONS", OpenMissions, row1, true);
+            _missionDot = UiKit.Box();
+            _missionDot.style.position = Position.Absolute;
+            _missionDot.style.right = 10;
+            _missionDot.style.top = 10;
+            _missionDot.style.width = _missionDot.style.height = 34;
+            _missionDot.style.backgroundColor = UiKit.Red;
+            UiKit.Border(_missionDot.style, 4, Color.white, 17);
+            missions.Add(_missionDot);
+            buttons.Add(row1);
+            var row2 = UiKit.Box();
+            row2.style.flexDirection = FlexDirection.Row;
+            Small("ROUTES", OpenRoutes, row2);
+            Small("SETTINGS", () => OpenModal(_settings), row2, true);
+            buttons.Add(row2);
             _menu.Add(buttons);
-            var ver = UiKit.Text($"v{Application.version} · Endless Rush · Manila", 28, new Color(1, 1, 1, 0.85f), false);
-            ver.style.marginBottom = 20;
+            var ver = UiKit.Text($"v{Application.version} · Beep beep! Tap the horn on the road.", 26, new Color(1, 1, 1, 0.85f), false);
+            ver.style.marginBottom = 16;
             _menu.Add(ver);
         }
 
         public void ShowMainMenu()
         {
             HideAll();
+            Services.Save.RefreshMissions();
+            RefreshMenuTop();
+            Show(_menu, true);
+            UiKit.PopIn(_menu.Q<Button>());
+        }
+
+        private void RefreshMenuTop()
+        {
             var d = Services.Save.Data;
             _menuCoins.text = d.coins.ToString("N0");
             _menuBest.text = $"{Mathf.FloorToInt(d.bestDistance):N0} m";
-            Show(_menu, true);
-            UiKit.PopIn(_menu.Q<Button>());
+            int lv = PlayerLevel.LevelFor(d.xp);
+            int a = PlayerLevel.XpForLevel(lv), b = PlayerLevel.XpForLevel(lv + 1);
+            _menuLevel.text = $"LV {lv}";
+            _menuXpFill.style.width = Length.Percent(Mathf.Clamp01((d.xp - a) / (float)Mathf.Max(1, b - a)) * 100f);
+            Show(_missionDot, HasClaimable());
         }
 
         // ======================================================================= modals
@@ -409,106 +463,57 @@ namespace JeepneyRush
             OpenModal(_confirm);
         }
 
-        // ======================================================================= garage
-        private void BuildGarage()
-        {
-            _garage = MakeScreen("garage", false);
-            var overlay = UiKit.Overlay(new Color(0, 0, 0, 0));
-            overlay.style.justifyContent = Justify.FlexEnd;
-            overlay.style.paddingBottom = 60;
-            _garage.Add(overlay);
-            var card = UiKit.Card(980);
-            overlay.Add(card);
-            card.Add(UiKit.Text("GARAGE", 70, UiKit.Red, true, 2.5f));
-            var nav = UiKit.Box();
-            nav.style.flexDirection = FlexDirection.Row;
-            nav.style.alignItems = Align.Center;
-            nav.style.justifyContent = Justify.SpaceBetween;
-            nav.Add(UiKit.IconButton("ui_arrow_left", () => CycleGarage(-1), 120, Color.white));
-            _garageName = UiKit.Text("", 56, UiKit.Ink);
-            _garageName.style.flexGrow = 1;
-            nav.Add(_garageName);
-            nav.Add(UiKit.IconButton("ui_arrow_right", () => CycleGarage(1), 120, Color.white));
-            card.Add(nav);
-            _garageDesc = UiKit.Text("", 34, UiKit.Grey, false);
-            _garageDesc.style.marginTop = 10;
-            card.Add(_garageDesc);
-            _garageStats = UiKit.Box();
-            _garageStats.style.marginTop = 16;
-            card.Add(_garageStats);
-            _garageStatus = UiKit.Text("", 34, UiKit.Green, false);
-            _garageStatus.style.marginTop = 10;
-            card.Add(_garageStatus);
-            _garageSelect = UiKit.Button("SELECT", SelectGarage, UiKit.Yellow, UiKit.Ink, 56, 140);
-            card.Add(_garageSelect);
-            var note = UiKit.Text("More jeepneys, upgrades and custom paint arrive with the Phase 2 garage.", 28, UiKit.Grey, false);
-            card.Add(note);
-            card.Add(UiKit.Button("BACK", () => { CloseModal(); Show(_menu, true); Services.Game.Menu?.ShowLivery(Services.Save.Data.selectedJeepney); }, Color.white, UiKit.Ink, 46, 120));
-        }
-
-        private void OpenGarage()
-        {
-            _specs = JeepneySpec.LoadAll();
-            _garageIndex = 0;
-            for (int i = 0; i < _specs.Length; i++) if (_specs[i].liveryId == Services.Save.Data.selectedJeepney) _garageIndex = i;
-            Show(_menu, false);
-            OpenModal(_garage);
-            RefreshGarage();
-        }
-
-        private void CycleGarage(int dir)
-        {
-            _garageIndex = (_garageIndex + dir + _specs.Length) % _specs.Length;
-            RefreshGarage();
-        }
-
-        private void RefreshGarage()
-        {
-            var s = _specs[_garageIndex];
-            _garageName.text = s.displayName.ToUpperInvariant();
-            _garageDesc.text = s.description;
-            _garageStats.Clear();
-            void Stat(string n, int value, int max)
-            {
-                var row = UiKit.Box();
-                row.style.flexDirection = FlexDirection.Row;
-                row.style.alignItems = Align.Center;
-                row.style.marginBottom = 8;
-                var l = UiKit.Text(n, 32, UiKit.Ink, false);
-                l.style.width = 280;
-                l.style.unityTextAlign = TextAnchor.MiddleLeft;
-                row.Add(l);
-                for (int i = 0; i < max; i++)
-                {
-                    var pip = UiKit.Box();
-                    pip.style.width = 56;
-                    pip.style.height = 30;
-                    pip.style.marginRight = 8;
-                    pip.style.backgroundColor = i < value ? UiKit.Yellow : UiKit.Hex("#E2DBC6");
-                    UiKit.Border(pip.style, 3, UiKit.Ink, 10);
-                    row.Add(pip);
-                }
-                _garageStats.Add(row);
-            }
-            Stat("Passengers", Mathf.CeilToInt(s.passengerCapacity / 3f), 5);
-            Stat("Health", s.health, 5);
-            Stat("Handling", s.handling, 5);
-            bool selected = s.liveryId == Services.Save.Data.selectedJeepney;
-            _garageStatus.text = selected ? "DRIVING THIS ONE" : "FREE";
-            _garageSelect.SetEnabled(!selected);
-            _garageSelect.text = selected ? "SELECTED" : "SELECT";
-            Services.Game.Menu?.ShowLivery(s.liveryId);
-        }
-
-        private void SelectGarage()
-        {
-            Services.Save.Data.selectedJeepney = _specs[_garageIndex].liveryId;
-            Services.Save.Save();
-            Services.Audio.Play(Logic.Audio.Sfx.Horn);
-            RefreshGarage();
-        }
-
         // ======================================================================= HUD
+        /// <summary>USS class marking non-Button elements that should block swipes (hold pedals).</summary>
+        public const string InteractiveClass = "jr-interactive";
+        private VisualElement _powerRow;
+        private readonly (VisualElement cell, VisualElement fill)[] _powerCells = new (VisualElement, VisualElement)[PowerUpState.KindCount];
+
+        /// <summary>
+        /// Press-and-hold pedal. Uses pointer capture so it keeps working while another
+        /// finger swipes (UI Toolkit tracks each pointer id separately).
+        /// </summary>
+        private VisualElement HoldButton(string label, string icon, Color color, System.Action<bool> set)
+        {
+            // a plain element (not a Button) so no click manipulator competes for the pointer
+            var b = new VisualElement { name = label.ToLowerInvariant() };
+            b.pickingMode = PickingMode.Position;
+            b.AddToClassList(InteractiveClass);
+            b.style.width = 210;
+            b.style.height = 210;
+            b.style.backgroundColor = color;
+            UiKit.Border(b.style, 7, UiKit.Ink, 46);
+            b.style.borderBottomWidth = 16;
+            b.style.alignItems = Align.Center;
+            b.style.justifyContent = Justify.Center;
+            b.style.paddingTop = b.style.paddingBottom = 0;
+            b.style.marginTop = b.style.marginBottom = 0;
+            var ic = UiKit.Icon(icon, 96);
+            b.Add(ic);
+            b.Add(UiKit.Text(label, 40, UiKit.Ink));
+            int pointer = -1;
+            void Down(int id)
+            {
+                pointer = id;
+                b.style.translate = new Translate(0, 8, 0);
+                b.style.borderBottomWidth = 8;
+                set(true);
+            }
+            void Up()
+            {
+                pointer = -1;
+                b.style.translate = new Translate(0, 0, 0);
+                b.style.borderBottomWidth = 16;
+                set(false);
+            }
+            b.RegisterCallback<PointerDownEvent>(e => { if (pointer >= 0) return; Down(e.pointerId); b.CapturePointer(e.pointerId); e.StopPropagation(); });
+            b.RegisterCallback<PointerUpEvent>(e => { if (e.pointerId == pointer) { b.ReleasePointer(e.pointerId); Up(); } });
+            b.RegisterCallback<PointerCancelEvent>(e => { if (e.pointerId == pointer) Up(); });
+            b.RegisterCallback<PointerCaptureOutEvent>(_ => { if (pointer >= 0) Up(); });
+            b.RegisterCallback<DetachFromPanelEvent>(_ => { if (pointer >= 0) Up(); });
+            return b;
+        }
+
         private void BuildHud()
         {
             _hud = MakeScreen("hud");
@@ -592,6 +597,36 @@ namespace JeepneyRush
             panel.Add(stopCol);
             _hud.Add(panel);
 
+            // active power-ups with draining timer bars
+            _powerRow = UiKit.Box("powerups");
+            _powerRow.style.flexDirection = FlexDirection.Row;
+            _powerRow.style.marginLeft = 30;
+            _powerRow.style.marginTop = 12;
+            foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind)))
+            {
+                if (k == PowerUpKind.RepairKit) continue;
+                var cell = UiKit.Box();
+                cell.style.marginRight = 12;
+                cell.style.alignItems = Align.Center;
+                cell.Add(UiKit.Icon("ui_pu_" + k, 84));
+                var bar = UiKit.Box();
+                bar.style.width = 84;
+                bar.style.height = 12;
+                bar.style.marginTop = 4;
+                bar.style.backgroundColor = new Color(0, 0, 0, 0.45f);
+                UiKit.Border(bar.style, 0, Color.clear, 6);
+                bar.style.overflow = Overflow.Hidden;
+                var fill = UiKit.Box();
+                fill.style.height = Length.Percent(100);
+                fill.style.backgroundColor = UiKit.Yellow;
+                bar.Add(fill);
+                cell.Add(bar);
+                Show(cell, false);
+                _powerRow.Add(cell);
+                _powerCells[(int)k] = (cell, fill);
+            }
+            _hud.Add(_powerRow);
+
             var spacer = UiKit.Box();
             spacer.style.flexGrow = 1;
             _hud.Add(spacer);
@@ -612,11 +647,21 @@ namespace JeepneyRush
             Show(_debug, false);
             speedCol.Add(_debug);
             bottom.Add(speedCol);
-            var horn = UiKit.IconButton("ui_horn", () => Services.Game.Session?.Honk(), 150, UiKit.Hex("#E9EDF2"));
+            var controls = UiKit.Box();
+            controls.style.alignItems = Align.FlexEnd;
+            var horn = UiKit.IconButton("ui_horn", () => Services.Game.Session?.Honk(), 130, UiKit.Hex("#E9EDF2"));
             horn.name = "horn";
-            UiKit.Border(horn.style, 7, UiKit.Ink, 75);
-            horn.style.borderBottomWidth = 14;
-            bottom.Add(horn);
+            UiKit.Border(horn.style, 7, UiKit.Ink, 65);
+            horn.style.borderBottomWidth = 12;
+            horn.style.marginBottom = 18;
+            controls.Add(horn);
+            // one pedal per thumb: BRAKE bottom-left (under the speedometer), GAS bottom-right (under the horn)
+            var brake = HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF6B6B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; });
+            brake.style.marginTop = 16;
+            speedCol.Add(brake);
+            var gas = HoldButton("GAS", "ui_gas", UiKit.Hex("#3EE07A"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; });
+            controls.Add(gas);
+            bottom.Add(controls);
             _hud.Add(bottom);
 
             _tutorial = UiKit.Box("tutorial");
@@ -628,7 +673,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Swipe UP to jump over cones & potholes", "Swipe DOWN to brake", "Drive through yellow PARA zones to pick up passengers" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Swipe UP to jump over cones & potholes", "Hold GAS to speed up · hold BRAKE to slow down", "Yellow PARA zones: pick up passengers", "GREEN arrow: drive in to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;
@@ -638,11 +683,13 @@ namespace JeepneyRush
             _hud.Add(_tutorial);
         }
 
-        public void ShowHud(bool tutorial)
+        public void ShowHud(bool tutorial, bool controlsTutorial = false)
         {
             HideAll();
             Show(_hud, true);
+            tutorial |= controlsTutorial;
             Show(_tutorial, tutorial);
+            foreach (var c in _powerCells) if (c.cell != null) Show(c.cell, false);
             _lastHealth = _lastScore = _lastCoins = _lastPax = _lastDist = _lastSpeed = -1;
             _lastStop = null;
             _floats.Clear();
@@ -652,6 +699,7 @@ namespace JeepneyRush
                 {
                     Show(_tutorial, false);
                     Services.Save.Data.tutorialDone = true;
+                    Services.Save.Data.controlsTutorialDone = true;
                     Services.Save.Save();
                 }).StartingIn(7000);
             }
@@ -686,7 +734,7 @@ namespace JeepneyRush
                 _pax.style.color = route.Count >= route.Capacity ? UiKit.Hex("#FF6B6B") : Color.white;
             }
             var next = s.Passengers.NextStop();
-            string key = next == null ? "none" : $"{next.Stop.Name}|{Mathf.CeilToInt(next.transform.localPosition.z / 10f)}";
+            string key = next == null ? "none" : $"{next.Stop.Name}|{Mathf.CeilToInt(next.transform.localPosition.z / 10f)}|{route.Count}";
             if (key != _lastStop)
             {
                 _lastStop = key;
@@ -695,10 +743,21 @@ namespace JeepneyRush
                 {
                     float m = Mathf.Max(0, next.transform.localPosition.z);
                     _stopName.text = next.Stop.Name;
-                    _stopMeta.text = $"{Mathf.CeilToInt(m)} m · {(next.Stop.Side < 0 ? "left" : "right")} lane · {next.Stop.Waiting} waiting";
+                    int drop = s.Passengers.Route.AlightingAt(next.Stop.Id);
+                    _stopMeta.text = $"{Mathf.CeilToInt(m)} m · {(next.Stop.Side < 0 ? "left" : "right")} · {next.Stop.Waiting} sakay" + (drop > 0 ? $" · {drop} bababa" : "");
+                    _stopMeta.style.color = drop > 0 ? UiKit.Hex("#2BFF88") : UiKit.Hex("#D8D3FF");
                     Show(_stopArrowL, next.Stop.Side < 0);
                     Show(_stopArrowR, next.Stop.Side > 0);
                 }
+            }
+            var pu = s.PowerUps.State;
+            for (int i = 0; i < _powerCells.Length; i++)
+            {
+                var (cell, fill) = _powerCells[i];
+                if (cell == null) continue;
+                bool on = pu.IsActive((PowerUpKind)i);
+                if ((cell.style.display == DisplayStyle.Flex) != on) Show(cell, on);
+                if (on) fill.style.width = Length.Percent(pu.Fraction((PowerUpKind)i) * 100f);
             }
             if (_showDebug) _debug.text = $"{(1f / Mathf.Max(1e-4f, Time.smoothDeltaTime)):0} fps · {s.DebugText()}";
         }
@@ -741,7 +800,7 @@ namespace JeepneyRush
             var picked = panel.Pick(p);
             while (picked != null)
             {
-                if (picked is Button) return true;
+                if (picked is Button || picked.ClassListContains(InteractiveClass)) return true;
                 picked = picked.parent;
             }
             return false;
@@ -763,7 +822,8 @@ namespace JeepneyRush
         }
 
         // ======================================================================= game over
-        private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge;
+        private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge, _goDelivered;
+        private VisualElement _goRewards;
 
         private void BuildGameOver()
         {
@@ -798,9 +858,14 @@ namespace JeepneyRush
             }
             _goDist = Cell("Distance");
             _goCoins = Cell("Coins");
-            _goPax = Cell("Passengers");
-            _goBest = Cell("Best score");
+            _goPax = Cell("Picked up");
+            _goDelivered = Cell("Delivered");
             card.Add(grid);
+            _goBest = UiKit.Text("", 32, UiKit.Grey, false);
+            card.Add(_goBest);
+            _goRewards = UiKit.Box("rewards");
+            _goRewards.style.marginTop = 8;
+            card.Add(_goRewards);
             card.Add(UiKit.Button("RESTART", () => { Show(_gameOver, false); Services.Game.Restart(); }, UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("HOME", () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }, Color.white, UiKit.Ink, 48, 128));
         }
@@ -813,7 +878,29 @@ namespace JeepneyRush
             _goDist.text = $"{Mathf.FloorToInt(r.Distance):N0} m";
             _goCoins.text = $"+{r.Coins:N0}";
             _goPax.text = r.Passengers.ToString();
-            _goBest.text = r.BestScore.ToString("N0");
+            _goDelivered.text = r.Deliveries.ToString();
+            _goBest.text = $"Best score {r.BestScore:N0} · best distance {Mathf.FloorToInt(r.BestDistance):N0} m";
+            _goRewards.Clear();
+            var rw = r.Rewards;
+            void Line(string text, Color c)
+            {
+                if (_goRewards.childCount >= 5) return; // keep the card on screen
+                var l = UiKit.Text(text, 34, c, false);
+                l.style.backgroundColor = Color.white;
+                UiKit.Border(l.style, 3, UiKit.Hex("#E2DBC6"), 18);
+                UiKit.Pad(l.style, 8, 14);
+                l.style.marginBottom = 8;
+                _goRewards.Add(l);
+            }
+            if (rw != null)
+            {
+                if (rw.CoinBonus > 0) Line($"Coin Bonus upgrade: +{rw.CoinBonus} coins", UiKit.Ink);
+                Line($"+{rw.XpGained} XP", UiKit.Blue);
+                if (rw.LevelsGained > 0) { Line($"LEVEL UP! Level {Services.Save.Data.level} · +{rw.LevelReward} coins", UiKit.Green); Services.Audio.Play(Logic.Audio.Sfx.LevelUp); }
+                foreach (var m in rw.MissionsCompleted) Line($"Mission complete: {m.Text} (claim +{m.Reward})", UiKit.Green);
+                foreach (var a in rw.AchievementsUnlocked) Line($"Achievement: {a.Name} (claim +{a.Reward})", UiKit.Hex("#B8860B"));
+                foreach (var e in rw.RoutesUnlocked) Line($"New route unlocked: {Environments.Get(e).Name}!", UiKit.Red);
+            }
             UiKit.PopIn(_gameOver.Q("card"), 320);
             // satisfying score count-up
             long start = 0;

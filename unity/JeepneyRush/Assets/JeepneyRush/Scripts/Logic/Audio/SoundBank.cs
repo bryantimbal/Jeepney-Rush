@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -56,6 +56,46 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Tone(b, Synth.Wave.Saw, 0, 0.5f, 1150, 900, 0.3f, 0.01f, 3000);
                     Synth.Noise(b, 0, 0.5f, 0.6f, 2500, 1800, 6f);
                     return Synth.Normalize(b, 0.4f);
+                case Sfx.PowerUp:
+                    b = Synth.Buffer(0.6f);
+                    for (int i = 0; i < 6; i++) Synth.Tone(b, Synth.Wave.Square, i * 0.05f, 0.18f, 523 * (float)Math.Pow(2, i / 4.0), 523 * (float)Math.Pow(2, i / 4.0), 0.25f, 0.003f, 5000);
+                    Synth.Tone(b, Synth.Wave.Sine, 0, 0.5f, 300, 1200, 0.3f);
+                    return Synth.Normalize(b, 0.65f);
+                case Sfx.Deliver:
+                    // "ka-ching": noise click then bright bells
+                    b = Synth.Buffer(0.7f);
+                    Synth.Noise(b, 0, 0.08f, 0.5f, 4000, 4000, 1f, highpass: true);
+                    float[] bells = { 1568, 2093, 2637 };
+                    for (int i = 0; i < bells.Length; i++) Synth.Tone(b, Synth.Wave.Sine, 0.05f + i * 0.07f, 0.55f, bells[i], bells[i], 0.4f);
+                    Synth.Tone(b, Synth.Wave.Triangle, 0, 0.25f, 523, 523, 0.3f);
+                    return Synth.Normalize(b, 0.7f);
+                case Sfx.Miss:
+                    b = Synth.Buffer(0.5f);
+                    Synth.Tone(b, Synth.Wave.Triangle, 0, 0.2f, 392, 330, 0.5f);
+                    Synth.Tone(b, Synth.Wave.Triangle, 0.17f, 0.28f, 330, 262, 0.5f);
+                    return Synth.Normalize(b, 0.55f);
+                case Sfx.Shield:
+                    b = Synth.Buffer(0.5f);
+                    Synth.Tone(b, Synth.Wave.Sine, 0, 0.45f, 1400, 500, 0.6f);
+                    Synth.Noise(b, 0, 0.3f, 0.4f, 6000, 2000, 2f);
+                    return Synth.Normalize(b, 0.7f);
+                case Sfx.Purchase:
+                    b = Synth.Buffer(0.6f);
+                    Synth.Noise(b, 0, 0.06f, 0.6f, 5000, 5000, 1f, highpass: true);
+                    Synth.Tone(b, Synth.Wave.Square, 0.04f, 0.12f, 1319, 1319, 0.3f, 0.002f, 6000);
+                    Synth.Tone(b, Synth.Wave.Square, 0.14f, 0.3f, 1760, 1760, 0.3f, 0.002f, 6000);
+                    return Synth.Normalize(b, 0.6f);
+                case Sfx.LevelUp:
+                    b = Synth.Buffer(1.2f);
+                    float[] lv = { 523, 659, 784, 1047, 1319 };
+                    for (int i = 0; i < lv.Length; i++) Synth.Tone(b, Synth.Wave.Square, i * 0.1f, 0.35f, lv[i], lv[i], 0.28f, 0.003f, 5000);
+                    Synth.Tone(b, Synth.Wave.Triangle, 0.5f, 0.6f, 1047, 1047, 0.35f);
+                    return Synth.Normalize(b, 0.7f);
+                case Sfx.Turbo:
+                    b = Synth.Buffer(0.9f);
+                    Synth.Noise(b, 0, 0.85f, 1f, 300, 3500, 1.2f);
+                    Synth.Tone(b, Synth.Wave.Saw, 0, 0.8f, 90, 400, 0.4f, 0.02f, 2000);
+                    return Synth.Normalize(b, 0.7f);
                 case Sfx.Horn:
                 case Sfx.Start:
                     return Horn();

@@ -1,3 +1,4 @@
+using JeepneyRush.Logic;
 using JeepneyRush.Logic.Geometry;
 using UnityEngine;
 
@@ -22,12 +23,13 @@ namespace JeepneyRush
         {
             Services.Game.Register(this);
             Services.Audio.EnsureLoaded(); // when Play is pressed directly in this scene
-            EnvironmentSetup.Apply();
+            var env = (EnvironmentKind)Services.Save.Data.selectedEnvironment;
+            EnvironmentSetup.Apply(env);
             _camera = EnvironmentSetup.EnsureCamera().GetComponent<CameraController>();
             var roadGo = new GameObject("RoadManager");
             roadGo.transform.SetParent(transform, false);
             _road = roadGo.AddComponent<RoadManager>();
-            _road.Build();
+            _road.Build(env);
             var fxGo = new GameObject("Effects");
             fxGo.transform.SetParent(transform, false);
             _fx = fxGo.AddComponent<EffectsManager>();
@@ -60,9 +62,17 @@ namespace JeepneyRush
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
             {
-                _wheels[i] = ModelLibrary.Instantiate(ModelLibrary.Wheel(), "Wheel" + i, _jeepRoot).transform;
+                _wheels[i] = ModelLibrary.Instantiate(ModelLibrary.WheelFor(id), "Wheel" + i, _jeepRoot).transform;
                 _wheels[i].localPosition = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
             }
+        }
+
+        /// <summary>Routes screen: show the newly selected route behind the menu.</summary>
+        public void ShowRoute(EnvironmentKind env)
+        {
+            if (_road.Environment == env) return;
+            EnvironmentSetup.Apply(env);
+            _road.Rebuild(env);
         }
 
         private void Update()

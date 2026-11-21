@@ -14,7 +14,7 @@ namespace JeepneyRush
         public bool Done;
         public readonly List<Transform> Waiting = new List<Transform>();
         public readonly List<int> WaitingVariants = new List<int>();
-        public Transform Shed, Arrow, Zone;
+        public Transform Shed, Arrow, DropArrow, Zone;
         public GameObject Sign;
         public BoxCollider Trigger;
 
@@ -25,6 +25,7 @@ namespace JeepneyRush
             v.Shed = ModelLibrary.Instantiate(ModelLibrary.Shed(), "Shed", root.transform).transform;
             v.Zone = ModelLibrary.Instantiate(ModelLibrary.Zone(zoneWidth, zoneLength), "Zone", root.transform, castShadows: false).transform;
             v.Arrow = ModelLibrary.Instantiate(ModelLibrary.StopArrow(false), "Arrow", root.transform, castShadows: false).transform;
+            v.DropArrow = ModelLibrary.Instantiate(ModelLibrary.StopArrow(true), "DropArrow", root.transform, castShadows: false).transform;
             var trig = new GameObject("Trigger");
             trig.transform.SetParent(root.transform, false);
             v.Trigger = trig.AddComponent<BoxCollider>();

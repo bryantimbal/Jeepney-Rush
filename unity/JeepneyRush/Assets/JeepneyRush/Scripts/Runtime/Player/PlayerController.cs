@@ -22,11 +22,35 @@ namespace JeepneyRush
         private float _lean, _pitch, _wheelSpin, _time, _brakeT, _brakeCooldown, _crashSlow = 1f;
         private string _livery;
 
-        public bool Braking => _brakeT > 0;
-        /// <summary>Multiplier applied to the difficulty speed (brake, crash slow-down).</summary>
-        public float SpeedMultiplier => (Braking ? _cfg.brakeMultiplier : 1f) * _crashSlow;
+        public bool Braking => _brakeT > 0 || BrakeHeld;
+        /// <summary>Set every frame by the session from the GAS / BRAKE hold controls.</summary>
+        public bool GasHeld, BrakeHeld;
+        /// <summary>Multiplier applied to the difficulty speed: brake pulse / hold, gas, crash slow-down.</summary>
+        public float SpeedMultiplier
+        {
+            get
+            {
+                float m = _crashSlow;
+                if (BrakeHeld) m *= _cfg.brakeHoldMultiplier;
+                else if (_brakeT > 0) m *= _cfg.brakeMultiplier;
+                else if (GasHeld) m *= _cfg.gasMultiplier;
+                return m;
+            }
+        }
 
         public void Init(BalanceConfig cfg, string liveryId)
+        {
+            Configure(cfg);
+            if (Body == null)
+            {
+                Body = new GameObject("Body").transform;
+                Body.SetParent(transform, false);
+            }
+            SetLivery(liveryId);
+        }
+
+        /// <summary>Applies a run's effective balance (jeepney stats + garage upgrades).</summary>
+        public void Configure(BalanceConfig cfg)
         {
             _cfg = cfg;
             Lanes = new LaneController(cfg);
@@ -42,12 +66,6 @@ namespace JeepneyRush
             Collisions = GetComponent<CollisionHandler>();
             if (Collisions == null) Collisions = gameObject.AddComponent<CollisionHandler>();
             Collisions.Init(cfg);
-            if (Body == null)
-            {
-                Body = new GameObject("Body").transform;
-                Body.SetParent(transform, false);
-            }
-            SetLivery(liveryId);
         }
 
         /// <summary>Swap the paint job (garage) without rebuilding gameplay state.</summary>
@@ -62,7 +80,7 @@ namespace JeepneyRush
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
             {
-                var w = ModelLibrary.Instantiate(ModelLibrary.Wheel(), "Wheel" + i, transform);
+                var w = ModelLibrary.Instantiate(ModelLibrary.WheelFor(liveryId), "Wheel" + i, transform);
                 w.transform.localPosition = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
                 _wheels[i] = w.transform;
             }
@@ -115,7 +133,7 @@ namespace JeepneyRush
             // visuals ---------------------------------------------------------------
             float targetLean = Mathf.Clamp(-Lanes.VelocityX * 0.7f, -12f, 12f);
             _lean = Mathf.Lerp(_lean, targetLean, 1f - Mathf.Exp(-dt * 14f));
-            float targetPitch = Jumper.Grounded ? (Braking ? 2.5f : 0f) : -Jumper.Phase * 6f;
+            float targetPitch = Jumper.Grounded ? (Braking ? 2.5f : GasHeld ? -1.5f : 0f) : -Jumper.Phase * 6f;
             if (landed) _pitch = 3f;
             _pitch = Mathf.Lerp(_pitch, targetPitch, 1f - Mathf.Exp(-dt * 8f));
             float shake = Jumper.Grounded ? Mathf.Sin(_time * 38f) * 0.012f + Mathf.Max(0, Mathf.Sin(_time * 7.3f)) * 0.02f : 0f;

@@ -1,4 +1,4 @@
-# Jeepney Rush — Unity 6 project (Phase 1 MVP)
+# Jeepney Rush — Unity 6 project (Phase 1 + Phase 2)
 
 Unity 6 LTS · URP · C# · UI Toolkit · Input System (legacy input also supported) · Android portrait.
 
@@ -37,9 +37,13 @@ You can also press Play in `MainMenu` or `Gameplay`. The persistent managers cre
 |---|---|---|
 | Change lane | swipe left / right | ← → (A D) |
 | Jump | swipe up | Space / ↑ (W) |
-| Brake (slam down when airborne) | swipe down | ↓ (S) |
+| Quick brake (slam down when airborne) | swipe down | ↓ (S) |
+| **Accelerate** (faster, ×1.5 score) | hold **GAS** (bottom-right) | hold Shift |
+| **Brake** | hold **BRAKE** (bottom-left) | hold B / Ctrl |
 | Horn | 📯 button | H |
 | Pause | ❚❚ button / Android back | Esc / P |
+
+Swipes work with any finger, even while the other thumb holds GAS or BRAKE.
 
 ## Build for Android
 * Menu **Jeepney Rush ▸ Build ▸ Android APK (development)** or **… ▸ Android AAB (release)**.

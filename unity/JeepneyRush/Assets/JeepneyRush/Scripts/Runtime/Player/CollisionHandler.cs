@@ -20,6 +20,15 @@ namespace JeepneyRush
         public System.Action<Hazard> HazardHit;
         public System.Action<Coin> CoinTouched;
         public System.Action<PassengerStopView> ZoneEntered;
+        public System.Action<PowerUpPickup> PowerUpTouched;
+
+        /// <summary>Repair Kit: restore one health point. Returns false at full health.</summary>
+        public bool Heal()
+        {
+            if (Health >= MaxHealth) return false;
+            Health++;
+            return true;
+        }
 
         public void Init(BalanceConfig cfg)
         {
@@ -57,6 +66,8 @@ namespace JeepneyRush
             }
             var coin = other.GetComponent<Coin>();
             if (coin != null) { CoinTouched?.Invoke(coin); return; }
+            var pu = other.GetComponent<PowerUpPickup>();
+            if (pu != null) { PowerUpTouched?.Invoke(pu); return; }
             var zone = other.GetComponent<StopZoneTrigger>();
             if (zone != null && zone.View != null) ZoneEntered?.Invoke(zone.View);
         }

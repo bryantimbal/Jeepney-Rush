@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using JeepneyRush.Logic;
 using JeepneyRush.Logic.Geometry;
 using UnityEngine;
 
@@ -22,13 +23,26 @@ namespace JeepneyRush
         private System.Random _rng = new System.Random(42);
         public int ActiveSegments => _active.Count;
 
-        public void Build(int segmentVariants = ModelLibrary.ChunkVariants)
+        public EnvironmentKind Environment { get; private set; }
+
+        /// <summary>Destroys the current road and builds the one for <paramref name="env"/> (route change in the menu).</summary>
+        public void Rebuild(EnvironmentKind env)
         {
+            for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
+            _active.Clear();
+            _free.Clear();
+            Build(env);
+        }
+
+        public void Build(EnvironmentKind env = EnvironmentKind.Manila, int segmentVariants = ModelLibrary.ChunkVariants)
+        {
+            Environment = env;
             float centre = RoadLength / 2f - RoadNear; // spans z = -RoadNear .. RoadLength - RoadNear
             float roadW = SceneryBuilder.RoadHalfWidth * 2;
             _road = MaterialLibrary.Surface("road", new Vector2(1, RoadLength / RoadTexMetres));
             float swW = SceneryBuilder.SidewalkOuter - SceneryBuilder.RoadHalfWidth;
-            _sidewalk = MaterialLibrary.Surface("sidewalk", new Vector2(swW / 2f, RoadLength / 2f));
+            string ground = env == EnvironmentKind.Provincial ? "grass" : env == EnvironmentKind.Beach ? "sand" : "sidewalk";
+            _sidewalk = MaterialLibrary.Surface(ground, new Vector2(swW / 2f, RoadLength / 2f));
             _curb = MaterialLibrary.Surface("curb", new Vector2(RoadLength / 4f, 1));
 
             Plane("Road", _road, new Vector3(0, 0, centre), new Vector2(roadW, RoadLength));
@@ -41,12 +55,13 @@ namespace JeepneyRush
                 Quad("Curb", _curb, new Vector3(x, 0, centre - hz), new Vector3(x, h, centre - hz), new Vector3(x, h, centre + hz), new Vector3(x, 0, centre + hz), nrm,
                     new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0));
             }
-            var ground = Plane("Ground", MaterialLibrary.Lit(Texture2D.whiteTexture, new Color(0.42f, 0.42f, 0.44f), 0, 0.1f), new Vector3(0, -0.05f, centre), new Vector2(240, RoadLength));
-            ground.GetComponent<MeshRenderer>().receiveShadows = false;
+            var groundColor = env == EnvironmentKind.Provincial ? new Color(0.42f, 0.6f, 0.3f) : env == EnvironmentKind.Beach ? new Color(0.91f, 0.85f, 0.65f) : new Color(0.42f, 0.42f, 0.44f);
+            var groundGo = Plane("Ground", MaterialLibrary.Lit(Texture2D.whiteTexture, groundColor, 0, 0.1f), new Vector3(0, -0.05f, centre), new Vector2(240, RoadLength));
+            groundGo.GetComponent<MeshRenderer>().receiveShadows = false;
 
             for (int i = 0; i < segmentVariants; i++)
             {
-                var model = ModelLibrary.Chunk(i);
+                var model = ModelLibrary.Chunk(env, i);
                 var go = ModelLibrary.Instantiate(model, "Segment" + i, transform, castShadows: false);
                 var seg = go.AddComponent<RoadSegment>();
                 seg.Variant = i;

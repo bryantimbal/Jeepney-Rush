@@ -46,7 +46,10 @@ namespace JeepneyRush
             return sun;
         }
 
-        public static void Apply()
+        public static void Apply() => Apply(JeepneyRush.Logic.EnvironmentKind.Manila);
+
+        /// <summary>Per-route sky, fog and ambient colours.</summary>
+        public static void Apply(JeepneyRush.Logic.EnvironmentKind env)
         {
             EnsureSun();
             RenderSettings.ambientMode = AmbientMode.Trilight;
@@ -55,7 +58,10 @@ namespace JeepneyRush
             RenderSettings.ambientGroundColor = new Color(0.45f, 0.4f, 0.35f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = Fog;
+            var fog = env == JeepneyRush.Logic.EnvironmentKind.Provincial ? new Color(0.78f, 0.9f, 0.95f)
+                : env == JeepneyRush.Logic.EnvironmentKind.Beach ? new Color(0.72f, 0.9f, 0.98f) : Fog;
+            RenderSettings.fogColor = fog;
+            if (env != JeepneyRush.Logic.EnvironmentKind.Manila) RenderSettings.ambientEquatorColor = new Color(0.8f, 0.86f, 0.88f);
             RenderSettings.fogStartDistance = 70f;
             RenderSettings.fogEndDistance = 210f;
             var sky = Resources.Load<Material>("Materials/JR_Skybox");

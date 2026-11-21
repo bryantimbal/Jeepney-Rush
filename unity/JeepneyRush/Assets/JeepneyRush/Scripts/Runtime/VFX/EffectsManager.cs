@@ -91,6 +91,10 @@ namespace JeepneyRush
             for (int i = 0; i < n; i++) Burst(_confetti, pos, 1, new Vector3(0, 5, -2), 5f, Flag[i % Flag.Length]);
         }
 
+        /// <summary>Turbo flames from the tail pipe.</summary>
+        public void Turbo(Vector3 playerPos) =>
+            Burst(_sparks, playerPos + new Vector3(0.55f, 0.5f, -3.2f), 2, new Vector3(0, 1f, -12f), 1.5f, new Color(1f, 0.55f, 0.1f));
+
         public void Dust(Vector3 pos) => Burst(_dust, pos, 10, new Vector3(0, 0.5f, -4), 2f);
 
         /// <summary>Called every frame: diesel puffs from the tail pipe and speed lines at high speed.</summary>

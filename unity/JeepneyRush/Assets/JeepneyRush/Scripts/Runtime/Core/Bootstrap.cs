@@ -72,7 +72,7 @@ namespace JeepneyRush
             ModelLibrary.WarmUpTraffic();
             ui.SetSplashProgress(0.75f, "Building Manila streets…");
             yield return null;
-            ModelLibrary.WarmUpScenery();
+            ModelLibrary.WarmUpScenery((EnvironmentKind)Services.Save.Data.selectedEnvironment);
             ui.SetSplashProgress(0.85f, "Opening the terminal…");
             yield return null;
 

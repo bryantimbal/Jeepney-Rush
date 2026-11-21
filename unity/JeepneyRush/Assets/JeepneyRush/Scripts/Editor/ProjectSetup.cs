@@ -142,7 +142,7 @@ namespace JeepneyRush.EditorTools
         [MenuItem("Jeepney Rush/Setup/Texture Import Settings")]
         public static void ConfigureTextures()
         {
-            var tiled = new[] { "road", "sidewalk", "curb", "facade" };
+            var tiled = new[] { "road", "sidewalk", "curb", "facade", "grass", "sand" };
             foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { Res + "/Textures" }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
@@ -244,7 +244,9 @@ namespace JeepneyRush.EditorTools
                 spec.liveryId = l.Id;
                 spec.displayName = l.DisplayName;
                 spec.description = d != null ? d.description : l.DisplayName;
-                spec.handling = l.Id == "sanjuan" ? 4 : 3;
+                spec.handling = Mathf.Clamp(3 + Mathf.RoundToInt(l.HandlingBonus * 100), 1, 5);
+                spec.passengerCapacity = 5 + l.CapacityBonus;
+                spec.health = 3 + l.HealthBonus;
                 AssetDatabase.CreateAsset(spec, p);
             }
         }

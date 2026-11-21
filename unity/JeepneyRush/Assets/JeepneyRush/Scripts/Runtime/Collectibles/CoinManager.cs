@@ -54,6 +54,10 @@ namespace JeepneyRush
 
         public int ActiveCount => _coins.Count;
 
+        /// <summary>Coin Magnet power-up: coins within this radius fly to the jeepney (0 = off).</summary>
+        public float MagnetRadius;
+        public Vector3 MagnetTarget;
+
         public void Tick(float dt, float speed)
         {
             _spin += dt * 220f;
@@ -68,6 +72,11 @@ namespace JeepneyRush
                     p.y += dt * 6f;
                     c.Visual.localScale *= 1f - dt * 6f;
                     if (c.Visual.localScale.x < 0.1f) { Remove(i); continue; }
+                }
+                else if (MagnetRadius > 0 && p.z < MagnetRadius && p.z > -2f && Mathf.Abs(p.x - MagnetTarget.x) < MagnetRadius)
+                {
+                    // pulled toward the jeepney; the trigger collects it on contact
+                    p = Vector3.MoveTowards(p, MagnetTarget + new Vector3(0, 1.2f, 0), dt * 30f);
                 }
                 else p.y = c.BaseY + Mathf.Sin(_spin * 0.02f + p.z * 0.3f) * 0.08f;
                 c.transform.localPosition = p;

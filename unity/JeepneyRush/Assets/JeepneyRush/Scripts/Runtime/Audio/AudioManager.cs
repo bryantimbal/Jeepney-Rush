@@ -14,7 +14,10 @@ namespace JeepneyRush
     public sealed class AudioManager : MonoBehaviour
     {
         private readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
-        private AudioClip _menuMusic, _runMusic, _engine;
+        private AudioClip _menuMusic, _engine;
+        private readonly AudioClip[] _runMusicByRoute = new AudioClip[3];
+        private AudioClip _runMusic => _runMusicByRoute[Mathf.Clamp(_route, 0, 2)];
+        private int _route;
         private AudioSource _musicA, _musicB, _engineSrc;
         private readonly List<AudioSource> _voices = new List<AudioSource>();
         private int _nextVoice;
@@ -39,10 +42,14 @@ namespace JeepneyRush
             GameEvents.Hit += (_, __) => Play(Sfx.Crash);
             GameEvents.PassengersServed += r =>
             {
+                if (r.Alighted > 0) Play(Sfx.Deliver);
                 if (r.Boarded > 0) Play(Sfx.Pickup);
                 else if (r.Full) Play(Sfx.Full);
             };
             GameEvents.RunEnded += r => Play(r.NewBestScore ? Sfx.NewBest : Sfx.GameOver);
+            GameEvents.PowerUpCollected += k => Play(k == JeepneyRush.Logic.PowerUpKind.Turbo ? Sfx.Turbo : Sfx.PowerUp);
+            GameEvents.PassengersMissed += _ => Play(Sfx.Miss);
+            GameEvents.ShieldBlocked += () => Play(Sfx.Shield);
             GameEvents.StateChanged += OnState;
         }
 
@@ -70,7 +77,7 @@ namespace JeepneyRush
         {
             if (Loaded) { progress?.Invoke(1); yield break; }
             var all = new List<Sfx>(SoundBank.AllSfx);
-            int total = all.Count + 3, done = 0;
+            int total = all.Count + 5, done = 0;
             foreach (var s in all)
             {
                 _clips[s] = Clip(s.ToString(), SoundBank.Make(s));
@@ -83,7 +90,12 @@ namespace JeepneyRush
             _menuMusic = Clip("MenuMusic", MusicComposer.RenderMenu(), true);
             progress?.Invoke(++done / (float)total);
             yield return null;
-            _runMusic = Clip("RunMusic", MusicComposer.RenderRun(), true);
+            for (int e = 0; e < 3; e++)
+            {
+                _runMusicByRoute[e] = Clip("RunMusic" + e, MusicComposer.RenderRun((JeepneyRush.Logic.EnvironmentKind)e), true);
+                progress?.Invoke(++done / (float)total);
+                yield return null;
+            }
             progress?.Invoke(1);
             Loaded = true;
             ApplySettings();
@@ -125,6 +137,9 @@ namespace JeepneyRush
         }
 
         // ------------------------------------------------------------------ music
+        /// <summary>Selects the run music for a route (each route has its own arrangement).</summary>
+        public void SetRoute(JeepneyRush.Logic.EnvironmentKind env) => _route = (int)env;
+
         public void PlayMusic(bool run)
         {
             _wantRunMusic = run; // remembered so music starts as soon as loading finishes

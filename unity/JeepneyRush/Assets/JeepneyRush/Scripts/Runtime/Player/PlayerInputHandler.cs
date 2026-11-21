@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace JeepneyRush
 {
     /// <summary>
-    /// Swipes (fire as soon as the finger travels far enough – no waiting for release,
-    /// re-armed so one touch can chain swipes) plus mirrored keyboard controls.
+    /// Multi-touch swipes (fire as soon as the finger travels far enough, re-armed so one
+    /// touch can chain swipes) plus the GAS / BRAKE hold buttons and mirrored keyboard
+    /// controls. Touches that start on a HUD button never count as swipes.
     /// </summary>
     public sealed class PlayerInputHandler : MonoBehaviour
     {
@@ -16,15 +18,27 @@ namespace JeepneyRush
         /// <summary>Settings ▸ Swipe sensitivity (0.5 .. 1.5).</summary>
         public float Sensitivity = 1f;
 
-        private bool _down;
-        private Vector2 _start;
-        private bool _blockedByUI;
+        /// <summary>Set by the HUD hold buttons.</summary>
+        public bool GasButton { get; set; }
+        public bool BrakeButton { get; set; }
+        public bool GasHeld => InputEnabled && (GasButton || InputCompat.KeyHeld(InputCompat.HoldKey.Gas));
+        public bool BrakeHeld => InputEnabled && (BrakeButton || InputCompat.KeyHeld(InputCompat.HoldKey.Brake));
+
+        private struct Track { public Vector2 Start; public bool Blocked; public bool Seen; }
+        private readonly Dictionary<int, Track> _tracks = new Dictionary<int, Track>();
+        private readonly List<InputCompat.Pointer> _pointers = new List<InputCompat.Pointer>();
+        private readonly List<int> _stale = new List<int>();
 
         private float Threshold => Mathf.Max(18f, Mathf.Min(Screen.width, Screen.height) * 0.055f / Mathf.Clamp(Sensitivity, 0.5f, 1.5f));
 
         private void Update()
         {
-            if (!InputEnabled) { _down = false; return; }
+            if (!InputEnabled)
+            {
+                _tracks.Clear();
+                GasButton = BrakeButton = false;
+                return;
+            }
             if (InputCompat.KeyPressed(InputCompat.Key.Left)) Fire(Action.Left);
             if (InputCompat.KeyPressed(InputCompat.Key.Right)) Fire(Action.Right);
             if (InputCompat.KeyPressed(InputCompat.Key.Up) || InputCompat.KeyPressed(InputCompat.Key.Jump)) Fire(Action.Jump);
@@ -32,24 +46,33 @@ namespace JeepneyRush
             if (InputCompat.KeyPressed(InputCompat.Key.Horn)) Fire(Action.Horn);
             if (InputCompat.KeyPressed(InputCompat.Key.Pause)) Fire(Action.Pause);
 
-            if (InputCompat.PointerDown(out var pos))
+            InputCompat.GetPointers(_pointers);
+            var keys = new List<int>(_tracks.Keys);
+            foreach (var k in keys) { var t = _tracks[k]; t.Seen = false; _tracks[k] = t; }
+            foreach (var p in _pointers)
             {
-                if (!_down)
+                if (!_tracks.TryGetValue(p.Id, out var t))
                 {
-                    _down = true;
-                    _start = pos;
-                    // touches that begin on HUD buttons (pause, horn) are not swipes
-                    _blockedByUI = Services.UI != null && Services.UI.IsOverInteractive(pos);
-                    return;
+                    // touches that begin on HUD buttons (gas, brake, pause, horn) are not swipes
+                    _tracks[p.Id] = new Track { Start = p.Position, Blocked = Services.UI != null && Services.UI.IsOverInteractive(p.Position), Seen = true };
+                    continue;
                 }
-                if (_blockedByUI) return;
-                var d = pos - _start;
-                if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) < Threshold) return;
-                if (Mathf.Abs(d.x) > Mathf.Abs(d.y)) Fire(d.x < 0 ? Action.Left : Action.Right);
-                else Fire(d.y > 0 ? Action.Jump : Action.Down); // screen Y grows upward
-                _start = pos; // re-arm
+                t.Seen = true;
+                if (!t.Blocked)
+                {
+                    var d = p.Position - t.Start;
+                    if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) >= Threshold)
+                    {
+                        if (Mathf.Abs(d.x) > Mathf.Abs(d.y)) Fire(d.x < 0 ? Action.Left : Action.Right);
+                        else Fire(d.y > 0 ? Action.Jump : Action.Down); // screen Y grows upward
+                        t.Start = p.Position; // re-arm
+                    }
+                }
+                _tracks[p.Id] = t;
             }
-            else _down = false;
+            _stale.Clear();
+            foreach (var kv in _tracks) if (!kv.Value.Seen) _stale.Add(kv.Key);
+            foreach (var k in _stale) _tracks.Remove(k);
         }
 
         private void Fire(Action a) => OnAction?.Invoke(a);

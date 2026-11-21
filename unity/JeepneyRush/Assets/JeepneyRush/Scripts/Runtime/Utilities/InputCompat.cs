@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -7,27 +8,38 @@ namespace JeepneyRush
 {
     /// <summary>
     /// Thin wrapper so the game works with the Input System package (Unity 6 default)
-    /// and with the legacy Input Manager. Exposes the primary pointer (touch or mouse)
-    /// and the keys the game uses.
+    /// and with the legacy Input Manager. Exposes every active touch (multi-touch: hold
+    /// GAS with one thumb and swipe with the other), the mouse, and the keys the game uses.
     /// </summary>
     public static class InputCompat
     {
         public enum Key { Left, Right, Up, Down, Jump, Horn, Pause }
+        public enum HoldKey { Gas, Brake }
 
-        public static bool PointerDown(out Vector2 pos)
+        public struct Pointer
         {
+            public int Id;
+            public Vector2 Position; // pixels, origin bottom-left
+        }
+
+        /// <summary>Fills <paramref name="output"/> with every finger/mouse button currently down.</summary>
+        public static void GetPointers(List<Pointer> output)
+        {
+            output.Clear();
 #if ENABLE_INPUT_SYSTEM
             var ts = Touchscreen.current;
-            if (ts != null && ts.primaryTouch.press.isPressed) { pos = ts.primaryTouch.position.ReadValue(); return true; }
+            if (ts != null)
+                foreach (var t in ts.touches)
+                    if (t.press.isPressed) output.Add(new Pointer { Id = t.touchId.ReadValue(), Position = t.position.ReadValue() });
             var m = Mouse.current;
-            if (m != null && m.leftButton.isPressed) { pos = m.position.ReadValue(); return true; }
-            pos = default;
-            return false;
+            if (output.Count == 0 && m != null && m.leftButton.isPressed) output.Add(new Pointer { Id = -1, Position = m.position.ReadValue() });
 #else
-            if (Input.touchCount > 0) { pos = Input.GetTouch(0).position; return true; }
-            if (Input.GetMouseButton(0)) { pos = Input.mousePosition; return true; }
-            pos = default;
-            return false;
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                var t = Input.GetTouch(i);
+                if (t.phase != TouchPhase.Ended && t.phase != TouchPhase.Canceled) output.Add(new Pointer { Id = t.fingerId, Position = t.position });
+            }
+            if (output.Count == 0 && Input.GetMouseButton(0)) output.Add(new Pointer { Id = -1, Position = Input.mousePosition });
 #endif
         }
 
@@ -59,6 +71,18 @@ namespace JeepneyRush
                 case Key.Pause: return Input.GetKeyDown(KeyCode.P);
             }
             return false;
+#endif
+        }
+
+        /// <summary>Desktop: hold Shift for gas, hold B or Ctrl for brake.</summary>
+        public static bool KeyHeld(HoldKey k)
+        {
+#if ENABLE_INPUT_SYSTEM
+            var kb = Keyboard.current;
+            if (kb == null) return false;
+            return k == HoldKey.Gas ? kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed : kb.bKey.isPressed || kb.leftCtrlKey.isPressed;
+#else
+            return k == HoldKey.Gas ? Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) : Input.GetKey(KeyCode.B) || Input.GetKey(KeyCode.LeftControl);
 #endif
         }
 

@@ -28,10 +28,10 @@ namespace JeepneyRush
             Passengers = 0;
         }
 
-        public void AddDistance(float metres)
+        public void AddDistance(float metres, float scoreMultiplier = 1f)
         {
             Distance += metres;
-            _scoreFloat += metres * _cfg.scorePerMetre;
+            _scoreFloat += metres * _cfg.scorePerMetre * scoreMultiplier;
         }
 
         public void AddCoins(int value)
@@ -42,11 +42,10 @@ namespace JeepneyRush
 
         public void AddPickup(PickupResult r)
         {
-            Passengers += r.Boarded;
+            Passengers += r.Boarded; // boarded passengers (deliveries are tracked by the route)
             Coins += r.Coins;
             _scoreFloat += r.Score;
         }
 
-        public RunSummary Summary(bool crashed) => new RunSummary { Score = Score, Distance = Distance, Coins = Coins, Passengers = Passengers, Crashed = crashed };
     }
 }

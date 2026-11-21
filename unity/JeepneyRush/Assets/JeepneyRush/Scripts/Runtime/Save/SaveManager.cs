@@ -79,11 +79,20 @@ namespace JeepneyRush
             }
         }
 
-        public (bool score, bool distance) RecordRun(RunSummary run)
+        /// <summary>Applies a finished run (bests, coins, XP, missions, achievements) and saves.</summary>
+        public Progress.RunRewards RecordRun(RunSummary run)
         {
-            var result = Progress.Apply(Data, run);
+            var now = DateTime.Now;
+            var result = Progress.Apply(Data, run, Missions.DayKey(now), Missions.WeekKey(now));
             Save();
             return result;
+        }
+
+        /// <summary>Rolls daily/weekly missions over when the date changed.</summary>
+        public void RefreshMissions()
+        {
+            var now = DateTime.Now;
+            Missions.Refresh(Data, Missions.DayKey(now), Missions.WeekKey(now));
         }
 
         public void ResetProgress()

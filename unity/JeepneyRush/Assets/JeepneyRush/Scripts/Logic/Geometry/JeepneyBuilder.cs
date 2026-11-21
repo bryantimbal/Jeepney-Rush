@@ -36,6 +36,8 @@ namespace JeepneyRush.Logic.Geometry
         {
             new V3(-0.62f, 1.05f, 0.1f), new V3(0.62f, 1.05f, -0.6f), new V3(-0.62f, 1.05f, -1.3f),
             new V3(0.62f, 1.05f, -2.0f), new V3(-0.62f, 1.05f, -2.4f),
+            new V3(0.62f, 1.05f, 0.1f), new V3(-0.62f, 1.05f, -0.6f), new V3(0.62f, 1.05f, -1.3f),
+            new V3(-0.62f, 1.05f, -1.85f), new V3(0.62f, 1.05f, -2.5f),
         };
 
         public static V3[] WheelPositions => new[]

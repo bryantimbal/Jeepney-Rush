@@ -78,7 +78,16 @@ namespace JeepneyRush
         public static Model StopSign(int nameIndex) => Get("stopsign" + nameIndex, () => PropBuilder.StopSign(nameIndex));
         public static Model StopArrow(bool drop) => Get(drop ? "arrow_drop" : "arrow_pick", () => PropBuilder.StopArrow(drop ? "#2BFF88" : "#FFD100"));
         public static Model Zone(float w, float l) => Get($"zone{w}x{l}", () => PropBuilder.ParaZone(w, l));
-        public static Model Chunk(int i) => Get("chunk" + i, () => SceneryBuilder.ManilaChunk(1000 + i * 7919, i == 2 || i == 6));
+        public static Model Chunk(int i) => Chunk(EnvironmentKind.Manila, i);
+        public static Model Chunk(EnvironmentKind env, int i) =>
+            Get($"chunk_{env}_{i}", () => SceneryProvinces.Chunk(env, (int)env * 100000 + 1000 + i * 7919, i == 2 || i == 6));
+        public static Model PowerUp(PowerUpKind k) => Get("pu_" + k, () => PropBuilder.PowerUp(k));
+        public static Model Bubble() => Get("bubble", PropBuilder.Bubble);
+        public static Model WheelFor(string liveryId)
+        {
+            var chrome = JeepneyCatalog.Get(liveryId).Chrome;
+            return Get("wheel_" + chrome, () => JeepneyBuilder.BuildWheel(null, chrome));
+        }
         public const int ChunkVariants = 8;
 
         public static int VariantCount(HazardKind k)
@@ -141,9 +150,10 @@ namespace JeepneyRush
             for (int i = 0; i < PropBuilder.PersonVariants; i++) { Person(i); SeatedPerson(i); }
         }
 
-        public static void WarmUpScenery()
+        public static void WarmUpScenery(EnvironmentKind env = EnvironmentKind.Manila)
         {
-            for (int i = 0; i < ChunkVariants; i++) Chunk(i);
+            for (int i = 0; i < ChunkVariants; i++) Chunk(env, i);
+            foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind))) PowerUp(k);
             Shed();
             StopArrow(true);
             StopArrow(false);

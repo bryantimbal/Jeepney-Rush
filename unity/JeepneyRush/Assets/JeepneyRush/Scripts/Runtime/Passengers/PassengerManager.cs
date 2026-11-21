@@ -19,6 +19,8 @@ namespace JeepneyRush
         private readonly List<GameObject> _seated = new List<GameObject>();
         private Transform _player;
         private float _time;
+        /// <summary>Raised when riders miss their stop (count, stop).</summary>
+        public System.Action<int, PassengerStop> Missed;
 
         public PassengerRoute Route => _route;
 
@@ -44,7 +46,7 @@ namespace JeepneyRush
             for (int i = 0; i < JeepneyBuilder.Seats.Length; i++)
             {
                 var seat = JeepneyBuilder.Seats[i];
-                var go = ModelLibrary.Instantiate(ModelLibrary.SeatedPerson(i), "Seated" + i, _player, castShadows: false);
+                var go = ModelLibrary.Instantiate(ModelLibrary.SeatedPerson(i % PropBuilder.PersonVariants), "Seated" + i, _player, castShadows: false);
                 go.transform.localPosition = new Vector3(seat.X, seat.Y, seat.Z);
                 go.transform.localRotation = Quaternion.Euler(0, seat.X < 0 ? 90 : -90, 0); // face the aisle
                 go.SetActive(false);
@@ -94,11 +96,11 @@ namespace JeepneyRush
             float shedX = stop.Side * (SceneryBuilder.RoadHalfWidth + 1.8f);
             v.Shed.localPosition = new Vector3(shedX, SceneryBuilder.SidewalkHeight, 0);
             v.Shed.localRotation = Quaternion.Euler(0, stop.Side < 0 ? 0 : 180, 0);
-            int nameIndex = System.Array.IndexOf(PassengerRoute.StopNames, stop.Name);
-            v.Sign = ModelLibrary.Instantiate(ModelLibrary.StopSign(Mathf.Max(0, nameIndex)), "Sign", v.transform);
+            v.Sign = ModelLibrary.Instantiate(ModelLibrary.StopSign(Mathf.Max(0, stop.NameIndex)), "Sign", v.transform);
             v.Sign.transform.localPosition = new Vector3(stop.Side * (SceneryBuilder.RoadHalfWidth + 0.5f), SceneryBuilder.SidewalkHeight, -3f);
             v.Sign.transform.localRotation = Quaternion.Euler(0, 180, 0); // face the oncoming jeepney (-Z)
             v.Arrow.gameObject.SetActive(true);
+            v.DropArrow.gameObject.SetActive(false);
             for (int i = 0; i < stop.Waiting; i++)
             {
                 int variant = Random.Range(0, PropBuilder.PersonVariants);
@@ -130,8 +132,13 @@ namespace JeepneyRush
                 var p = s.transform.localPosition;
                 p.z -= speed * dt;
                 s.transform.localPosition = p;
-                s.Arrow.localPosition = new Vector3(_cfg.LaneX(s.Stop.Lane), 3.2f + Mathf.Sin(_time * 5f) * 0.3f, -half + 2f);
-                s.Arrow.localRotation = Quaternion.Euler(0, _time * 120f, 0);
+                // green arrow when someone aboard gets off here, yellow when it is a pickup only
+                bool drop = !s.Done && _route.AlightingAt(s.Stop.Id) > 0;
+                if (s.DropArrow.gameObject.activeSelf != drop) s.DropArrow.gameObject.SetActive(drop);
+                if (s.Arrow.gameObject.activeSelf != (!s.Done && !drop)) s.Arrow.gameObject.SetActive(!s.Done && !drop);
+                var arrowPos = new Vector3(_cfg.LaneX(s.Stop.Lane), 3.2f + Mathf.Sin(_time * 5f) * 0.3f, -half + 2f);
+                s.Arrow.localPosition = s.DropArrow.localPosition = arrowPos;
+                s.Arrow.localRotation = s.DropArrow.localRotation = Quaternion.Euler(0, _time * 120f, 0);
                 for (int w = 0; w < s.Waiting.Count; w++)
                 {
                     var t = s.Waiting[w];
@@ -143,7 +150,9 @@ namespace JeepneyRush
                 {
                     s.Done = true;
                     s.Arrow.gameObject.SetActive(false);
-                    _route.Miss(s.Stop);
+                    s.DropArrow.gameObject.SetActive(false);
+                    int lost = _route.Miss(s.Stop);
+                    if (lost > 0) { Missed?.Invoke(lost, s.Stop); UpdateSeats(); }
                 }
                 if (p.z < -40f)
                 {
@@ -189,6 +198,7 @@ namespace JeepneyRush
             if (s.Done) return default;
             s.Done = true;
             s.Arrow.gameObject.SetActive(false);
+            s.DropArrow.gameObject.SetActive(false);
             var r = _route.Serve(s.Stop);
             for (int b = 0; b < r.Boarded && s.Waiting.Count > 0; b++)
             {

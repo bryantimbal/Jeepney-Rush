@@ -14,13 +14,14 @@ namespace JeepneyRush
         private readonly ObstacleManager _obstacles;
         private readonly CoinManager _coins;
         private readonly PassengerManager _passengers;
+        private readonly PowerUpManager _powerUps;
         private readonly int[] _one = new int[1];
         private readonly int[] _two = new int[2];
         private IReadOnlyList<int> _lanes;
 
-        public LevelSpawner(TrafficManager t, ObstacleManager o, CoinManager c, PassengerManager p)
+        public LevelSpawner(TrafficManager t, ObstacleManager o, CoinManager c, PassengerManager p, PowerUpManager pu)
         {
-            _traffic = t; _obstacles = o; _coins = c; _passengers = p;
+            _traffic = t; _obstacles = o; _coins = c; _passengers = p; _powerUps = pu;
             _lanes = _one;
         }
 
@@ -48,5 +49,7 @@ namespace JeepneyRush
             _coins.SpawnFormation(formation, lane, lane2, -z, count, spacing);
 
         public void SpawnStop(PassengerStop stop, float z) => _passengers.SpawnStop(stop, -z);
+
+        public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => _powerUps.Spawn(kind, lane, -z);
     }
 }

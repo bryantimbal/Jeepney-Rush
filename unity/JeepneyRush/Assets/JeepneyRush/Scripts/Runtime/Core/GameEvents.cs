@@ -19,6 +19,9 @@ namespace JeepneyRush
         public static event Action Braked;
         public static event Action Honked;
         public static event Action<RunResult> RunEnded;
+        public static event Action<PowerUpKind> PowerUpCollected;
+        public static event Action<int> PassengersMissed;
+        public static event Action ShieldBlocked;
 
         /// <summary>
         /// Clears every subscriber at the start of each Play session. Required when the
@@ -31,6 +34,7 @@ namespace JeepneyRush
         {
             StateChanged = null; CoinCollected = null; PassengersServed = null; Hit = null; Jumped = null;
             Landed = null; LaneChanged = null; Braked = null; Honked = null; RunEnded = null;
+            PowerUpCollected = null; PassengersMissed = null; ShieldBlocked = null;
             Services.Reset();
         }
 
@@ -44,6 +48,9 @@ namespace JeepneyRush
         public static void RaiseBrake() => Braked?.Invoke();
         public static void RaiseHonk() => Honked?.Invoke();
         public static void RaiseRunEnded(RunResult r) => RunEnded?.Invoke(r);
+        public static void RaisePowerUp(PowerUpKind k) => PowerUpCollected?.Invoke(k);
+        public static void RaiseMissed(int n) => PassengersMissed?.Invoke(n);
+        public static void RaiseShieldBlocked() => ShieldBlocked?.Invoke();
     }
 
     public struct RunResult
@@ -52,9 +59,11 @@ namespace JeepneyRush
         public float Distance;
         public int Coins;
         public int Passengers;
+        public int Deliveries;
         public bool NewBestScore;
         public bool NewBestDistance;
         public int BestScore;
         public float BestDistance;
+        public Progress.RunRewards Rewards;
     }
 }

@@ -79,6 +79,28 @@ namespace JeepneyRush.Logic.Audio
         private static double Hz(int midi) => 440.0 * Math.Pow(2, (midi - 69) / 12.0);
 
         public static float[] RenderRun() => Render(RunTrack());
+
+        /// <summary>
+        /// Route themes reuse the run melody with a different tempo, key and feel:
+        /// Provincial is a relaxed, lower "harana" groove; Beach is brighter and faster.
+        /// </summary>
+        public static float[] RenderRun(EnvironmentKind env)
+        {
+            var t = RunTrack();
+            if (env == EnvironmentKind.Manila) return Render(t);
+            int shift = env == EnvironmentKind.Provincial ? -2 : 3;
+            t.Bpm = env == EnvironmentKind.Provincial ? 116 : 140;
+            for (int i = 0; i < t.Melody.Count; i++) { var n = t.Melody[i]; t.Melody[i] = new Note(n.Step, n.Midi + shift, n.Len); }
+            for (int i = 0; i < t.Bass.Count; i++) { var n = t.Bass[i]; t.Bass[i] = new Note(n.Step, n.Midi + shift, n.Len); }
+            for (int i = 0; i < t.Chords.Count; i++)
+            {
+                var (step, notes) = t.Chords[i];
+                var moved = new int[notes.Length];
+                for (int k = 0; k < notes.Length; k++) moved[k] = notes[k] + shift;
+                t.Chords[i] = (step, moved);
+            }
+            return Render(t);
+        }
         public static float[] RenderMenu() => Render(MenuTrack());
 
         private static float[] Render(Track tr)
