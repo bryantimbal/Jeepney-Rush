@@ -156,3 +156,39 @@ namespace JeepneyRush.Tests
         }
     }
 }
+
+namespace JeepneyRush.Tests
+{
+    public class CatalogExportTests
+    {
+        private static string RepoRoot()
+        {
+            var d = new System.IO.DirectoryInfo(System.IO.Directory.GetCurrentDirectory());
+            while (d != null && !System.IO.Directory.Exists(System.IO.Path.Combine(d.FullName, "supabase", "migrations"))) d = d.Parent;
+            return d?.FullName;
+        }
+
+        [Test]
+        public void ServerCatalogMatchesTheGame()
+        {
+            string root = RepoRoot();
+            if (root == null) Assert.Ignore("supabase/ folder not found next to the project");
+            string path = System.IO.Path.Combine(root, "supabase", "migrations", CatalogExport.FileName);
+            Assert.IsTrue(System.IO.File.Exists(path), "catalog migration missing – run unity/tools/ExportCatalog");
+            Assert.AreEqual(CatalogExport.Sql(), System.IO.File.ReadAllText(path).Replace("\r\n", "\n"),
+                "Prices/missions/achievements changed in C# – re-run: dotnet run --project unity/tools/ExportCatalog");
+        }
+
+        [Test]
+        public void EveryAchievementHasAServerStat()
+        {
+            var d = new JeepneyRush.Logic.SaveData { totalPassengers = 3, bestDistance = 1200, totalCoins = 40 };
+            foreach (var a in JeepneyRush.Logic.Achievements.All)
+            {
+                float v = JeepneyRush.Logic.CatalogExport.StatValue(d, a.StatKey);
+                Assert.IsFalse(float.IsNaN(v), a.Id + " has no stat key");
+                Assert.AreEqual(a.Stat(d), v, 1e-3, a.Id);
+            }
+        }
+    }
+}

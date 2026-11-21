@@ -402,7 +402,7 @@ declare
   dk int := jr_private.day_key(jr_private.ph_date()); wk int := jr_private.week_key(jr_private.ph_date());
   is_daily boolean := false; ch record;
   played real; clamped boolean;
-  coins int; bonus int; xp_gain int; lvl_before int; lvl_after int; lvl_reward int := 0; lv int;
+  v_coins int; bonus int; xp_gain int; lvl_before int; lvl_after int; lvl_reward int := 0; lv int;
   m record; val int; existing public.jr_runs;
   bonus_level int;
 begin
@@ -435,23 +435,23 @@ begin
   end if;
 
   select * into p from public.jr_profiles where user_id = uid for update;
-  coins := (r->>'coins')::int;
+  v_coins := (r->>'coins')::int;
   select coalesce(max(level), 0) into bonus_level from public.jr_inventory where user_id = uid and item_kind = 'upgrade' and item_id = '4';
-  bonus := round(coins * jr_private.const('coin_bonus_per_level') * bonus_level)::int;
+  bonus := round(v_coins * jr_private.const('coin_bonus_per_level') * bonus_level)::int;
   xp_gain := trunc((r->>'distance')::real / 10::real)::int + (r->>'passengers')::int * 5 + (r->>'deliveries')::int * 10 + (r->>'power_ups')::int * 5;
   lvl_before := jr_private.level_for(p.xp);
   lvl_after := jr_private.level_for(p.xp + xp_gain);
   for lv in lvl_before + 1 .. lvl_after loop lvl_reward := lvl_reward + (jr_private.const('level_reward_per_level')::int * lv); end loop;
 
   update public.jr_profiles set
-    coins = coins + jr_submit_run.coins + bonus + lvl_reward,
+    coins = coins + v_coins + bonus + lvl_reward,
     xp = xp + xp_gain,
     best_score = greatest(best_score, (r->>'score')::int),
     best_distance = greatest(best_distance, (r->>'distance')::real),
     best_clean = greatest(best_clean, coalesce((r->>'clean_distance')::real, 0)),
     runs = runs + 1,
     total_distance = total_distance + (r->>'distance')::real,
-    total_coins = total_coins + jr_submit_run.coins + bonus,
+    total_coins = total_coins + v_coins + bonus,
     total_passengers = total_passengers + (r->>'passengers')::int,
     total_deliveries = total_deliveries + (r->>'deliveries')::int,
     total_power_ups = total_power_ups + (r->>'power_ups')::int,
@@ -462,8 +462,8 @@ begin
   where user_id = uid;
 
   insert into public.jr_runs (run_id, user_id, accepted, clamped, daily, duration, credited_coins, report)
-  values (r->>'run_id', uid, true, clamped, is_daily, (r->>'duration')::real, coins + bonus, r);
-  insert into public.jr_transactions (user_id, kind, amount, ref) values (uid, 'run', coins + bonus, r->>'run_id');
+  values (r->>'run_id', uid, true, clamped, is_daily, (r->>'duration')::real, v_coins + bonus, r);
+  insert into public.jr_transactions (user_id, kind, amount, ref) values (uid, 'run', v_coins + bonus, r->>'run_id');
   if lvl_reward > 0 then insert into public.jr_transactions (user_id, kind, amount, ref) values (uid, 'level_up', lvl_reward, lvl_after::text); end if;
 
   -- missions (same rules as C# Missions.ApplyRun)
@@ -494,7 +494,7 @@ begin
   if is_daily then perform jr_private.post_score(uid, 'daily:' || dk, (r->>'score')::int, (r->>'distance')::real); end if;
 
   return jsonb_build_object(
-    'accepted', true, 'clamped', clamped, 'credited_coins', coins, 'coin_bonus', bonus, 'xp_gained', xp_gain, 'level_reward', lvl_reward,
+    'accepted', true, 'clamped', clamped, 'credited_coins', v_coins, 'coin_bonus', bonus, 'xp_gained', xp_gain, 'level_reward', lvl_reward,
     'daily', is_daily,
     'rank_all', jr_private.rank_on(uid, 'all'), 'rank_week', jr_private.rank_on(uid, 'week:' || wk),
     'rank_daily', case when is_daily then jr_private.rank_on(uid, 'daily:' || dk) else 0 end,
