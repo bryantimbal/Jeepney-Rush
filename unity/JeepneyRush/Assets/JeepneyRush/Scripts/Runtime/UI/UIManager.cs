@@ -71,7 +71,7 @@ namespace JeepneyRush
             _floats = UiKit.Box("floats");
             _floats.style.position = Position.Absolute;
             _floats.style.left = _floats.style.right = 0;
-            _floats.style.top = Length.Percent(30);
+            _floats.style.top = Length.Percent(25f); // above the warning banner, clear of the road
             _floats.style.alignItems = Align.Center;
             _root.Add(_floats);
             _flash = UiKit.Box("flash");

@@ -5,8 +5,8 @@ using UnityEngine;
 namespace JeepneyRush
 {
     /// <summary>
-    /// Multi-touch swipes (fire as soon as the finger travels far enough, re-armed so one
-    /// touch can chain swipes) plus the GAS / BRAKE hold buttons and mirrored keyboard
+    /// Multi-touch swipes (fire as soon as the finger travels far enough; exactly one action
+    /// per touch – lift and swipe again for a second lane) plus the GAS / BRAKE hold buttons and mirrored keyboard
     /// controls. Touches that start on a HUD button never count as swipes.
     /// </summary>
     public sealed class PlayerInputHandler : MonoBehaviour
@@ -24,7 +24,7 @@ namespace JeepneyRush
         public bool GasHeld => InputEnabled && (GasButton || InputCompat.KeyHeld(InputCompat.HoldKey.Gas));
         public bool BrakeHeld => InputEnabled && (BrakeButton || InputCompat.KeyHeld(InputCompat.HoldKey.Brake));
 
-        private struct Track { public Vector2 Start; public bool Blocked; public bool Seen; }
+        private struct Track { public Vector2 Start; public bool Blocked; public bool Seen; public bool Fired; }
         private readonly Dictionary<int, Track> _tracks = new Dictionary<int, Track>();
         private readonly List<InputCompat.Pointer> _pointers = new List<InputCompat.Pointer>();
         private readonly List<int> _stale = new List<int>();
@@ -59,14 +59,16 @@ namespace JeepneyRush
                     continue;
                 }
                 t.Seen = true;
-                if (!t.Blocked)
+                // exactly ONE action per finger: a long or fast swipe must not count twice
+                // (that used to queue a second lane change straight into the next car)
+                if (!t.Blocked && !t.Fired)
                 {
                     var d = p.Position - t.Start;
                     if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) >= Threshold)
                     {
                         if (Mathf.Abs(d.x) > Mathf.Abs(d.y)) Fire(d.x < 0 ? Action.Left : Action.Right);
                         else Fire(d.y > 0 ? Action.Horn : Action.Down); // screen Y grows upward; swipe up = honk
-                        t.Start = p.Position; // re-arm
+                        t.Fired = true; // lift the finger to swipe again
                     }
                 }
                 _tracks[p.Id] = t;

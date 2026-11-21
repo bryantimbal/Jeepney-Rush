@@ -38,16 +38,17 @@ namespace JeepneyRush
             _banner = UiKit.Box("mmdaBanner");
             _banner.style.position = Position.Absolute;
             _banner.style.left = _banner.style.right = 0;
-            _banner.style.top = Length.Percent(36);
+            // above the horizon so the road stays visible (just under the stop panel / power-ups)
+            _banner.style.top = Length.Percent(30.5f);
             _banner.style.alignItems = Align.Center;
             var inner = UiKit.Box();
             inner.style.flexDirection = FlexDirection.Row;
             inner.style.alignItems = Align.Center;
             inner.style.backgroundColor = UiKit.Hex("#0038A8");
-            UiKit.Border(inner.style, 6, UiKit.Yellow, 30);
-            UiKit.Pad(inner.style, 14, 30);
-            inner.Add(UiKit.Icon("ui_brake", 70));
-            _bannerLabel = UiKit.Text("", 40, Color.white, true, 2f);
+            UiKit.Border(inner.style, 5, UiKit.Yellow, 26);
+            UiKit.Pad(inner.style, 8, 24);
+            inner.Add(UiKit.Icon("ui_brake", 54));
+            _bannerLabel = UiKit.Text("", 34, Color.white, true, 2f);
             _bannerLabel.style.marginLeft = 16;
             inner.Add(_bannerLabel);
             _banner.Add(inner);
