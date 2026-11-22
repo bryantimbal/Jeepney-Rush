@@ -178,8 +178,11 @@ namespace JeepneyRush
             _dev.style.backgroundColor = DevNavy;
             _dev.style.alignItems = Align.Center;
             _dev.style.justifyContent = Justify.Center;
-            _devLogo = UiKit.Icon("ninjatech_logo", 720);
-            _devLogo.style.height = 820;
+            // size from the texture's own aspect ratio, so the logo can never be stretched
+            var logoTex = UiKit.Tex("ninjatech_logo");
+            const float logoW = 720f;
+            _devLogo = UiKit.Icon("ninjatech_logo", logoW);
+            _devLogo.style.height = logoTex != null && logoTex.width > 0 ? logoW * logoTex.height / logoTex.width : logoW * 1024f / 902f;
             _dev.Add(_devLogo);
             var track = UiKit.Box();
             track.style.width = 646;

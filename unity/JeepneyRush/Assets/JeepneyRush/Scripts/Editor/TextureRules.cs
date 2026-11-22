@@ -16,6 +16,9 @@ namespace JeepneyRush.EditorTools
         public const string Folder = "Assets/JeepneyRush/Resources/Textures/";
         private static readonly string[] Tiled = { "road", "sidewalk", "curb", "facade", "grass", "sand", "road_dirt", "dirt", "curb_dirt" };
 
+        /// <summary>Bump when the rules change: Unity then re-imports every texture with the new rules.</summary>
+        public override uint GetVersion() => 2;
+
         private void OnPreprocessTexture()
         {
             if (!assetPath.Replace('\\', '/').StartsWith(Folder)) return;
@@ -34,7 +37,12 @@ namespace JeepneyRush.EditorTools
             imp.sRGBTexture = true;
             imp.alphaIsTransparency = true;
             imp.isReadable = false;
-            imp.mipmapEnabled = !ui;
+            // keep the real size: Unity's default rescales non-power-of-two images (720x820 → 1024x1024),
+            // which stretched the studio logo and the menu logo. ASTC handles any size.
+            imp.npotScale = TextureImporterNPOTScale.None;
+            bool bigLogo = name == "logo" || name == "ninjatech_logo";
+            // UI icons are drawn near their real size; the logos are drawn smaller on lower-res phones, so they get mipmaps
+            imp.mipmapEnabled = !ui || bigLogo;
             imp.wrapMode = Tiled.Contains(name) ? UnityEngine.TextureWrapMode.Repeat : UnityEngine.TextureWrapMode.Clamp;
             imp.filterMode = UnityEngine.FilterMode.Bilinear;
             imp.anisoLevel = name == "road" ? 4 : 1;
