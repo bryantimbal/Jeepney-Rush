@@ -126,6 +126,7 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("paint", "#495057", 1.6f, 0.08f, 0.1f, side * (RoadHalfWidth - 0.2f), sy + 6, lz);
                 b.Box("glow", "#FFF1C1", 0.5f, 0.1f, 0.3f, side * (RoadHalfWidth - 0.8f), sy + 5.93f, lz);
                 NightKit.Pool(b, side * (RoadHalfWidth - 1.2f), 0.035f, lz, 3.6f);
+                NightKit.LampHaze(b, side * (RoadHalfWidth - 0.8f), sy + 5.85f, lz);
                 // ---- tropical trees
                 if (rng.Chance(0.6))
                 {

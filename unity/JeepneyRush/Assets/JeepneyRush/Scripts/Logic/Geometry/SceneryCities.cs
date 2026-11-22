@@ -124,6 +124,7 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("paint", "#5C5F66", 2.6f, 0.1f, 0.12f, s * (R - 0.9f), SY + 9f, lz);
                 b.Box("glow", "#FFF1C1", 0.6f, 0.12f, 0.35f, s * (R - 2.0f), SY + 8.92f, lz);
                 NightKit.Pool(b, s * (R - 2.2f), 0.035f, lz, 4.2f);
+                NightKit.LampHaze(b, s * (R - 2.0f), SY + 8.8f, lz);
             }
 
             // ---- right side: malls, towers, billboards, footbridge, bus stop

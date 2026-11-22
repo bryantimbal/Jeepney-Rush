@@ -99,6 +99,7 @@ namespace JeepneyRush
             Apply(0, 0);
             if (_sun != null) { _sun.color = _baseSunColor; _sun.transform.rotation = _baseSunRot; }
             MaterialLibrary.SetNight(0);
+            MaterialLibrary.SetHaze(0);
             _schedule = null;
             if (_rain != null) { var em = _rain.emission; em.rateOverTime = 0; _rain.Clear(); }
             if (_splash != null) { var se = _splash.emission; se.rateOverTime = 0; _splash.Clear(); }
@@ -277,6 +278,7 @@ namespace JeepneyRush
                 if (_sky.HasProperty("_Exposure")) _sky.SetFloat("_Exposure", Mathf.Lerp(_baseExposure, _baseExposure * 0.45f, k) * Mathf.Lerp(1f, 0.14f, n) + flash * 1.5f);
             }
             MaterialLibrary.SetNight(n);
+            MaterialLibrary.SetHaze(wet); // light hangs in the rainy air around headlights and lamps
             if (_cam != null && _cam.clearFlags == CameraClearFlags.SolidColor)
                 _cam.backgroundColor = RenderSettings.fogColor;
             _road?.SetWetness(Mathf.Clamp01(wet * 1.4f));

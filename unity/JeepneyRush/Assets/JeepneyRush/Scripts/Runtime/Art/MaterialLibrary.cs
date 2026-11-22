@@ -134,6 +134,7 @@ namespace JeepneyRush
                 case "nightglow": m = Unlit(pal, new Color(1f, 1f, 1f, _night), true); break;      // lit windows, lamp glow
                 case "lightpool": m = Unlit(LoadTexture("light_pool"), new Color(1f, 0.86f, 0.6f, _night * 0.55f), true); break; // pools of street light
                 case "beam": m = Unlit(LoadTexture("light_beam"), new Color(1f, 0.95f, 0.8f, _night * 0.6f), true); break;     // headlight beam
+                case "haze": m = Additive(Unlit(pal, new Color(1f, 1f, 1f, HazeAlpha), true)); break;                         // light in rainy air
                 default:
                     if (key.StartsWith("utexa:")) // self-lit texture with see-through parts (gauge needle, rounded labels)
                     {
@@ -159,7 +160,28 @@ namespace JeepneyRush
             return m;
         }
 
-        private static float _night;
+        private static float _night, _wet;
+        /// <summary>Light haze shows on rainy nights: darkness × rain.</summary>
+        private static float HazeAlpha => _night * Mathf.Clamp01(_wet * 1.3f) * 0.4f;
+
+        /// <summary>Rain wetness 0..1 for the headlight / street-lamp haze.</summary>
+        public static void SetHaze(float wet)
+        {
+            wet = Mathf.Clamp01(wet);
+            if (Mathf.Abs(wet - _wet) < 0.01f && wet > 0.001f) return;
+            _wet = wet;
+            SetAlpha("haze", new Color(1f, 1f, 1f, HazeAlpha));
+        }
+
+        /// <summary>Turns a transparent material additive (dark = invisible), for glows and light haze.</summary>
+        private static Material Additive(Material m)
+        {
+            if (m.HasProperty("_SrcBlend")) m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (m.HasProperty("_DstBlend")) m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", 0);
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 10;
+            return m;
+        }
 
         /// <summary>
         /// 0 = day, 1 = night: fades in lit windows, street-light pools and headlight beams.
@@ -173,6 +195,7 @@ namespace JeepneyRush
             SetAlpha("nightglow", new Color(1f, 1f, 1f, night));
             SetAlpha("lightpool", new Color(1f, 0.86f, 0.6f, night * 0.55f));
             SetAlpha("beam", new Color(1f, 0.95f, 0.8f, night * 0.6f));
+            SetAlpha("haze", new Color(1f, 1f, 1f, HazeAlpha));
         }
 
         public static float Night => _night;

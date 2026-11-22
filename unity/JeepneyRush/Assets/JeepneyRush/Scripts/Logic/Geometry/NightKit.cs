@@ -72,6 +72,14 @@ namespace JeepneyRush.Logic.Geometry
             b.Box("paint", pole, 1.6f, 0.08f, 0.1f, side * (roadHalf - 0.2f), height, z);
             b.Box("glow", "#FFF1C1", 0.5f, 0.1f, 0.3f, side * (roadHalf - 0.8f), height - 0.07f, z);
             Pool(b, side * (roadHalf - 1.2f), 0.035f, z, 3.6f);
+            LampHaze(b, side * (roadHalf - 0.8f), height - 0.1f, z);
+        }
+
+        /// <summary>Cone of misty light under a street lamp – only visible on rainy nights (see MaterialLibrary.SetHaze).</summary>
+        public static void LampHaze(MeshBuilder b, float x, float top, float z)
+        {
+            // pointing straight down: rotate the cone's +Y axis to −Y
+            LifeBuilder.HazeCone(b, new V3(x, top, z), new Rot((float)Math.PI, 0, 0), top, 0.2f, 2.0f, 4);
         }
     }
 }

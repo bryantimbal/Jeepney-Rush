@@ -45,6 +45,12 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("windshield_drops_classic", CockpitBuilder.WindshieldDrops(JeepneyCatalog.Get("pilipinas")));
             yield return ("windshield_drops_modern", CockpitBuilder.WindshieldDrops(JeepneyCatalog.Get("modern")));
             yield return ("wiper", CockpitBuilder.Wiper());
+            yield return ("headlight_haze", LifeBuilder.HeadlightHaze());
+            yield return ("bird_body", LifeBuilder.BirdBody("#5E636E", 1.4f));
+            yield return ("bird_wing", LifeBuilder.BirdWing("#5E636E", 1.4f));
+            yield return ("umbrella", LifeBuilder.Umbrella("#E63946"));
+            yield return ("dog", LifeBuilder.Dog("#B08455"));
+            yield return ("chicken", LifeBuilder.Chicken("#8B3A1E"));
             yield return ("dash_gauge", CockpitBuilder.GaugeFace());
             yield return ("dash_needle", CockpitBuilder.GaugeNeedle());
             yield return ("rosary", CockpitBuilder.Rosary());

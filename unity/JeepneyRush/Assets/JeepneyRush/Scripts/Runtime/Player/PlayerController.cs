@@ -263,6 +263,8 @@ namespace JeepneyRush
                     return b.Data;
                 });
                 _beam = ModelLibrary.Instantiate(model, "HeadlightBeam", transform, castShadows: false);
+                // misty light cones in front of the headlights (only visible on rainy nights)
+                ModelLibrary.Instantiate(ModelLibrary.Get("headlight_haze", LifeBuilder.HeadlightHaze), "HeadlightHaze", _beam.transform, castShadows: false);
             }
             if (_headlight == null && GraphicsQuality.Level >= 1)
             {

@@ -74,6 +74,7 @@ namespace JeepneyRush
         private int _bellStopId = -1;
         private float _prevSpeed;
         private RoadBender _bender;
+        private LifeManager _life;
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
         private bool _gasWas;
@@ -185,6 +186,10 @@ namespace JeepneyRush
             // hills & bends are applied for rendering only (gameplay stays in straight lanes)
             _bender = GetOrAdd<RoadBender>(Child("RoadBender"));
             _bender.Road = _road;
+            // birds, walkers with umbrellas, dogs and chickens (visual only)
+            _life = GetOrAdd<LifeManager>(Child("Life"));
+            _life.Init(_env);
+            _bender.AddRoot(_life.GroundRoot);
             foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _crossings.transform, _road.SegmentRoot })
                 _bender.AddRoot(root);
             _weather = GetOrAdd<WeatherManager>(Child("Weather"));
@@ -434,6 +439,7 @@ namespace JeepneyRush
             _weather.Tick(_score.Distance, dt);
             float wet = _weather.Wetness;
             _player.SetRain(wet); // drops on the windshield + wipers (driver view)
+            _life.Tick(dt, Mathf.Max(0f, _speed), _weather.Night, wet);
             // unpaved mountain road: loose, slippery ground and constant small jolts
             float rough = Environments.Roughness(_env);
             _player.SetWetness(Mathf.Max(wet, 0.35f * rough));
