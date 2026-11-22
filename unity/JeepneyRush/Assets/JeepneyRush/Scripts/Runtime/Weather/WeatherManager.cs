@@ -133,9 +133,10 @@ namespace JeepneyRush
             var vel = _rain.velocityOverLifetime;
             vel.enabled = true;
             vel.space = ParticleSystemSimulationSpace.Local;
-            vel.x = new ParticleSystem.MinMaxCurve(0f);
+            // all three axes must use the same curve mode (here: random between two constants)
+            vel.x = new ParticleSystem.MinMaxCurve(-1f, 0f);
             vel.y = new ParticleSystem.MinMaxCurve(-26f, -22f);
-            vel.z = new ParticleSystem.MinMaxCurve(-6f);
+            vel.z = new ParticleSystem.MinMaxCurve(-6.5f, -5.5f);
             var em = _rain.emission;
             em.enabled = true;
             em.rateOverTime = 0;
