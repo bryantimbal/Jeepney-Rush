@@ -17,6 +17,7 @@ namespace JeepneyRush
         private readonly List<PassengerStopView> _stops = new List<PassengerStopView>();
         private readonly List<(Transform t, int variant, Vector3 from, float time, bool boarding, float targetX)> _flying = new List<(Transform, int, Vector3, float, bool, float)>();
         private readonly List<GameObject> _seated = new List<GameObject>();
+        private readonly List<GameObject> _hangers = new List<GameObject>();
         private Transform _player;
         private float _time;
         // ---- fare passing ("Bayad po!"): money travels hand to hand along the bench to the driver
@@ -68,6 +69,18 @@ namespace JeepneyRush
                 _seated.Add(go);
             }
             _bob = new float[_seated.Count];
+            // "sabit" riders standing on the rear step, holding the grab bar (provincial roads)
+            foreach (var hg in _hangers) if (hg != null) Destroy(hg);
+            _hangers.Clear();
+            float[] hx = { -0.55f, 0.55f, 0f };
+            for (int i = 0; i < Sabit.ProvinceExtra; i++)
+            {
+                var go = ModelLibrary.Instantiate(ModelLibrary.Person((i + 5) % PropBuilder.PersonVariants), "Sabit" + i, _player, castShadows: false);
+                go.transform.localPosition = new Vector3(hx[i], 0.42f, JeepneyBuilder.BodyRearZ - 0.32f - (i == 2 ? 0.08f : 0f));
+                go.transform.localRotation = Quaternion.Euler(-6f, i == 0 ? -20f : i == 1 ? 20f : 0f, i == 0 ? 6f : i == 1 ? -6f : 0f); // leaning out, holding on
+                go.SetActive(false);
+                _hangers.Add(go);
+            }
             if (_driver != null) Destroy(_driver);
             _driver = ModelLibrary.Instantiate(ModelLibrary.SeatedPerson(3 % PropBuilder.PersonVariants), "Driver", _player, castShadows: false);
             _driver.transform.localPosition = DriverSeat;
@@ -96,7 +109,7 @@ namespace JeepneyRush
             var f = new Fare { Delay = delay };
             f.Path.Add(HandOf(seat));
             float z = JeepneyBuilder.Seats[seat].Z;
-            int n = _route != null ? Mathf.Min(_route.Count, _seated.Count) : 0;
+            int n = _route != null ? Mathf.Min(Mathf.Min(_route.Count, _route.SeatCapacity), _seated.Count) : 0;
             var ahead = new List<int>();
             for (int j = 0; j < n; j++) if (j != seat && JeepneyBuilder.Seats[j].Z > z + 0.2f) ahead.Add(j);
             ahead.Sort((a, b) => JeepneyBuilder.Seats[a].Z.CompareTo(JeepneyBuilder.Seats[b].Z));
@@ -259,7 +272,7 @@ namespace JeepneyRush
                     s.Arrow.gameObject.SetActive(false);
                     s.DropArrow.gameObject.SetActive(false);
                     // someone was waiting (and there was room) or wanted to get off here: a skipped stop
-                    bool business = (s.Stop.Waiting > 0 && _route.Count < _cfg.passengerCapacity) || _route.AlightingAt(s.Stop.Id) > 0;
+                    bool business = (s.Stop.Waiting > 0 && _route.Count < _route.Capacity) || _route.AlightingAt(s.Stop.Id) > 0;
                     int lost = _route.Miss(s.Stop);
                     if (lost > 0) { Missed?.Invoke(lost, s.Stop); UpdateSeats(); }
                     if (business) Skipped?.Invoke(s.Stop);
@@ -330,8 +343,10 @@ namespace JeepneyRush
             }
             UpdateSeats();
             // every new rider pays: the fare is passed forward to the driver once they sit down
+            int seatedNow = Mathf.Min(Mathf.Min(_route.Count, _route.SeatCapacity), _seated.Count);
             int firstNew = Mathf.Min(_route.Count, _seated.Count) - r.Boarded;
-            for (int b = 0; b < r.Boarded; b++) StartFare(firstNew + b, 0.6f + b * 0.45f);
+            for (int b = 0; b < r.Boarded; b++) if (firstNew + b < seatedNow) StartFare(firstNew + b, 0.6f + b * 0.45f); // sabit riders pay at the step
+            if (_route.Hanging > 0 && r.Boarded > 0) Services.UI?.Float(_route.Hanging == 1 ? "SUMABIT SA LIKOD!" : $"{_route.Hanging} NAKASABIT!", UIManager.FloatKind.Info);
             return r;
         }
 
@@ -351,7 +366,8 @@ namespace JeepneyRush
         /// <summary>World position of a random seated passenger's head (speech-bubble anchor).</summary>
         public Vector3 RandomRiderHead()
         {
-            int n = Mathf.Min(_route != null ? _route.Count : 0, _seated.Count);
+            int n = Mathf.Min(_route != null ? Mathf.Min(_route.Count, _route.SeatCapacity) : 0, _seated.Count);
+            if (n == 0 && _route != null && _route.Hanging > 0 && _hangers.Count > 0 && _hangers[0] != null) return _hangers[0].transform.position + new Vector3(0, 2.0f, 0);
             if (n == 0) return _player.position + new Vector3(0, 2.6f, -1f);
             var s = _seated[Random.Range(0, n)];
             return s != null ? s.transform.position + new Vector3(0, 1.1f, 0) : _player.position + Vector3.up * 2.6f;
@@ -359,8 +375,28 @@ namespace JeepneyRush
 
         public void UpdateSeats()
         {
-            int n = _route != null ? _route.Count : 0;
+            int n = _route != null ? Mathf.Min(_route.Count, _route.SeatCapacity) : 0;
             for (int i = 0; i < _seated.Count; i++) if (_seated[i] != null) _seated[i].SetActive(i < n);
+            int h = _route != null ? _route.Hanging : 0;
+            for (int i = 0; i < _hangers.Count; i++) if (_hangers[i] != null) _hangers[i].SetActive(i < h);
+        }
+
+        /// <summary>The seated driver is hidden in the driver's-seat view (the camera is in his place).</summary>
+        public void SetDriverVisible(bool visible) { if (_driver != null) _driver.SetActive(visible); }
+
+        /// <summary>A rider hanging on the back loses grip (fast hump, crash) and drops off. Returns true if someone fell.</summary>
+        public bool SabitFallsOff()
+        {
+            if (_route == null || _route.Hanging <= 0 || _route.EjectAngry() <= 0) return false;
+            int variant = Random.Range(0, PropBuilder.PersonVariants);
+            var t = Services.Pools.Get("person" + variant, transform).transform;
+            var from = new Vector3(_player.position.x, 0.6f, -3.6f);
+            t.position = from;
+            t.localRotation = Quaternion.identity;
+            float side = _player.position.x >= 0 ? 1f : -1f;
+            _flying.Add((t, variant, from, 0f, false, side * (SceneryBuilder.RoadHalfWidth + 1.2f)));
+            UpdateSeats();
+            return true;
         }
     }
 }

@@ -35,6 +35,12 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("enforcer_police", PropBuilder.Enforcer(EnforcerKind.Police));
             yield return ("enforcer_city", PropBuilder.Enforcer(EnforcerKind.CityTraffic));
             yield return ("gas_marker", PropBuilder.GasMarker());
+            yield return ("cockpit_pilipinas", CockpitBuilder.Extras(JeepneyCatalog.Get("pilipinas")));
+            yield return ("cockpit_cogeo", CockpitBuilder.Extras(JeepneyCatalog.Get("cogeo")));
+            yield return ("steering_wheel", CockpitBuilder.SteeringWheel());
+            yield return ("dash_gauge", CockpitBuilder.GaugeFace());
+            yield return ("dash_needle", CockpitBuilder.GaugeNeedle());
+            yield return ("rosary", CockpitBuilder.Rosary());
             yield return ("siren_red", PropBuilder.Siren(true));
             yield return ("chunk_provincial", SceneryProvinces.Provincial(2000, true));
             yield return ("chunk_beach", SceneryProvinces.Beach(3000, true));

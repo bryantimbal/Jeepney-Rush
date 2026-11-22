@@ -47,7 +47,7 @@ function mat(key) {
     const t = loader.load(texDir + (key === 'beam' ? 'light_beam' : 'light_pool') + '.png');
     return (mats[key] = new THREE.MeshBasicMaterial({ map: t, color: '#ffdb99', transparent: true, opacity: night * 0.55, depthWrite: false }));
   }
-  if (key.startsWith('utex:')) { const t = loader.load(texDir + key.slice(5) + '.png'); t.colorSpace = THREE.SRGBColorSpace; return (mats[key] = new THREE.MeshBasicMaterial({ map: t })); }
+  if (key.startsWith('utex:') || key.startsWith('utexa:')) { const a = key.startsWith('utexa:'); const t = loader.load(texDir + key.slice(a ? 6 : 5) + '.png'); t.colorSpace = THREE.SRGBColorSpace; return (mats[key] = new THREE.MeshBasicMaterial({ map: t, transparent: a })); }
   if (key === 'gold') return (mats[key] = new THREE.MeshStandardMaterial({ map: palTex, roughness: 0.2, metalness: 1 }));
   const [name, tint] = key.slice(4).split('|');
   const t = loader.load(texDir + name + '.png', undefined, undefined, () => {});

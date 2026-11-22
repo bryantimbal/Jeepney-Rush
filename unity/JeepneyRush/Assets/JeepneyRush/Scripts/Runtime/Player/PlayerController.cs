@@ -36,6 +36,12 @@ namespace JeepneyRush
         private int _discoBeat = int.MinValue;
         // headlights: a soft beam on the road (all phones) + a real spot light on medium/high quality
         private GameObject _beam;
+        // driver's-seat view: cockpit extras, steering wheel, dash speedometer, rosary
+        private GameObject _cockpit;
+        private Transform _wheelT, _needleT, _rosaryT;
+        private readonly System.Collections.Generic.List<(Renderer r, Material[] mats)> _glassSwap = new System.Collections.Generic.List<(Renderer, Material[])>();
+        private float _gaugeKmh, _gaugeShown;
+        public bool DriverView { get; private set; }
         private Light _headlight;
 
         public bool Braking => _brakeT > 0 || BrakeHeld;
@@ -96,6 +102,7 @@ namespace JeepneyRush
             BuildBlinkers();
             BuildDisco();
             BuildHeadlights();
+            BuildCockpit();
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];
             for (int i = 0; i < wp.Length; i++)
@@ -104,6 +111,71 @@ namespace JeepneyRush
                 w.transform.localPosition = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
                 _wheels[i] = w.transform;
             }
+        }
+
+        private void BuildCockpit()
+        {
+            if (_cockpit != null) Destroy(_cockpit);
+            _glassSwap.Clear();
+            var livery = JeepneyCatalog.Get(_livery);
+            _cockpit = ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_" + _livery, () => CockpitBuilder.Extras(livery)), "Cockpit", Body, castShadows: false);
+            var wheelPivot = new GameObject("WheelPivot").transform;
+            wheelPivot.SetParent(_cockpit.transform, false);
+            var wp = CockpitBuilder.WheelPos;
+            wheelPivot.localPosition = new Vector3(wp.X, wp.Y, wp.Z);
+            wheelPivot.localRotation = Quaternion.Euler(CockpitBuilder.WheelTiltDeg, 0, 0);
+            _wheelT = ModelLibrary.Instantiate(ModelLibrary.Get("steering_wheel", CockpitBuilder.SteeringWheel), "SteeringWheel", wheelPivot, castShadows: false).transform;
+            var gp = CockpitBuilder.GaugePos;
+            var gauge = ModelLibrary.Instantiate(ModelLibrary.Get("dash_gauge", CockpitBuilder.GaugeFace), "DashGauge", _cockpit.transform, castShadows: false).transform;
+            gauge.localPosition = new Vector3(gp.X, gp.Y, gp.Z);
+            gauge.localRotation = Quaternion.Euler(CockpitBuilder.GaugeTiltDeg, 0, 0);
+            _needleT = ModelLibrary.Instantiate(ModelLibrary.Get("dash_needle", CockpitBuilder.GaugeNeedle), "Needle", gauge, castShadows: false).transform;
+            var mp = CockpitBuilder.MirrorPos;
+            _rosaryT = ModelLibrary.Instantiate(ModelLibrary.Get("rosary", CockpitBuilder.Rosary), "Rosary", _cockpit.transform, castShadows: false).transform;
+            _rosaryT.localPosition = new Vector3(mp.X - 0.05f, mp.Y - 0.035f, mp.Z - 0.01f);
+            // remember the windshield materials so the glass can turn see-through from inside
+            foreach (var r in _bodyModel.GetComponentsInChildren<Renderer>()) _glassSwap.Add((r, r.sharedMaterials));
+            ApplyDriverView();
+        }
+
+        /// <summary>Driver's-seat view on/off: cockpit visible, windshield see-through from inside.</summary>
+        public void SetDriverView(bool on)
+        {
+            DriverView = on;
+            ApplyDriverView();
+        }
+
+        private void ApplyDriverView()
+        {
+            if (_cockpit != null && _cockpit.activeSelf != DriverView) _cockpit.SetActive(DriverView);
+            var clear = MaterialLibrary.ForKey("glass_clear");
+            foreach (var (r, mats) in _glassSwap)
+            {
+                if (r == null) continue;
+                if (!DriverView) { r.sharedMaterials = mats; continue; }
+                var swapped = (Material[])mats.Clone();
+                for (int i = 0; i < swapped.Length; i++) if (swapped[i] != null && swapped[i].name == "JR_glass") swapped[i] = clear;
+                r.sharedMaterials = swapped;
+            }
+        }
+
+        /// <summary>Speed for the dashboard speedometer (km/h).</summary>
+        public void SetGauge(float kmh) => _gaugeKmh = kmh;
+
+        private void UpdateCockpit(float dt)
+        {
+            if (!DriverView || _cockpit == null) return;
+            // steering wheel follows the lane change (left = counter-clockwise as the driver sees it)
+            float steer = Mathf.Clamp(Lanes.VelocityX * 12f, -110f, 110f);
+            _wheelT.localRotation = Quaternion.Euler(0, 0, steer);
+            // old gauges lag and shake a little
+            _gaugeShown = Mathf.Lerp(_gaugeShown, _gaugeKmh, 1f - Mathf.Exp(-dt * 4f));
+            float wobble = _gaugeShown > 2f ? Mathf.Sin(_time * 23f) * 0.9f + Mathf.Sin(_time * 7.3f) * 0.6f : 0f;
+            _needleT.localRotation = Quaternion.Euler(0, 0, Logic.Speedometer.NeedleAngle(_gaugeShown + wobble));
+            // rosary swings with turns, braking and bumps
+            float swayZ = Mathf.Clamp(Lanes.VelocityX * 3.5f, -25f, 25f) + Mathf.Sin(_time * 2.1f) * 3f;
+            float swayX = Mathf.Clamp(_pitch * 4f + _bumpV * 20f, -30f, 30f);
+            _rosaryT.localRotation = Quaternion.Slerp(_rosaryT.localRotation, Quaternion.Euler(swayX, 0, swayZ), 1f - Mathf.Exp(-dt * 5f));
         }
 
         private void BuildHeadlights()
@@ -334,6 +406,7 @@ namespace JeepneyRush
             Body.localPosition = new Vector3(0, shake + bass + Mathf.Max(-0.05f, _bumpY), 0);
             UpdateDisco();
             UpdateHeadlights();
+            UpdateCockpit(dt);
             // the nose points into the turn (steering), the body leans gently outward
             Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.7f + fishtail, _lean);
             UpdateSignals(dt);

@@ -719,6 +719,12 @@ namespace JeepneyRush
             }
             right.Add(hearts);
             right.Add(BuildFuelGauge());
+            right.Add(BuildSpeedometer());
+            _viewBtn = UiKit.Button("VIEW: LIKOD", () => Services.Game.Session?.ToggleView(), new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.85f), Color.white, 26, 72);
+            _viewBtn.style.width = 230;
+            _viewBtn.style.marginTop = 10;
+            _viewBtn.style.borderBottomWidth = 7;
+            right.Add(_viewBtn);
             top.Add(right);
             _hud.Add(top);
 
@@ -823,6 +829,7 @@ namespace JeepneyRush
             var brake = Pedal(HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF3B3B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; }), "#FF3B3B", 245);
             brake.style.marginTop = 16;
             speedCol.Add(brake);
+            _pedalButtons.Add(brake);
 
             // centred on the screen regardless of the side columns' widths (the strip itself ignores touches)
             var centre = UiKit.Box("hornCol");
@@ -838,6 +845,7 @@ namespace JeepneyRush
             UiKit.Border(horn.style, 8, UiKit.Ink, 100);
             horn.style.borderBottomWidth = 20;
             centre.Add(horn);
+            _pedalButtons.Add(horn);
             bottom.Add(centre);
 
             var controls = UiKit.Box();
@@ -848,6 +856,8 @@ namespace JeepneyRush
             controls.Add(gear);
             var gas = Pedal(HoldButton("GAS", "ui_gas", UiKit.Hex("#22D065"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; }), "#22D065", 245);
             controls.Add(gas);
+            _pedalButtons.Add(gas);
+            _pedalButtons.Add(gear);
             bottom.Add(controls);
             _hud.Add(bottom);
 

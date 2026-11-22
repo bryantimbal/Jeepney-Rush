@@ -47,6 +47,19 @@ namespace JeepneyRush.Logic
 
         public readonly List<PassengerStop> Stops = new List<PassengerStop>();
         public int Capacity;
+        /// <summary>Extra riders allowed hanging on the back ("sabit", provincial roads). Included in <see cref="Capacity"/>.</summary>
+        public int SabitCapacity { get; private set; }
+        /// <summary>Seats inside; anyone beyond this rides "sabit" on the rear step.</summary>
+        public int SeatCapacity => Capacity - SabitCapacity;
+        /// <summary>Riders currently hanging on the back.</summary>
+        public int Hanging => Sabit.Hanging(Count, SeatCapacity);
+
+        /// <summary>Allows <paramref name="extra"/> riders to hang on the back on top of the seats.</summary>
+        public void AllowSabit(int extra)
+        {
+            Capacity = SeatCapacity + Math.Max(0, extra);
+            SabitCapacity = Math.Max(0, extra);
+        }
         /// <summary>Set to 2 while the Passenger Bonus power-up is active.</summary>
         public float FareMultiplier = 1f;
         public int PickedUp { get; private set; }

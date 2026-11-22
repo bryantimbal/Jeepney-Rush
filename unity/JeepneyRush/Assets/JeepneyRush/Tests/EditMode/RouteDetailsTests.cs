@@ -39,7 +39,7 @@ namespace JeepneyRush.Tests
         {
             var m = PropBuilder.GasStation(3.2f, 2.7f, 18f);
             CollectionAssert.IsSupersetOf(m.SubmeshKeys, new[] { "utex:gas_sign", "utex:gas_fascia", "lightpool" });
-            Assert.IsTrue(PropBuilder.GasMarker().SubmeshKeys.Contains("utex:gas_label"));
+            Assert.IsTrue(PropBuilder.GasMarker().SubmeshKeys.Contains("utexa:gas_label"));
             Assert.Greater(Lines.GasPrice.Length, 3);
         }
 

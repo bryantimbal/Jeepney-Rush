@@ -562,6 +562,49 @@ const textures = await page.evaluate(() => {
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#FFFFFF'; x.shadowColor = '#FF2E4D'; x.shadowBlur = 12;
     fit(x, 'HILA KUNG BABABA', 0, 0, 390, 60, (z) => `${z}px ${D}`); x.fillText('HILA KUNG BABABA', 295, 70); x.shadowBlur = 0;
     save('hila_sign', c);
+    // old jeepney speedometer: dial (no needle) and the needle on its own (pointing up, pivot at the centre)
+    [c, x] = cv(512, 512);
+    {
+      const cx = 256, cy = 256, R = 226;
+      let g = x.createRadialGradient(cx - R * 0.3, cy - R * 0.4, R * 0.1, cx, cy, R * 1.12);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#b9bec6'); g.addColorStop(0.75, '#6c727c'); g.addColorStop(1, '#e6e9ee');
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, 254, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#2a2a2a'; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
+      g = x.createRadialGradient(cx, cy - R * 0.2, R * 0.1, cx, cy, R * 0.97); g.addColorStop(0, '#f8efd8'); g.addColorStop(0.8, '#eadcb8'); g.addColorStop(1, '#c9b68b');
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R * 0.96, 0, Math.PI * 2); x.fill();
+      const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, max = 120, ang = (v) => a0 + (a1 - a0) * v / max;
+      x.strokeStyle = '#c8102e'; x.lineWidth = R * 0.07; x.beginPath(); x.arc(cx, cy, R * 0.83, ang(100), ang(120)); x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      for (let v = 0; v <= max; v += 5) {
+        const a = ang(v), big = v % 20 === 0, mid = v % 10 === 0;
+        const r0 = R * (big ? 0.72 : mid ? 0.77 : 0.8), r1 = R * 0.88;
+        x.strokeStyle = '#1b1b1b'; x.lineWidth = big ? R * 0.03 : R * 0.014;
+        x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); x.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.stroke();
+        if (big) { x.fillStyle = '#1b1b1b'; x.font = `italic 700 ${R * 0.16}px Georgia, serif`; x.fillText(v, cx + Math.cos(a) * R * 0.57, cy + Math.sin(a) * R * 0.57); }
+      }
+      x.fillStyle = '#3a3a3a'; x.font = `italic 700 ${R * 0.11}px Georgia, serif`; x.fillText('km/h', cx, cy + R * 0.3);
+      // odometer window (digits are drawn by the game)
+      x.fillStyle = '#111'; x.fillRect(cx - R * 0.31, cy + R * 0.43, R * 0.62, R * 0.15);
+      x.fillStyle = 'rgba(255,255,255,0.16)'; x.beginPath(); x.ellipse(cx - R * 0.25, cy - R * 0.45, R * 0.55, R * 0.22, -0.5, 0, Math.PI * 2); x.fill();
+    }
+    save('gauge_face', c);
+    [c, x] = cv(512, 512);
+    x.strokeStyle = '#d62828'; x.lineWidth = 11; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(256, 256 + 34); x.lineTo(256, 256 - 186); x.stroke();
+    x.fillStyle = '#111'; x.beginPath(); x.arc(256, 256, 21, 0, Math.PI * 2); x.fill(); x.fillStyle = '#888'; x.beginPath(); x.arc(252, 252, 8, 0, Math.PI * 2); x.fill();
+    save('gauge_needle', c);
+    // rear-view mirror: the riders behind the driver (small drawn faces)
+    [c, x] = cv(256, 96);
+    { const g = x.createLinearGradient(0, 0, 0, 96); g.addColorStop(0, '#4a3b45'); g.addColorStop(1, '#7a6a5c'); x.fillStyle = g; x.fillRect(0, 0, 256, 96);
+      x.fillStyle = 'rgba(255,241,193,0.35)'; x.fillRect(0, 6, 256, 6);
+      for (let i = 0; i < 7; i++) { const px = 22 + i * 35, py = 44 + (i % 2) * 10; x.fillStyle = ['#e63946', '#2a9d8f', '#f4a261', '#457b9d', '#ffd166'][i % 5]; x.fillRect(px - 12, py + 12, 24, 40); x.fillStyle = ['#8D5524', '#C68642', '#A86B3C', '#7A4A26'][i % 4]; x.beginPath(); x.arc(px, py, 12, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1b1b1b'; x.beginPath(); x.arc(px, py - 6, 12, Math.PI, 0); x.fill(); }
+      x.fillStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.moveTo(0, 0); x.lineTo(90, 0); x.lineTo(40, 96); x.lineTo(0, 96); x.fill(); }
+    save('mirror_pax', c);
+    // dashboard sign
+    [c, x] = cv(512, 96);
+    x.fillStyle = '#FCD116'; x.beginPath(); x.roundRect(2, 2, 508, 92, 16); x.fill(); x.strokeStyle = '#c8102e'; x.lineWidth = 6; x.stroke();
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#c8102e'; fit(x, 'GOD BLESS OUR TRIP', 0, 0, 470, 54, (z) => `${z}px ${D}`); x.fillText('GOD BLESS OUR TRIP', 256, 52);
+    save('dash_sign', c);
     [c, x] = cv(256, 128);
     x.fillStyle = '#FFFFFF'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.beginPath(); x.roundRect(6, 6, 244, 96, 36); x.fill(); x.stroke();
     x.beginPath(); x.moveTo(60, 98); x.lineTo(48, 124); x.lineTo(92, 98); x.closePath(); x.fill(); x.stroke();

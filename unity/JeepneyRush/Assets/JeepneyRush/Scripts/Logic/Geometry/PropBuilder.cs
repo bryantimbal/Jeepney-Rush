@@ -263,9 +263,9 @@ namespace JeepneyRush.Logic.Geometry
             b.Box("glow", orange, 0.45f, 0.8f, 0.45f, 0, 0.85f, 0);
             float w = 2.4f, h = 1.2f, y = 1.6f;
             // both sides of the label so it reads while it turns
-            b.Quad("utex:gas_label", new V3(-w / 2, y, -0.02f), new V3(w / 2, y, -0.02f), new V3(w / 2, y + h, -0.02f), new V3(-w / 2, y + h, -0.02f), new V3(0, 0, -1),
+            b.Quad("utexa:gas_label", new V3(-w / 2, y, -0.02f), new V3(w / 2, y, -0.02f), new V3(w / 2, y + h, -0.02f), new V3(-w / 2, y + h, -0.02f), new V3(0, 0, -1),
                 new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
-            b.Quad("utex:gas_label", new V3(w / 2, y, 0.02f), new V3(-w / 2, y, 0.02f), new V3(-w / 2, y + h, 0.02f), new V3(w / 2, y + h, 0.02f), new V3(0, 0, 1),
+            b.Quad("utexa:gas_label", new V3(w / 2, y, 0.02f), new V3(-w / 2, y, 0.02f), new V3(-w / 2, y + h, 0.02f), new V3(w / 2, y + h, 0.02f), new V3(0, 0, 1),
                 new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
             return b.Data;
         }

@@ -21,6 +21,11 @@ namespace JeepneyRush
         private float _roll, _shake, _shakeT, _fovBoost;
         private float _baseFov = 60f;
         private int _lastW, _lastH;
+        /// <summary>Driver's-seat view: the camera rides in the jeepney body at the driver's eye.</summary>
+        public bool DriverView;
+        public Transform DriverAnchor;
+        [Tooltip("Horizontal field of view from the driver's seat.")]
+        public float driverHorizontalFov = 84f;
 
         private void Awake()
         {
@@ -54,6 +59,25 @@ namespace JeepneyRush
         public void Follow(Vector3 player, float lateralVelocity, float speed01, float dt)
         {
             if (Screen.width != _lastW || Screen.height != _lastH) UpdateFov();
+            if (DriverView && DriverAnchor != null)
+            {
+                _cam.nearClipPlane = 0.04f;
+                _shakeT += dt;
+                var sh = Vector3.zero;
+                if (_shake > 0.001f) { sh = new Vector3(Mathf.Sin(_shakeT * 61f), Mathf.Cos(_shakeT * 47f) * 0.7f, 0) * _shake * 0.25f; _shake *= Mathf.Pow(0.02f, dt); }
+                var e = Logic.Geometry.CockpitBuilder.Eye;
+                transform.position = DriverAnchor.TransformPoint(new Vector3(e.X, e.Y, e.Z)) + sh;
+                // look a little down the road and slightly toward where we're steering
+                float yaw = Mathf.Clamp(lateralVelocity * 0.8f, -6f, 6f);
+                transform.rotation = DriverAnchor.rotation * Quaternion.Euler(Logic.Geometry.CockpitBuilder.PitchDeg, yaw + 2f, 0);
+                float aspect = Mathf.Max(0.3f, (float)Screen.width / Mathf.Max(1, Screen.height));
+                float v = 2f * Mathf.Atan(Mathf.Tan(driverHorizontalFov * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
+                _fovBoost = Mathf.Lerp(_fovBoost, speed01 * 5f, 1f - Mathf.Exp(-dt * 3f));
+                _cam.fieldOfView = Mathf.Clamp(v, 60f, Logic.Geometry.CockpitBuilder.MaxVerticalFov) + _fovBoost; // tall phones: don't stare at the ceiling
+                _pos = new Vector3(player.x * 0.55f, offset.y, offset.z); // ready for switching back
+                return;
+            }
+            _cam.nearClipPlane = 0.3f;
             var target = new Vector3(player.x * 0.55f, offset.y + player.y * 0.35f, offset.z);
             _pos = Vector3.Lerp(_pos, target, 1f - Mathf.Exp(-dt * 5f));
             _roll = Mathf.Lerp(_roll, Mathf.Clamp(-lateralVelocity * 0.25f, -3f, 3f), 1f - Mathf.Exp(-dt * 6f));

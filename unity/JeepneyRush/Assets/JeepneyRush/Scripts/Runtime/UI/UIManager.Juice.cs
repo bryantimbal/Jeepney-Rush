@@ -315,6 +315,65 @@ namespace JeepneyRush
 
         /// <summary>Weather readout under the distance ("UMUULAN · madulas").</summary>
         private Label _clock, _jamLabel;
+        // old-style analog speedometer (HUD, behind view)
+        private VisualElement _speedo, _needle;
+        private Label _odo;
+        private Button _viewBtn;
+        private float _speedTarget, _speedShown;
+
+        private const float SpeedoSize = 210f;
+
+        private VisualElement BuildSpeedometer()
+        {
+            _speedo = UiKit.Box("speedo");
+            _speedo.style.width = _speedo.style.height = SpeedoSize;
+            _speedo.style.marginTop = 10;
+            _speedo.style.backgroundImage = UiKit.Tex("gauge_face");
+            _odo = UiKit.Text("000000", 14, new Color(0.93f, 0.93f, 0.93f), false);
+            _odo.style.position = Position.Absolute;
+            _odo.style.left = SpeedoSize * 0.364f;
+            _odo.style.width = SpeedoSize * 0.274f;
+            _odo.style.top = SpeedoSize * 0.688f;
+            _odo.style.height = SpeedoSize * 0.066f;
+            _odo.style.letterSpacing = 2.2f;
+            _odo.style.fontSize = SpeedoSize * 0.058f;
+            _speedo.Add(_odo);
+            _needle = UiKit.Box("needle");
+            _needle.style.position = Position.Absolute;
+            _needle.style.left = _needle.style.top = 0;
+            _needle.style.width = _needle.style.height = SpeedoSize;
+            _needle.style.backgroundImage = UiKit.Tex("gauge_needle");
+            _speedo.Add(_needle);
+            // the needle lags and shakes a little, like an old cable-driven gauge
+            _speedo.schedule.Execute(() =>
+            {
+                if (_speedo.resolvedStyle.display == DisplayStyle.None) return;
+                float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+                _speedShown = Mathf.Lerp(_speedShown, _speedTarget, 1f - Mathf.Exp(-dt * 4f));
+                float t = Time.time;
+                float wobble = _speedShown > 2f ? Mathf.Sin(t * 23f) * 0.9f + Mathf.Sin(t * 7.3f) * 0.6f : 0f;
+                _needle.style.rotate = new Rotate(Logic.Speedometer.NeedleAngle(_speedShown + wobble));
+            }).Every(16);
+            return _speedo;
+        }
+
+        /// <summary>Speed (km/h) and the lifetime odometer (metres) for the analog speedometer.</summary>
+        public void SetSpeedo(float kmh, double odometerMetres)
+        {
+            _speedTarget = kmh;
+            if (_odo != null) _odo.text = Logic.Speedometer.Odometer(odometerMetres);
+        }
+
+        /// <summary>Driver view hides the HUD speedometer (the one on the dashboard takes over).</summary>
+        public void SetViewMode(bool driver)
+        {
+            if (_speedo != null) _speedo.style.display = driver ? DisplayStyle.None : DisplayStyle.Flex;
+            if (_viewBtn != null) _viewBtn.text = driver ? "VIEW: DRIVER" : "VIEW: LIKOD";
+            // keep the road visible: pedals slightly see-through from the driver's seat
+            foreach (var b in _pedalButtons) if (b != null) b.style.opacity = driver ? 0.72f : 1f;
+        }
+
+        private readonly System.Collections.Generic.List<VisualElement> _pedalButtons = new System.Collections.Generic.List<VisualElement>();
 
         /// <summary>In-game clock under the weather ("🌙 9:15 PM" style, text only).</summary>
         public void SetClock(string text, bool night)

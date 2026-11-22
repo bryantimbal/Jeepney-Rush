@@ -247,6 +247,7 @@ namespace JeepneyRush
             _player.Configure(_cfg);
             _passengers.Init(_cfg, _player.Body);
             var route = new PassengerRoute(_cfg, _rng, StopNames.ForEnvironment(_env));
+            route.AllowSabit(Sabit.ExtraFor(_env)); // provincial roads: riders may hang on the back
             _passengers.ResetRun(route);
             _powerUps.ResetRun(_cfg, Upgrades.PowerUpDurationScale(save.UpgradeLevel(UpgradeKind.PowerUpDuration)));
             RoadCurve.Shape = new RoadShape(seed, _env);
@@ -280,6 +281,7 @@ namespace JeepneyRush
             _inZone = null;
             _dying = false;
             _camera.Snap(_player.transform.position);
+            ApplyView(Services.Save.Data.driverView, false);
             Services.Game.SetState(GameState.Starting);
             Services.UI.ShowHud(!save.tutorialDone, !save.controlsTutorialDone);
             Services.UI.Float(IsDaily ? "DAILY CHALLENGE!" : "ARANGKADA!", UIManager.FloatKind.Big);
@@ -541,6 +543,10 @@ namespace JeepneyRush
 
             // ---- camera, audio, HUD
             _camera.Follow(_player.transform.position, _player.Lanes.VelocityX, s01, dt);
+            // speedometer: HUD gauge (behind view) and the dashboard gauge (driver view)
+            float kmh = Logic.Speedometer.Kmh(_speed);
+            _player.SetGauge(kmh);
+            Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
             if (!_dying)
             {
@@ -635,6 +641,7 @@ namespace JeepneyRush
             Services.UI.Float(isHump ? "HUMP! ARAY!" : "LUBAK! ARAY!", UIManager.FloatKind.Bad);
             if (_passengers.Route.Count > 0) Rate(RatingEvent.HumpFast);
             var route = _passengers.Route;
+            SabitFall(isHump ? "HUMP" : "LUBAK");
             if (route.Count > 0)
             {
                 Services.UI.Say(Lines.Pick(isHump ? Lines.Hump : Lines.Bump, _rng), _passengers.RandomRiderHead, true);
@@ -788,6 +795,7 @@ namespace JeepneyRush
             _hits++;
             _cleanDistance = 0;
             Rate(RatingEvent.Crash);
+            SabitFall("CRASH");
             _player.OnCrash(sideSwipe);
             manager.Knock(h, _player.transform.position.x);
             _fx.Crash(hitPos);
@@ -1044,7 +1052,7 @@ namespace JeepneyRush
 
         /// <summary>Does anyone want to get on or off at this stop?</summary>
         private bool _route_HasBusiness(PassengerStopView s) =>
-            s.Stop.Waiting > 0 && _passengers.Route.Count < _cfg.passengerCapacity || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
+            s.Stop.Waiting > 0 && _passengers.Route.Count < _passengers.Route.Capacity || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
 
         /// <summary>
         /// PARA stops: passengers only board / get off once the jeepney has come to a
@@ -1118,6 +1126,29 @@ namespace JeepneyRush
             if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);
             GameEvents.RaisePassengers(r);
             return r;
+        }
+
+        /// <summary>A rider hanging on the back drops off (fast hump, pothole or a crash).</summary>
+        private void SabitFall(string cause)
+        {
+            if (_dying || !_passengers.SabitFallsOff()) return;
+            Services.UI.Say(_rng.Chance(0.5) ? "ARAY! NALAGLAG AKO!" : "KUYA! DAHAN-DAHAN!", () => _player.transform.position + new Vector3(0, 2.2f, -3.8f), true, 2f);
+            Services.UI.Float("NALAGLAG ANG SUMABIT!", UIManager.FloatKind.Bad);
+            Rate(RatingEvent.AngryWalkOff);
+        }
+
+        /// <summary>Behind view (LIKOD) ⇄ driver's-seat view; remembered in the save.</summary>
+        public void ToggleView() => ApplyView(!Services.Save.Data.driverView, true);
+
+        private void ApplyView(bool driver, bool save)
+        {
+            if (save) { Services.Save.Data.driverView = driver; Services.Save.Save(); }
+            _player.SetDriverView(driver);
+            _camera.DriverView = driver;
+            _camera.DriverAnchor = _player.Body;
+            _passengers.SetDriverVisible(!driver);
+            Services.UI.SetViewMode(driver);
+            if (!driver) _camera.Snap(_player.transform.position);
         }
 
         /// <summary>Applies a rating event, updates the HUD and shows a small +/- float for big changes.</summary>

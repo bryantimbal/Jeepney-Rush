@@ -125,6 +125,7 @@ namespace JeepneyRush
                 case "paint": m = Lit(pal, Color.white, 0.1f, 0.55f); break;
                 case "chrome": m = Lit(pal, Color.white, 1f, 0.9f); break;
                 case "glass": m = Lit(pal, Color.white, 0.5f, 0.95f); break;
+                case "glass_clear": m = Unlit(pal, new Color(1f, 1f, 1f, 0.1f), true); break; // windshield seen from the driver's seat
                 case "gold": m = Lit(pal, Color.white, 1f, 0.8f); break;
                 case "glow": m = Unlit(pal, Color.white); break;
                 case "bubble": m = Unlit(pal, new Color(1f, 1f, 1f, 0.28f), true); break;
@@ -134,7 +135,11 @@ namespace JeepneyRush
                 case "lightpool": m = Unlit(LoadTexture("light_pool"), new Color(1f, 0.86f, 0.6f, _night * 0.55f), true); break; // pools of street light
                 case "beam": m = Unlit(LoadTexture("light_beam"), new Color(1f, 0.95f, 0.8f, _night * 0.6f), true); break;     // headlight beam
                 default:
-                    if (key.StartsWith("utex:")) // self-lit texture (billboards, LED signs): bright day and night
+                    if (key.StartsWith("utexa:")) // self-lit texture with see-through parts (gauge needle, rounded labels)
+                    {
+                        m = Unlit(LoadTexture(key.Substring(6)), Color.white, true);
+                    }
+                    else if (key.StartsWith("utex:")) // self-lit texture (billboards, LED signs): bright day and night
                     {
                         m = Unlit(LoadTexture(key.Substring(5)), Color.white);
                     }
