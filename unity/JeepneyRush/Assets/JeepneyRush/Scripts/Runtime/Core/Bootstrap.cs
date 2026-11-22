@@ -37,6 +37,8 @@ namespace JeepneyRush
         {
             if (_systems != null) return;
             Application.targetFrameRate = 60;
+            // release builds: only warnings and errors reach the log (formatting every Debug.Log costs time on phones)
+            if (!Debug.isDebugBuild && !Application.isEditor) Debug.unityLogger.filterLogType = LogType.Warning;
             QualitySettings.vSyncCount = 0;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
             Screen.orientation = ScreenOrientation.Portrait;

@@ -28,6 +28,12 @@ namespace JeepneyRush.EditorTools
         {
             if (EnabledScenes().Length == 0) ProjectSetup.CreateScenes();
             ApplySigningFromEnvironment();
+            if (!development && !ReleaseTools.PreflightForBuild())
+            {
+                if (Application.isBatchMode) EditorApplication.Exit(2);
+                else EditorUtility.DisplayDialog("Release build stopped", "The preflight found errors – see the Console (Jeepney Rush ▸ Release ▸ Run Preflight Check).", "OK");
+                return;
+            }
             EditorUserBuildSettings.buildAppBundle = aab;
             Directory.CreateDirectory("Builds");
             string version = PlayerSettings.bundleVersion;
@@ -43,6 +49,8 @@ namespace JeepneyRush.EditorTools
             var report = BuildPipeline.BuildPlayer(options);
             var s = report.summary;
             Debug.Log($"[Jeepney Rush] Build {s.result}: {path} ({s.totalSize / (1024f * 1024f):0.0} MB, {s.totalErrors} errors, {s.totalTime})");
+            if (!development && s.result == BuildResult.Succeeded)
+                Debug.Log($"[Jeepney Rush] Upload {path} (and the symbols .zip next to it) to Play Console. After uploading, run Jeepney Rush ▸ Release ▸ Mark Current Version As Uploaded.");
             if (Application.isBatchMode && s.result != BuildResult.Succeeded) EditorApplication.Exit(1);
         }
 

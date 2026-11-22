@@ -280,6 +280,20 @@ namespace JeepneyRush
             body.Add(SmallButton("ADD FRIEND", () => o.AddFriend(code.value, (ok, msg) => { Toast(ok ? "Friend added!" : msg); if (ok) LoadFriends(list); }), UiKit.Yellow, UiKit.Ink));
             body.Add(list);
             LoadFriends(list);
+
+            // ---- privacy: delete the account (Google Play requires this in the app)
+            body.Add(Heading("PRIVACY"));
+            var rel = ReleaseConfig.Active;
+            if (!string.IsNullOrWhiteSpace(rel.privacyPolicyUrl))
+                body.Add(SmallButton("PRIVACY POLICY", () => Application.OpenURL(rel.privacyPolicyUrl.Trim()), Color.white, UiKit.Ink));
+            body.Add(Note("Deleting your account erases your coins, gems, jeepneys, scores and friends from the server and this phone. Purchases can't be restored afterwards."));
+            body.Add(SmallButton("DELETE ACCOUNT", () => Confirm("Delete account?", "Everything on this account will be erased for good: coins, gems, jeepneys, upgrades, scores, friends and purchases.",
+                () => Confirm("Sigurado ka ba?", "This can't be undone. Tap YES to delete your account now.",
+                    () => o.DeleteAccount((ok, msg) =>
+                    {
+                        Toast(ok ? "Account deleted" : msg);
+                        if (ok) { RefreshAccount(); ShowMainMenu(); }
+                    }))), UiKit.Hex("#E5484D"), Color.white));
         }
 
         private void LoadFriends(VisualElement list)

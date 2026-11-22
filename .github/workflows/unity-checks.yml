@@ -1,0 +1,38 @@
+# Checks that run without a Unity licence: C# compile checks against Unity reference
+# assemblies, the engine-free logic tests, the Supabase SQL tests and the Edge Function tests.
+# (The Unity build itself happens on a machine with Unity: see docs/RELEASE.md.)
+name: unity-checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  csharp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Fetch Unity reference assemblies
+        run: ./unity/tools/fetch-unity-refs.sh
+      - name: Compile check (game + editor scripts)
+        run: dotnet build unity/tools/CompileCheck --no-incremental
+      - name: Compile check (AdMob / IAP adapters)
+        run: dotnet build unity/tools/CompileCheckAdapters --no-incremental
+      - name: Logic tests
+        run: dotnet test unity/Tests.DotNet
+
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrations + SQL tests on a throw-away Postgres
+        run: |
+          export PGBIN=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
+          ./supabase/dev-tests/run.sh
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Edge Function type check + tests
+        run: ./supabase/dev-tests/run-functions.sh

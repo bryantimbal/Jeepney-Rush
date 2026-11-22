@@ -26,7 +26,7 @@ namespace JeepneyRush.Logic
         public bool driverView;
         /// <summary>0.5 (needs long swipes) .. 1.5 (very sensitive).</summary>
         public float swipeSensitivity = 1f;
-        public int graphicsQuality = 1; // 0 low, 1 medium, 2 high
+        public int graphicsQuality = 3; // 0 low, 1 medium, 2 high, 3 auto (adapts to the device)
         public bool tutorialDone;
 
         // lifetime stats
@@ -122,7 +122,7 @@ namespace JeepneyRush.Logic
             d.bestScore = NonNeg(d.bestScore);
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;
-            if (d.graphicsQuality < 0 || d.graphicsQuality > 2) d.graphicsQuality = 1;
+            if (d.graphicsQuality < 0 || d.graphicsQuality > 3) d.graphicsQuality = 3;
             d.runs = NonNeg(d.runs);
             d.totalDistance = NonNeg(d.totalDistance);
             d.totalCoins = NonNeg(d.totalCoins);

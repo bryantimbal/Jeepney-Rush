@@ -205,6 +205,30 @@ namespace JeepneyRush
             }));
         }
 
+        /// <summary>
+        /// Permanently deletes the account and everything stored with it on the server, then
+        /// wipes local progress (settings stay). The game stays signed out until the player
+        /// chooses to play as a guest again.
+        /// </summary>
+        public void DeleteAccount(Action<bool, string> done)
+        {
+            if (!SignedIn) { done?.Invoke(false, "Walang account na naka-sign in."); return; }
+            Op("jr_delete_account", "{}", (ok, msg, _) =>
+            {
+                if (!ok) { done?.Invoke(false, msg ?? "Hindi na-delete. Subukan ulit mamaya."); return; }
+                _client.ClearSession();
+                _queue = new OfflineQueue();
+                SaveQueue();
+                Snapshot = null;
+                Services.Save.ResetProgress();
+                Services.Save.Data.onlineLinked = true;
+                Services.Save.Data.signedOut = true;
+                Services.Save.Save();
+                SetState(OnlineState.SignedOut);
+                done?.Invoke(true, null);
+            });
+        }
+
         /// <summary>After signing out: start a fresh guest account.</summary>
         public void PlayAsGuest()
         {

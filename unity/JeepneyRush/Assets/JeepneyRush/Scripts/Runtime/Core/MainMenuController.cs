@@ -56,6 +56,7 @@ namespace JeepneyRush
 
         private void Start()
         {
+            GraphicsQuality.SetMenuMode(true);
             if (Services.Game.State == GameState.Loading || Services.Game.State == GameState.GameOver) Services.Game.SetState(GameState.MainMenu);
             Services.UI.ShowMainMenu();
         }

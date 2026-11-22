@@ -13,8 +13,43 @@ namespace JeepneyRush
     public static class GraphicsQuality
     {
         public static int Level { get; private set; } = 1;
+        /// <summary>True when the player chose "Auto": the level follows the frame rate.</summary>
+        public static bool Auto { get; private set; }
+        private static JeepneyRush.Logic.Perf.FrameGovernor _governor;
 
-        public static void Apply(int level)
+        /// <summary>Applies a Settings value: 0 Low, 1 Medium, 2 High, 3 Auto.</summary>
+        public static void Apply(int setting)
+        {
+            Auto = setting == JeepneyRush.Logic.Perf.FrameGovernor.AutoSetting;
+            if (Auto)
+            {
+                int start = JeepneyRush.Logic.Perf.FrameGovernor.StartLevel(SystemInfo.systemMemorySize, SystemInfo.processorCount);
+                // low-end phones may climb to Medium after a smooth stretch, never straight to High
+                _governor = new JeepneyRush.Logic.Perf.FrameGovernor(start, Mathf.Min(2, start + 1));
+                ApplyLevel(_governor.Level);
+            }
+            else
+            {
+                _governor = null;
+                ApplyLevel(setting);
+            }
+        }
+
+        /// <summary>Feeds the Auto governor one gameplay frame (unscaled seconds).</summary>
+        public static void Tick(float dt)
+        {
+            if (!Auto || _governor == null || !_governor.Tick(dt)) return;
+            Debug.Log($"[Graphics] Auto → {(_governor.Level == 0 ? "Low" : _governor.Level == 1 ? "Medium" : "High")} (avg frame over budget/under budget)");
+            ApplyLevel(_governor.Level);
+        }
+
+        /// <summary>Menus don't need 60 fps: halve the rate there to save battery and heat.</summary>
+        public static void SetMenuMode(bool menu)
+        {
+            Application.targetFrameRate = menu ? 30 : 60;
+        }
+
+        private static void ApplyLevel(int level)
         {
             Level = Mathf.Clamp(level, 0, 2);
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;

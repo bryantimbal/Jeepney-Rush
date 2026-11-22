@@ -1,0 +1,14 @@
+<!--
+  Keeps code that is only reached through reflection, so "Medium" managed stripping in
+  release builds can't remove it (Jeepney Rush ▸ Release ▸ Apply Release Player Settings).
+  - GraphicsQuality tunes the URP asset and camera data by property name.
+  - Save / online data classes are (de)serialised with JsonUtility.
+-->
+<linker>
+  <assembly fullname="Unity.RenderPipelines.Universal.Runtime">
+    <type fullname="UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset" preserve="all" />
+    <type fullname="UnityEngine.Rendering.Universal.UniversalAdditionalCameraData" preserve="all" />
+  </assembly>
+  <assembly fullname="JeepneyRush.Logic" preserve="all" />
+  <assembly fullname="JeepneyRush" preserve="all" />
+</linker>

@@ -150,22 +150,12 @@ namespace JeepneyRush.EditorTools
         [MenuItem("Jeepney Rush/Setup/Texture Import Settings")]
         public static void ConfigureTextures()
         {
-            var tiled = new[] { "road", "sidewalk", "curb", "facade", "grass", "sand", "road_dirt", "dirt", "curb_dirt" };
+            // the rules live in TextureRules (also applied automatically on import); reimport to apply them now
             foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { Res + "/Textures" }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter imp)) continue;
-                string name = Path.GetFileNameWithoutExtension(path);
-                bool ui = name.StartsWith("ui_") || name == "logo" || name == "ninjatech_logo";
-                imp.textureType = TextureImporterType.Default;
-                imp.sRGBTexture = true;
-                imp.alphaIsTransparency = true;
-                imp.mipmapEnabled = !ui;
-                imp.wrapMode = tiled.Contains(name) ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
-                imp.filterMode = FilterMode.Bilinear;
-                imp.anisoLevel = name == "road" ? 4 : 1;
-                imp.maxTextureSize = name == "ui_splash_bg" ? 1024 : 2048;
-                imp.textureCompression = ui ? TextureImporterCompression.CompressedHQ : TextureImporterCompression.Compressed;
+                TextureRules.Apply(imp, Path.GetFileNameWithoutExtension(path));
                 imp.SaveAndReimport();
             }
         }
@@ -234,7 +224,7 @@ namespace JeepneyRush.EditorTools
         }
 
         // ------------------------------------------------------------------ ScriptableObjects
-        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys, OnlineConfig, MonetizationConfig)")]
+        [MenuItem("Jeepney Rush/Setup/Config Assets (GameBalance, Jeepneys, Online, Monetization, Release)")]
         public static void CreateConfigAssets()
         {
             EnsureFolder(Res);
@@ -249,6 +239,10 @@ namespace JeepneyRush.EditorTools
             string moneyPath = Res + "/MonetizationConfig.asset";
             if (AssetDatabase.LoadAssetAtPath<MonetizationConfig>(moneyPath) == null)
                 AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MonetizationConfig>(), moneyPath);
+            // Phase 5: privacy policy / account deletion links and the last uploaded version code
+            string releasePath = Res + "/ReleaseConfig.asset";
+            if (AssetDatabase.LoadAssetAtPath<ReleaseConfig>(releasePath) == null)
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<ReleaseConfig>(), releasePath);
             EnsureFolder(Res + "/Jeepneys");
             var defaults = JeepneySpec.LoadAll(); // runtime defaults when none exist
             foreach (var l in JeepneyCatalog.All)

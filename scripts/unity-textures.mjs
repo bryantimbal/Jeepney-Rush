@@ -220,7 +220,7 @@ const textures = await page.evaluate(() => {
       x.fillStyle = '#ffd100'; fit(x, 'SAKAYAN', 0, 0, CW - 30, 24, (z) => `900 ${z}px ${B}`); x.fillText('SAKAYAN', ox + CW / 2, oy + CH * 0.27);
       x.fillStyle = '#fff'; fit(x, n, 0, 0, CW - 30, 52, (z) => `${z}px ${D}`); x.fillText(n, ox + CW / 2, oy + CH * 0.65);
     });
-    save('stop_signs', c);
+    // (drawn as a scratch atlas only: each stop gets its own texture below)
     // one sign per stop, named after the stop (must match StopNames.SignTexture)
     names.forEach((n, i) => {
       const [c1, x1] = cv(CW, CH);

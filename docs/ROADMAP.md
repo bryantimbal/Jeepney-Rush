@@ -6,7 +6,7 @@
 | 2. Game expansion | Garage, more jeepneys & upgrades, power-ups, more environments, missions, achievements | ✅ Done |
 | 3. Online | Supabase auth (guest + account), cloud save, leaderboards, daily challenges, profiles | ✅ Done (see UNITY_PHASE3_REPORT.md) |
 | 4. Monetization | AdMob (banner on menus, interstitial between selected runs, rewarded), IAP, ad-free | ✅ Done (see UNITY_PHASE4_REPORT.md) |
-| 5. Google Play release | Optimisation pass, store listing, privacy policy, internal → closed → production | Planned |
+| 5. Google Play release | Optimisation pass, release build + preflight, privacy & account deletion, store listing, internal → closed → production | 🚧 In progress (see RELEASE.md) |
 
 ## Phase 2 – design notes (extension points already in the code)
 * **Garage / skins**: `JeepneySkin` (`art/JeepneySkins.ts`) already drives every colour,

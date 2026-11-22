@@ -206,7 +206,11 @@ namespace JeepneyRush
             GameEvents.StateChanged += OnStateChanged;
         }
 
-        private void Start() => StartRun();
+        private void Start()
+        {
+            GraphicsQuality.SetMenuMode(false);
+            StartRun();
+        }
 
         private void OnDestroy()
         {
@@ -371,6 +375,7 @@ namespace JeepneyRush
                 if (_dyingTime > 1.1f) { FinishRun(); return; }
             }
 
+            if (state == GameState.Playing && !_dying) GraphicsQuality.Tick(Time.unscaledDeltaTime);
             _runTime += dt;
             if (state == GameState.Starting && _runTime > 1.2f) Services.Game.SetState(GameState.Playing);
 

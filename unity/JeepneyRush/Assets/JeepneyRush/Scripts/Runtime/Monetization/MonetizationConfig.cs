@@ -29,7 +29,7 @@ namespace JeepneyRush
         [Header("In-app purchases (Google Play)")]
         public bool iapEnabled = true;
         [Tooltip("Play Console package name, e.g. com.yourstudio.jeepneyrush")]
-        public string packageName = "com.jeepneyrush.game";
+        public string packageName = "ph.jeepneyrush.game"; // must equal the application id (Player Settings) and the server secret PLAY_PACKAGE_NAME
 
         [Header("Development")]
         [Tooltip("Without the AdMob / Unity IAP packages (or in the Editor), show simulated TEST ads and TEST purchases. Never in release builds.")]

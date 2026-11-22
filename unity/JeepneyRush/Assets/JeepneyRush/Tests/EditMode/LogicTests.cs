@@ -181,7 +181,7 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(0, d.bestDistance);
             Assert.AreEqual(JeepneyCatalog.DefaultId, d.selectedJeepney);
             Assert.AreEqual(1f, d.swipeSensitivity);
-            Assert.AreEqual(1, d.graphicsQuality);
+            Assert.AreEqual(3, d.graphicsQuality); // back to Auto
         }
 
         [Test]

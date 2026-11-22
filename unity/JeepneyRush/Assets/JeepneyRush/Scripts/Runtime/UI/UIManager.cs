@@ -23,7 +23,7 @@ namespace JeepneyRush
         private Image _stopArrowL, _stopArrowR;
         private readonly List<Image> _hearts = new List<Image>();
         private int _lastHealth = -1, _lastScore = -1, _lastCoins = -1, _lastPax = -1, _lastDist = -1, _lastSpeed = -1;
-        private string _lastStop;
+        private long _lastStop = long.MaxValue;
         private readonly Stack<VisualElement> _modals = new Stack<VisualElement>();
         private System.Action _confirmYes, _confirmCancel;
         private Label _confirmTitle, _confirmText;
@@ -575,7 +575,10 @@ namespace JeepneyRush
             card.Add(Segmented("Swipe sensitivity", new[] { "Low", "Normal", "High" },
                 () => d().swipeSensitivity < 0.85f ? 0 : d().swipeSensitivity > 1.15f ? 2 : 1,
                 i => d().swipeSensitivity = i == 0 ? 0.7f : i == 1 ? 1f : 1.3f));
-            card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
+            card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High", "Auto" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
+            var rel = ReleaseConfig.Active;
+            if (!string.IsNullOrWhiteSpace(rel.privacyPolicyUrl))
+                card.Add(UiKit.Button("PRIVACY POLICY", () => Application.OpenURL(rel.privacyPolicyUrl.Trim()), Color.white, UiKit.Ink, 36, 96));
             card.Add(Toggle("Show FPS", () => _showDebug, v => { _showDebug = v; if (_debug != null) Show(_debug, v); }));
             card.Add(UiKit.Button("RESET PROGRESS", () => Confirm("Reset progress?", "Erases coins, best scores and stats on this device.", () =>
             {
@@ -893,7 +896,7 @@ namespace JeepneyRush
             foreach (var c in _powerCells) if (c.cell != null) Show(c.cell, false);
             ClearJuice();
             _lastHealth = _lastScore = _lastCoins = _lastPax = _lastDist = _lastSpeed = -1;
-            _lastStop = null;
+            _lastStop = long.MaxValue;
             _floats.Clear();
             if (tutorial)
             {
@@ -936,7 +939,8 @@ namespace JeepneyRush
                 _pax.style.color = route.Count >= route.Capacity ? UiKit.Hex("#FF6B6B") : Color.white;
             }
             var next = s.Passengers.NextStop();
-            string key = next == null ? "none" : $"{next.Stop.Name}|{Mathf.CeilToInt(next.transform.localPosition.z / 10f)}|{route.Count}";
+            // compare numbers, not a formatted string, so the HUD allocates nothing per frame
+            long key = next == null ? long.MinValue : ((long)next.Stop.Id << 32) ^ ((long)Mathf.CeilToInt(next.transform.localPosition.z / 10f) << 8) ^ route.Count;
             if (key != _lastStop)
             {
                 _lastStop = key;

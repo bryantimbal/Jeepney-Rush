@@ -274,7 +274,7 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
-        /// <summary>Stop sign facing +Z (toward the oncoming jeepney) using a cell of the stop_signs atlas.</summary>
+        /// <summary>Stop sign facing +Z (toward the oncoming jeepney) using that stop's own sign texture.</summary>
         public static MeshData StopSign(int nameIndex)
         {
             var b = new MeshBuilder();
