@@ -370,6 +370,22 @@ namespace JeepneyRush.Logic.Geometry
             }
             b.Box("glow", L.Accent1, 1.9f, 0.04f, 0.03f, 0, 0.4f, BodyRearZ - 0.05f);
             b.Box("glow", L.Accent2, 1.9f, 0.04f, 0.03f, 0, RoofY + 0.05f, BodyRearZ - 0.04f);
+            // pull cord along the ceiling to the driver's bell: the music is too loud to hear "PARA!"
+            foreach (float cx in new[] { -0.5f, 0.5f })
+                b.Box("paint", "#E9E4D4", 0.025f, 0.025f, BodyFrontZ - BodyRearZ - 0.3f, cx, RoofY - 0.16f, (BodyFrontZ + BodyRearZ) / 2);
+            b.Box("paint", "#E9E4D4", 1.0f, 0.025f, 0.025f, 0, RoofY - 0.16f, BodyFrontZ - 0.15f);
+            b.Sphere("gold", "#FFC93C", 0.09f, -0.35f, RoofY - 0.24f, BodyFrontZ - 0.1f, 8);   // the bell by the driver
+            b.Box("gold", "#FFC93C", 0.03f, 0.08f, 0.03f, -0.35f, RoofY - 0.12f, BodyFrontZ - 0.1f);
+            // "HILA KUNG BABABA" sign hanging from the ceiling, facing the rear doorway (riders and the chase camera)
+            float sz = -1.6f, sy = RoofY - 0.36f, hw = 0.7f, hh = 0.175f;
+            b.Box("paint", "#111114", hw * 2 + 0.06f, hh * 2 + 0.06f, 0.03f, 0, sy, sz + 0.03f);
+            b.Quad("utex:hila_sign", new V3(-hw, sy - hh, sz), new V3(hw, sy - hh, sz), new V3(hw, sy + hh, sz), new V3(-hw, sy + hh, sz), new V3(0, 0, -1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            foreach (float hx in new[] { -0.6f, 0.6f }) b.Box("paint", "#333333", 0.015f, RoofY - (sy + hh), 0.015f, hx, (RoofY + sy + hh) / 2, sz + 0.03f);
+            // and over the top of the rear doorway, under the rear slogan, where boarding riders see it
+            float rz = BodyRearZ - 0.07f, ry = 1.7f;
+            b.Quad("utex:hila_sign", new V3(-0.62f, ry - 0.155f, rz), new V3(0.62f, ry - 0.155f, rz), new V3(0.62f, ry + 0.155f, rz), new V3(-0.62f, ry + 0.155f, rz), new V3(0, 0, -1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
         }
 
         /// <summary>Fiesta Edition: strings of colourful banderitas over the roof.</summary>

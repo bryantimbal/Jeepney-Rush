@@ -11,6 +11,8 @@ namespace JeepneyRush
         public GasStation Station;
         public bool Done;
         public Transform Attendant;
+        /// <summary>Floating "GAS" marker above the pad (hidden once used).</summary>
+        public Transform Marker;
         public Vector3 AttendantHome;
     }
 
@@ -42,6 +44,9 @@ namespace JeepneyRush
                     person.transform.localPosition = v.AttendantHome;
                     person.transform.localRotation = Quaternion.Euler(0, -90, 0); // facing the road
                     v.Attendant = person.transform;
+                    var marker = ModelLibrary.Instantiate(ModelLibrary.Get("gas_marker", PropBuilder.GasMarker), "GasMarker", go.transform, castShadows: false);
+                    marker.transform.localPosition = new Vector3(laneX, 7.4f, 0);
+                    v.Marker = marker.transform;
                     return go;
                 }, 1);
         }
@@ -54,6 +59,7 @@ namespace JeepneyRush
             v.transform.localPosition = new Vector3(0, 0, unityZ);
             v.transform.localRotation = Quaternion.identity;
             v.Attendant.localPosition = v.AttendantHome;
+            if (v.Marker != null) v.Marker.gameObject.SetActive(true);
             _stations.Add(v);
         }
 
@@ -92,6 +98,17 @@ namespace JeepneyRush
                 s.Attendant.localPosition = new Vector3(a.x, Serving == s ? 0f : Mathf.Max(home.y, a.y) + wave, a.z);
                 s.Attendant.localRotation = Quaternion.Euler(0, Serving == s ? -90f + Mathf.Sin(_time * 3f) * 10f : -90f, 0);
                 if (!s.Done && StopRules.OutOfReach(p.z, _cfg)) s.Done = true;
+                if (s.Marker != null)
+                {
+                    bool show = !s.Done && Serving != s;
+                    if (s.Marker.gameObject.activeSelf != show) s.Marker.gameObject.SetActive(show);
+                    if (show)
+                    {
+                        var m = s.Marker.localPosition;
+                        s.Marker.localPosition = new Vector3(m.x, 7.4f + Mathf.Sin(_time * 2.5f) * 0.35f, m.z);
+                        s.Marker.localRotation = Quaternion.Euler(0, Mathf.Sin(_time * 0.8f) * 35f, 0); // sways, always readable
+                    }
+                }
                 if (p.z < -60f)
                 {
                     if (Serving == s) Serving = null;

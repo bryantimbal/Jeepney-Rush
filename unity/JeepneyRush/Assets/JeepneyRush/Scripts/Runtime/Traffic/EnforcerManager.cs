@@ -21,12 +21,19 @@ namespace JeepneyRush
         public System.Action Passed;
         private bool _passed;
 
-        public void Init()
+        public EnforcerKind Kind { get; private set; }
+        public string CheckpointName => Enforcers.Checkpoint(Kind);
+
+        /// <summary>MMDA only in Metro Manila (Manila streets, EDSA); police or city traffic enforcers elsewhere.</summary>
+        public void Init(EnvironmentKind env = EnvironmentKind.Manila)
         {
-            if (_root != null) return;
-            _root = new GameObject("MMDA_Checkpoint");
+            var kind = Enforcers.For(env);
+            if (_root != null && kind == Kind) return;
+            if (_root != null) Destroy(_root);
+            Kind = kind;
+            _root = new GameObject(CheckpointName.Replace(' ', '_'));
             _root.transform.SetParent(transform, false);
-            ModelLibrary.Instantiate(ModelLibrary.Get("enforcer", PropBuilder.Enforcer), "Enforcer", _root.transform);
+            ModelLibrary.Instantiate(ModelLibrary.Get("enforcer_" + kind, () => PropBuilder.Enforcer(kind)), "Enforcer", _root.transform);
             _red = ModelLibrary.Instantiate(ModelLibrary.Get("siren_red", () => PropBuilder.Siren(true)), "SirenRed", _root.transform, false);
             _blue = ModelLibrary.Instantiate(ModelLibrary.Get("siren_blue", () => PropBuilder.Siren(false)), "SirenBlue", _root.transform, false);
             _root.SetActive(false);

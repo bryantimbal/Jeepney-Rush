@@ -63,6 +63,8 @@ namespace JeepneyRush.Logic
         }
 
         public bool IsActive(PowerUpKind k) => _remaining[(int)k] > 0;
+        /// <summary>Ends a power-up early (Turbo switches off before a stop or gas station).</summary>
+        public void End(PowerUpKind k) => _remaining[(int)k] = 0;
         public float Remaining(PowerUpKind k) => _remaining[(int)k];
         /// <summary>0..1 fraction left (for the HUD timer bars).</summary>
         public float Fraction(PowerUpKind k) => _duration[(int)k] > 0 ? Math.Max(0, _remaining[(int)k] / _duration[(int)k]) : 0;

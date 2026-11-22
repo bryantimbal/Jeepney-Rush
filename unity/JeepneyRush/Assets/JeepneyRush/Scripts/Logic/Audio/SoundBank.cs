@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -148,6 +148,38 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Tone(b, Synth.Wave.Saw, 0, 1.15f, 118, 124, 0.25f, 0.05f, 700);
                     Synth.Noise(b, 0, 1.15f, 0.35f, 900, 600, 2.5f);
                     for (int g = 0; g < 9; g++) Synth.Tone(b, Synth.Wave.Sine, 0.08f + g * 0.12f, 0.08f, 420 + (g % 3) * 90, 300, 0.25f, 0.005f);
+                    return Synth.Normalize(b, 0.5f);
+                case Sfx.Bell:
+                    // pull-cord bell of a patok jeepney: two bright metallic "ding"s
+                    b = Synth.Buffer(0.9f);
+                    foreach (float t0 in new[] { 0f, 0.28f })
+                    {
+                        Synth.Tone(b, Synth.Wave.Sine, t0, 0.6f, 1760, 1755, 0.5f, 0.002f);
+                        Synth.Tone(b, Synth.Wave.Sine, t0, 0.45f, 4400, 4390, 0.18f, 0.001f);
+                        Synth.Tone(b, Synth.Wave.Sine, t0, 0.35f, 2637, 2630, 0.22f, 0.001f);
+                    }
+                    return Synth.Normalize(b, 0.7f);
+                case Sfx.BrakeSqueal:
+                    // brake shoes squealing as the jeepney slows to a stop
+                    b = Synth.Buffer(1.0f);
+                    {
+                        double p = 0;
+                        for (int i = 0; i < b.Length; i++)
+                        {
+                            float t = i / (float)Synth.Rate;
+                            double f = 2350 + 140 * Math.Sin(t * 37) - 250 * t;
+                            p += f / Synth.Rate;
+                            float env = Math.Min(1f, t / 0.06f) * (float)Math.Exp(-1.6 * t) * (t > 0.85f ? (1f - t) / 0.15f : 1f);
+                            b[i] += (float)Math.Sin(p * 2 * Math.PI) * env * 0.35f * (0.75f + 0.25f * (float)Math.Sin(t * 90));
+                        }
+                    }
+                    Synth.Noise(b, 0, 0.9f, 0.25f, 3200, 2600, 5f);
+                    return Synth.Normalize(b, 0.45f);
+                case Sfx.AirBrake:
+                    // "pssssh" once the jeepney has come to a complete stop
+                    b = Synth.Buffer(0.8f);
+                    Synth.Noise(b, 0.02f, 0.75f, 0.9f, 5200, 3000, 0.7f, highpass: true);
+                    Synth.Noise(b, 0, 0.12f, 0.6f, 1500, 900, 1.5f);
                     return Synth.Normalize(b, 0.5f);
                 case Sfx.Sputter:
                     // engine coughing on the last drops of diesel

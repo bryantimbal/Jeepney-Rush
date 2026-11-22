@@ -49,6 +49,20 @@ namespace JeepneyRush.Logic
     /// Slow down (hold BRAKE) when passing to be waved through with a small bonus;
     /// speed past and you get a ticket (coins deducted from the run).
     /// </summary>
+    /// <summary>Who runs the checkpoints: the MMDA only in Metro Manila (Manila streets, EDSA).</summary>
+    public enum EnforcerKind { Mmda, Police, CityTraffic }
+
+    public static class Enforcers
+    {
+        public static EnforcerKind For(EnvironmentKind env) =>
+            env == EnvironmentKind.Manila || env == EnvironmentKind.Edsa ? EnforcerKind.Mmda
+            : env == EnvironmentKind.Cebu || env == EnvironmentKind.Baguio ? EnforcerKind.CityTraffic
+            : EnforcerKind.Police; // provincial, beach and mountain roads: police checkpoints
+
+        public static string Checkpoint(EnforcerKind k) => k == EnforcerKind.Mmda ? "MMDA CHECKPOINT" : k == EnforcerKind.Police ? "POLICE CHECKPOINT" : "TRAFFIC CHECKPOINT";
+        public static string SignTexture(EnforcerKind k) => k == EnforcerKind.Mmda ? "mmda_sign" : k == EnforcerKind.Police ? "police_sign" : "enforcer_sign";
+    }
+
     public static class EnforcerRules
     {
         /// <summary>Passing speed must be at or below this fraction of the current base speed.</summary>
@@ -100,6 +114,12 @@ namespace JeepneyRush.Logic
             if (r < 0.62) return Pick(DayNight.GoingToWork(hour) ? LateForWork : GoingHome, rng);
             return Pick(Traffic, rng);
         }
+
+        // the driver at the gas station
+        public static readonly string[] GasPrice = { "ANG MAHAL NG GAS!", "TUMAAS NA NAMAN ANG DIESEL!", "WALA NANG KITA SA BOUNDARY!", "KAILAN BA ANG ROLLBACK?!", "PUHUNAN LANG 'TO, WALANG TUBO!", "PANG-ULAM KO NA SANA 'YAN!" };
+
+        // Patok jeepney: the music is too loud to hear "PARA!", so riders pull the cord to ring the bell
+        public static readonly string[] PullCord = { "*HILA* DING-DING!", "*HILA* BABABA PO!", "DING! DITO LANG PO!" };
 
         public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
     }

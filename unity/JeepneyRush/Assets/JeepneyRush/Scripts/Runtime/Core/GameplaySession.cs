@@ -58,6 +58,10 @@ namespace JeepneyRush
         private float _jamCap = 1f, _jam, _stuckT, _complainT, _hour;
         private int _jamComplaints, _dayPhase = -1;
         private bool _inJam;
+        // patok pull-cord bell, brake sounds
+        private bool _patok, _stopArmed;
+        private int _bellStopId = -1;
+        private float _prevSpeed;
         private RoadBender _bender;
         private float _speed, _runTime, _dyingTime, _cleanDistance, _bestClean, _turboFx, _wetDistance;
         private int _smoothHumps, _hits;
@@ -154,7 +158,7 @@ namespace JeepneyRush
             _powerUps = GetOrAdd<PowerUpManager>(Child("PowerUpManager"));
             _powerUps.Init(_cfg, _player.transform);
             _enforcer = GetOrAdd<EnforcerManager>(Child("EnforcerManager"));
-            _enforcer.Init();
+            _enforcer.Init(_env);
             _enforcer.Passed = OnEnforcerPassed;
             _spawner = new LevelSpawner(_traffic, _obstacles, _coins, _passengers, _powerUps);
             _stations = GetOrAdd<StationManager>(Child("StationManager"));
@@ -221,8 +225,11 @@ namespace JeepneyRush
             _score.Init(_cfg);
             _fx.Clear();
             _player.SetLivery(RunJeepney);
+            _patok = JeepneyCatalog.Get(RunJeepney).SoundSystem;
+            _bellStopId = -1; _prevSpeed = 0; _stopArmed = false;
             Services.Audio.SetSoundTrip(JeepneyCatalog.Get(RunJeepney).SoundSystem && Services.Save.Data.soundTrip);
             _revived = false;
+            if (_patok) Services.UI.Float("PATOK! · HILA KUNG BABABA", UIManager.FloatKind.Info);
             if (!string.IsNullOrEmpty(TrialJeepney)) Services.UI.Float("TRIAL RUN: " + JeepneyCatalog.Get(TrialJeepney).DisplayName.ToUpperInvariant(), UIManager.FloatKind.Info);
             _player.Configure(_cfg);
             _passengers.Init(_cfg, _player.Body);
@@ -391,6 +398,8 @@ namespace JeepneyRush
                 _speed = Mathf.Lerp(_speed, target, 1f - Mathf.Exp(-dt * accel));
             }
 
+            BrakeSounds(brakeHeld);
+
             // ---- traffic jam (EDSA rush hour): the road ahead crawls, the top speed eases down
             _jam = _jams.At(_score.Distance);
             float cap = JamRules.SpeedCap(_jam), baseV = Mathf.Max(1f, _difficulty.BaseSpeed);
@@ -471,8 +480,9 @@ namespace JeepneyRush
             float hump = NextHumpZ();
             var next = _passengers.NextStop();
             float nextZ = next != null ? next.transform.localPosition.z - _cfg.stopZoneLength / 2f : -1f;
+            if (!_dying) { PullCordBell(next, nextZ); TurboSafety(pu, next, nextZ); }
             if (_enforcer.Active && _enforcer.Z > 0)
-                Services.UI.SetEnforcerBanner($"MMDA CHECKPOINT · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
+                Services.UI.SetEnforcerBanner($"{_enforcer.CheckpointName} · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
             else if (LightBanner(out string light))
                 Services.UI.SetEnforcerBanner(light);
             else if (_refuelling)
@@ -482,7 +492,9 @@ namespace JeepneyRush
             else if (_stationZone != null && _fuel.Fraction < 0.97f)
                 Services.UI.SetEnforcerBanner("GAS STATION · HOLD BRAKE · FULL STOP");
             else if (NextStationAhead(out float stz) && stz < 90f && _fuel.Fraction < 0.8f && _inZone == null)
-                Services.UI.SetEnforcerBanner($"GAS STATION {Mathf.CeilToInt(stz)} m · STOP TO REFUEL");
+                Services.UI.SetEnforcerBanner($"GASOLINAHAN {Mathf.CeilToInt(stz)} m · STOP TO REFUEL");
+            else if (stz < 140f && stz > 0f && _inZone == null)
+                Services.UI.SetEnforcerBanner($"GASOLINAHAN AHEAD · {Mathf.CeilToInt(stz)} m");
             else if (_loadT > 0)
                 Services.UI.SetEnforcerBanner("SAKAY / BABA... HINTAY LANG");
             else if (_inZone != null)
@@ -611,6 +623,48 @@ namespace JeepneyRush
                     Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
                 }
             }
+        }
+
+        /// <summary>Brake squeal while slowing down hard, and the air-brake "pssh" when the jeepney comes to a full stop.</summary>
+        private void BrakeSounds(bool brakeHeld)
+        {
+            bool braking = brakeHeld || _player.Braking || _loadT > 0 || _refuelling || _dying;
+            float v = Mathf.Abs(_speed);
+            if (v > 3.5f) _stopArmed = true;
+            if (braking && _prevSpeed > 5f && v <= 5f && !_dying) Services.Audio.Play(Logic.Audio.Sfx.BrakeSqueal, 0.75f, Random.Range(0.95f, 1.08f));
+            if (_stopArmed && braking && v <= _cfg.stopSpeed && !_dying)
+            {
+                _stopArmed = false;
+                Services.Audio.Play(Logic.Audio.Sfx.AirBrake, 0.6f);
+            }
+            _prevSpeed = v;
+        }
+
+        /// <summary>
+        /// Patok jeepney: the sound trip is too loud to hear "PARA!", so a rider pulls the cord and
+        /// the bell rings as you approach a stop where someone wants to get off.
+        /// </summary>
+        private void PullCordBell(PassengerStopView next, float nextZ)
+        {
+            if (!_patok || next == null || next.Stop.Id == _bellStopId) return;
+            if (nextZ < 0 || nextZ > 75f || _passengers.Route.AlightingAt(next.Stop.Id) <= 0) return;
+            _bellStopId = next.Stop.Id;
+            Services.Audio.Play(Logic.Audio.Sfx.Bell, 0.95f);
+            Services.UI.Say(Lines.Pick(Lines.PullCord, _rng), _passengers.RandomRiderHead);
+            Services.UI.Float("DING-DING! MAY BABABA", UIManager.FloatKind.Info);
+        }
+
+        /// <summary>Turbo switches off before a PARA stop with business, a gas station or an intersection.</summary>
+        private void TurboSafety(PowerUpState pu, PassengerStopView next, float nextZ)
+        {
+            if (!pu.IsActive(PowerUpKind.Turbo)) return;
+            bool stopAhead = next != null && nextZ >= 0 && nextZ < 90f && _route_HasBusiness(next);
+            bool stationAhead = NextStationAhead(out float stz) && stz < 90f;
+            bool crossingAhead = false;
+            foreach (var x in _crossings.Items) { float z = x.transform.localPosition.z; if (z > 0 && z < 90f) { crossingAhead = true; break; } }
+            if (!stopAhead && !stationAhead && !crossingAhead) return;
+            pu.End(PowerUpKind.Turbo);
+            Services.UI.Float("TURBO OFF · MAY HINTUAN", UIManager.FloatKind.Info);
         }
 
         private bool RushHour => (_hour >= 16f && _hour < 20.5f) || (_hour >= 6f && _hour < 9.5f);
@@ -956,6 +1010,8 @@ namespace JeepneyRush
             int litres = Mathf.RoundToInt(_quote.Total);
             if (_quote.Credit > 0.5f) Services.UI.Float($"UTANG MUNA! +{litres} L", UIManager.FloatKind.Info);
             else Services.UI.Float($"FULL TANK! +{litres} L · -{_quote.Cost} COINS", UIManager.FloatKind.Good);
+            // the driver grumbles about the price of diesel
+            Services.UI.Say(Lines.Pick(Lines.GasPrice, _rng), () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)), true, 2.4f);
             Services.UI.Float("ARANGKADA! (GAS)", UIManager.FloatKind.Info);
         }
 

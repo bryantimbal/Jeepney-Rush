@@ -509,6 +509,51 @@ const textures = await page.evaluate(() => {
     x.fillStyle = '#FFFFFF'; fit(x, 'MMDA', 0, 0, 440, 110, (z) => `${z}px ${D}`); x.fillText('MMDA', 256, 96);
     x.fillStyle = '#FCD116'; fit(x, 'CHECKPOINT', 0, 0, 460, 64, (z) => `${z}px ${D}`); x.fillText('CHECKPOINT', 256, 186);
     save('mmda_sign', c);
+    // police / city traffic enforcer checkpoint signs (MMDA only in Metro Manila)
+    for (const [name, bg, border, t1, t2, c1, c2] of [['police_sign', '#14213D', '#FFFFFF', 'POLICE', 'CHECKPOINT', '#FFFFFF', '#FCD116'], ['enforcer_sign', '#F77F00', '#1B1033', 'TRAFFIC', 'ENFORCER', '#1B1033', '#FFFFFF']]) {
+      [c, x] = cv(512, 256);
+      x.fillStyle = bg; x.fillRect(0, 0, 512, 256); x.strokeStyle = border; x.lineWidth = 10; x.strokeRect(8, 8, 496, 240);
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = c1; fit(x, t1, 0, 0, 440, 104, (z) => `${z}px ${D}`); x.fillText(t1, 256, 96);
+      x.fillStyle = c2; fit(x, t2, 0, 0, 460, 64, (z) => `${z}px ${D}`); x.fillText(t2, 256, 186);
+      save(name, c);
+    }
+    // gas station: tall pylon sign with the name and (expensive!) LED prices
+    [c, x] = cv(512, 640);
+    x.fillStyle = '#0E7C86'; x.fillRect(0, 0, 512, 640); x.fillStyle = '#FF8C1A'; x.fillRect(0, 0, 512, 22); x.fillRect(0, 250, 512, 14);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    // pump icon
+    x.fillStyle = '#FFFFFF'; x.beginPath(); x.roundRect(40, 60, 90, 150, 12); x.fill(); x.fillStyle = '#0E7C86'; x.fillRect(56, 80, 58, 40);
+    x.strokeStyle = '#FFFFFF'; x.lineWidth = 12; x.beginPath(); x.moveTo(130, 100); x.lineTo(160, 100); x.lineTo(160, 190); x.stroke();
+    x.fillStyle = '#FFFFFF'; fit(x, 'GASOLINAHAN', 0, 0, 300, 76, (z) => `${z}px ${D}`); x.fillText('GASOLINAHAN', 335, 112);
+    x.fillStyle = '#FFD166'; fit(x, 'DIESEL · GAS · 24 ORAS', 0, 0, 300, 34, (z) => `900 ${z}px ${B}`); x.fillText('DIESEL · GAS · 24 ORAS', 335, 190);
+    x.fillStyle = '#111111'; x.fillRect(28, 284, 456, 330);
+    const prices = [['DIESEL', '78.50', '#FF5A3C'], ['GASOLINA', '84.30', '#FFE066'], ['PREMIUM', '91.75', '#FFE066']];
+    prices.forEach(([n, p, col], i) => {
+      const y = 340 + i * 100;
+      x.textAlign = 'left'; x.fillStyle = '#FFFFFF'; fit(x, n, 0, 0, 200, 40, (z) => `900 ${z}px ${B}`); x.fillText(n, 50, y);
+      x.textAlign = 'right'; x.fillStyle = col; x.shadowColor = col; x.shadowBlur = 14; fit(x, '₱' + p, 0, 0, 230, 70, (z) => `${z}px ${D}`); x.fillText('₱' + p, 466, y + 4); x.shadowBlur = 0;
+    });
+    x.textAlign = 'center'; x.fillStyle = '#FF8C1A'; fit(x, 'PER LITRO', 0, 0, 200, 24, (z) => `900 ${z}px ${B}`); x.fillText('PER LITRO', 256, 600);
+    save('gas_sign', c);
+    // canopy fascia lettering
+    [c, x] = cv(1024, 128);
+    x.fillStyle = '#0E7C86'; x.fillRect(0, 0, 1024, 128); x.fillStyle = '#FF8C1A'; x.fillRect(0, 108, 1024, 20);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#FFFFFF';
+    fit(x, 'GASOLINAHAN · DIESEL · GASOLINA', 0, 0, 960, 78, (z) => `${z}px ${D}`); x.fillText('GASOLINAHAN · DIESEL · GASOLINA', 512, 58);
+    save('gas_fascia', c);
+    // floating marker label above the refuelling pad
+    [c, x] = cv(256, 128);
+    x.fillStyle = '#FF8C1A'; x.beginPath(); x.roundRect(4, 4, 248, 120, 26); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 8; x.stroke();
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#FFFFFF'; fit(x, 'GAS', 0, 0, 200, 90, (z) => `${z}px ${D}`); x.fillText('GAS', 128, 70);
+    save('gas_label', c);
+    // patok jeepney: "pull the cord if you're getting off" (the music drowns out "PARA!")
+    [c, x] = cv(512, 128);
+    x.fillStyle = '#111114'; x.fillRect(0, 0, 512, 128); x.strokeStyle = '#FFC300'; x.lineWidth = 6; x.strokeRect(5, 5, 502, 118);
+    x.fillStyle = '#FFC300'; x.beginPath(); x.arc(58, 70, 30, Math.PI, 0); x.lineTo(88, 82); x.lineTo(28, 82); x.closePath(); x.fill(); x.fillRect(54, 30, 8, 12); x.beginPath(); x.arc(58, 90, 7, 0, Math.PI * 2); x.fill();
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#FFFFFF'; x.shadowColor = '#FF2E4D'; x.shadowBlur = 12;
+    fit(x, 'HILA KUNG BABABA', 0, 0, 390, 60, (z) => `${z}px ${D}`); x.fillText('HILA KUNG BABABA', 295, 70); x.shadowBlur = 0;
+    save('hila_sign', c);
     [c, x] = cv(256, 128);
     x.fillStyle = '#FFFFFF'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.beginPath(); x.roundRect(6, 6, 244, 96, 36); x.fill(); x.stroke();
     x.beginPath(); x.moveTo(60, 98); x.lineTo(48, 124); x.lineTo(92, 98); x.closePath(); x.fill(); x.stroke();

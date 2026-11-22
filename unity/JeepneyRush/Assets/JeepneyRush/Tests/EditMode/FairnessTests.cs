@@ -42,7 +42,8 @@ namespace JeepneyRush.Tests
             public void SpawnCoins(CoinFormation f, int lane, int lane2, float z, int count, float spacing) => CoinFormations++;
             public void SpawnStop(PassengerStop stop, float z) => Stops.Add((stop, z));
             public int PowerUps;
-            public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => PowerUps++;
+            public readonly List<(PowerUpKind kind, float w)> PowerUpList = new List<(PowerUpKind, float)>();
+            public void SpawnPowerUp(PowerUpKind kind, int lane, float z) { PowerUps++; PowerUpList.Add((kind, Distance - z)); }
             public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
             public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
             public readonly List<(Intersection x, float z)> Crossings = new List<(Intersection, float)>();
@@ -75,6 +76,7 @@ namespace JeepneyRush.Tests
                 float target = cfg.SpeedAt(distance) * JamRules.SpeedCap(jams.At(distance)); // the jeepney crawls in a jam
                 speed = speed < 0 ? target : speed > target ? Math.Max(target, speed - JamRules.CapDecel * dt) : Math.Min(target, speed + JamRules.CapAccel * dt);
                 world.Lanes = laneT < 1 ? new[] { from, lane } : new[] { lane };
+                world.Distance = distance;
                 director.Update(distance, speed);
                 foreach (var o in world.Objs) o.Z += (speed - (o.Z > 0 && o.Speed > 0 ? Math.Min(o.Speed, speed) : o.Speed)) * dt; // like the game: traffic behind waits
                 world.Objs.RemoveAll(o => o.Z > cfg.despawnBehind + 6);
@@ -224,6 +226,14 @@ namespace JeepneyRush.Tests
                 Assert.AreEqual(0, Count(HazardKind.SpeedHump));
                 Assert.Greater(Count(HazardKind.MudPatch), 3, "mud patches on the dirt road");
                 Assert.Greater(Count(HazardKind.Rocks), 0, "fallen rocks");
+            }
+            // no Turbo right before a PARA stop, gas station or intersection (you'd fly past it)
+            foreach (var (kind, w) in world.PowerUpList)
+            {
+                if (kind != PowerUpKind.Turbo) continue;
+                foreach (var (st, _) in world.Stops) Assert.IsFalse(st.At > w - 10 && st.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before stop at {st.At:0}");
+                foreach (var (gs, _) in world.Stations) Assert.IsFalse(gs.At > w - 10 && gs.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before gas station at {gs.At:0}");
+                foreach (var (x, _) in world.Crossings) Assert.IsFalse(x.At > w - 10 && x.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before intersection at {x.At:0}");
             }
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");

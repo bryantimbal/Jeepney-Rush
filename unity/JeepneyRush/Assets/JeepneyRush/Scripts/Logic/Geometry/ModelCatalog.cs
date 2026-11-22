@@ -32,6 +32,9 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("stop_sign", PropBuilder.StopSign(0));
             yield return ("chunk", SceneryBuilder.ManilaChunk(1000, true));
             yield return ("enforcer", PropBuilder.Enforcer());
+            yield return ("enforcer_police", PropBuilder.Enforcer(EnforcerKind.Police));
+            yield return ("enforcer_city", PropBuilder.Enforcer(EnforcerKind.CityTraffic));
+            yield return ("gas_marker", PropBuilder.GasMarker());
             yield return ("siren_red", PropBuilder.Siren(true));
             yield return ("chunk_provincial", SceneryProvinces.Provincial(2000, true));
             yield return ("chunk_beach", SceneryProvinces.Beach(3000, true));

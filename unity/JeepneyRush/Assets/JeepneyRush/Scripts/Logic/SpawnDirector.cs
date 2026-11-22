@@ -461,10 +461,25 @@ namespace JeepneyRush.Logic
             {
                 int l = (start + i) % _cfg.laneCount;
                 if (!LaneOccupancy.LaneClear(_intervals, l, t - 0.5f, t + 0.5f) || Reserved(l, distance - z, 3)) continue;
-                _sink.SpawnPowerUp(PowerUpState.RandomKind(_rng), l, z);
+                var kind = PowerUpState.RandomKind(_rng);
+                // no speed boost right before a PARA stop, gas station or intersection: you'd fly past it
+                if (kind == PowerUpKind.Turbo && TurboUnsafe(distance - z)) kind = l % 2 == 0 ? PowerUpKind.Magnet : PowerUpKind.DoubleCoins;
+                _sink.SpawnPowerUp(kind, l, z);
                 PowerUpsPlaced++;
                 return true;
             }
+            return false;
+        }
+
+        /// <summary>Distance a Turbo must stay away from any stop, gas station or intersection (it lasts several seconds at high speed).</summary>
+        public const float TurboClearance = 220f; // ~5 s of Turbo at top speed, plus room to brake
+
+        /// <summary>True if a reserved zone (PARA stop, gas station, intersection) starts within reach of a Turbo picked up at <paramref name="w"/>.</summary>
+        public bool TurboUnsafe(float w)
+        {
+            foreach (var r in _reservations) if (r.To > w - 10f && r.From < w + TurboClearance) return true;
+            foreach (var st in _pendingStops) if (st.At > w - 10f && st.At < w + TurboClearance) return true;
+            foreach (var x in _pendingCrossings) if (x.At > w - 10f && x.At < w + TurboClearance) return true;
             return false;
         }
 

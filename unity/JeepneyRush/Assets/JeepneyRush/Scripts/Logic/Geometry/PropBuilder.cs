@@ -107,17 +107,27 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("paint", "#222222", 0.08f, 0.3f, 0.12f, px - 0.38f, sh + 0.25f + 0.5f, z + 0.25f); // nozzle
                 b.CylinderZ("paint", "#222222", 0.025f, 0.6f, 6, px - 0.42f, sh + 0.25f + 0.35f, z + 0.25f);
             }
-            // ---- price sign before the station, facing the oncoming jeepney (-Z)
-            float sx2 = SceneryBuilder.SidewalkOuter - 0.6f, sz = -hz - 9f;
-            b.Box("paint", grey, 0.25f, 6.2f, 0.25f, sx2, 3.1f, sz);
-            b.Box("paint", teal, 2.2f, 2.8f, 0.3f, sx2, 6.6f, sz);
-            b.Box("glow", orange, 2.0f, 0.5f, 0.05f, sx2, 7.6f, sz - 0.17f);
-            for (int r = 0; r < 3; r++)
-            {
-                b.Box("paint", "#111111", 1.9f, 0.45f, 0.05f, sx2, 6.95f - r * 0.6f, sz - 0.17f);
-                for (int d = 0; d < 4; d++) b.Box("glow", r == 0 ? "#FF5A3C" : "#FFE066", 0.2f, 0.3f, 0.03f, sx2 + 0.2f + d * 0.24f, 6.95f - r * 0.6f, sz - 0.2f);
-                b.Box("glow", "#FFFFFF", 0.5f, 0.1f, 0.03f, sx2 - 0.55f, 6.95f - r * 0.6f, sz - 0.2f);
-            }
+            // ---- tall pylon sign before the station, facing the oncoming jeepney (-Z): name + LED prices,
+            //      self-lit so it reads from far away, day and night
+            float sx2 = SceneryBuilder.SidewalkOuter - 1.2f, sz = -hz - 10f;
+            const float pw = 3.4f, ph = 4.25f, py = 6.2f; // board size and bottom height
+            foreach (float e in new[] { -1.1f, 1.1f }) b.Box("paint", grey, 0.3f, py + 0.2f, 0.3f, sx2 + e, (py + 0.2f) / 2f, sz + 0.1f);
+            b.Box("paint", teal, pw + 0.4f, ph + 0.4f, 0.4f, sx2, py + ph / 2f, sz + 0.12f);
+            b.Quad("utex:gas_sign", new V3(sx2 - pw / 2, py, sz - 0.1f), new V3(sx2 + pw / 2, py, sz - 0.1f), new V3(sx2 + pw / 2, py + ph, sz - 0.1f), new V3(sx2 - pw / 2, py + ph, sz - 0.1f), new V3(0, 0, -1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            b.Box("glow", orange, pw + 0.45f, 0.18f, 0.45f, sx2, py + ph + 0.3f, sz + 0.12f);
+            // ---- lettering on the canopy fascia: front (facing the jeepney) and the road side
+            float fz = -(padLength + 2f) / 2f - 0.07f;
+            b.Quad("utex:gas_fascia", new V3(cx0, cy - 0.17f, fz), new V3(cx1, cy - 0.17f, fz), new V3(cx1, cy + 0.37f, fz), new V3(cx0, cy + 0.37f, fz), new V3(0, 0, -1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            float fx = cx0 - 0.07f, flen = Math.Min(padLength + 2f, 7f);
+            // seen from the road (looking +X): +Z is on the viewer's left
+            b.Quad("utex:gas_fascia", new V3(fx, cy - 0.17f, flen / 2), new V3(fx, cy + 0.37f, flen / 2), new V3(fx, cy + 0.37f, -flen / 2), new V3(fx, cy - 0.17f, -flen / 2), new V3(-1, 0, 0),
+                new V2(0, 0), new V2(0, 1), new V2(1, 1), new V2(1, 0));
+            // bright under the canopy at night
+            NightKit.Pool(b, laneX, 0.04f, -hz / 2, 4.2f);
+            NightKit.Pool(b, laneX, 0.04f, hz / 2, 4.2f);
+            NightKit.Pool(b, rw + 2f, sh + 0.03f, 0, 4.0f);
             // drum of a gas can on the corner – unmistakably a fuel stop
             b.Cylinder("paint", "#D62828", 0.3f, 0.3f, 0.8f, 12, cx1 - 1.2f, sh + 0.4f, hz - 0.6f);
             return b.Data;
@@ -245,6 +255,22 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Big orange marker that floats above the refuelling pad ("GAS" label + down arrow), seen from far away.</summary>
+        public static MeshData GasMarker()
+        {
+            var b = new MeshBuilder();
+            const string orange = "#FF8C1A";
+            b.Cylinder("glow", orange, 0f, 0.7f, 1.0f, 4, 0, 0, 0, new Rot((float)Math.PI, 0, 0));
+            b.Box("glow", orange, 0.45f, 0.8f, 0.45f, 0, 0.85f, 0);
+            float w = 2.4f, h = 1.2f, y = 1.6f;
+            // both sides of the label so it reads while it turns
+            b.Quad("utex:gas_label", new V3(-w / 2, y, -0.02f), new V3(w / 2, y, -0.02f), new V3(w / 2, y + h, -0.02f), new V3(-w / 2, y + h, -0.02f), new V3(0, 0, -1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            b.Quad("utex:gas_label", new V3(w / 2, y, 0.02f), new V3(-w / 2, y, 0.02f), new V3(-w / 2, y + h, 0.02f), new V3(w / 2, y + h, 0.02f), new V3(0, 0, 1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            return b.Data;
+        }
+
         /// <summary>Floating power-up pickup (rotates in game): glowing ring + an icon shape per kind.</summary>
         public static MeshData PowerUp(PowerUpKind k)
         {
@@ -314,10 +340,22 @@ namespace JeepneyRush.Logic.Geometry
         /// Origin on the ground; the enforcer faces +Z (toward the oncoming jeepney).
         /// Siren lights are separate meshes (<see cref="Siren"/>) so they can flash.
         /// </summary>
-        public static MeshData Enforcer()
+        public static MeshData Enforcer() => Enforcer(EnforcerKind.Mmda);
+
+        /// <summary>
+        /// Checkpoint officer by route: MMDA (blue + lime vest, white cap) in Metro Manila, police
+        /// (navy uniform, navy cap) on provincial roads, city traffic enforcer (orange) in Cebu/Baguio.
+        /// </summary>
+        public static MeshData Enforcer(EnforcerKind kind)
         {
             var b = new MeshBuilder();
-            const string blue = "#1F3FBF", pants = "#1B1F3B", vest = "#C6FF00", skin = "#A86B3C";
+            const string skin = "#A86B3C";
+            string blue = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#F77F00" : "#1F3FBF";
+            string pants = kind == EnforcerKind.CityTraffic ? "#2B2D42" : "#1B1F3B";
+            string vest = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#FFD60A" : "#C6FF00";
+            string cap = kind == EnforcerKind.Police ? "#1A2340" : "#FFFFFF";
+            string bikeBody = kind == EnforcerKind.Police ? "#F8F9FA" : kind == EnforcerKind.CityTraffic ? "#F8F9FA" : "#F8F9FA";
+            string signTex = Enforcers.SignTexture(kind);
             foreach (float s in new[] { -1f, 1f })
             {
                 b.Box("paint", pants, 0.16f, 0.78f, 0.17f, s * 0.11f, 0.39f, 0);
@@ -330,7 +368,8 @@ namespace JeepneyRush.Logic.Geometry
             b.Box("paint", blue, 0.12f, 0.5f, 0.13f, 0.33f, 1.5f, 0.05f, new Rot(0, 0, 0.35f));           // right arm raised
             b.Box("paint", skin, 0.1f, 0.12f, 0.1f, 0.42f, 1.78f, 0.05f);
             b.Sphere("paint", skin, 0.16f, 0, 1.55f, 0, 8);
-            b.Cylinder("paint", "#FFFFFF", 0.19f, 0.17f, 0.12f, 12, 0, 1.68f, 0);                         // cap
+            b.Cylinder("paint", cap, 0.19f, 0.17f, 0.12f, 12, 0, 1.68f, 0);                               // cap
+            if (kind == EnforcerKind.Police) b.Box("gold", "#FFC93C", 0.08f, 0.08f, 0.03f, 0, 1.7f, 0.18f);  // cap badge
             b.Cylinder("paint", blue, 0.195f, 0.195f, 0.04f, 12, 0, 1.64f, 0);
             b.Box("paint", "#111111", 0.3f, 0.03f, 0.18f, 0, 1.62f, 0.14f);                                // visor
             b.Cylinder("paint", "#FFFFFF", 0.015f, 0.015f, 0.35f, 5, 0.47f, 1.95f, 0.05f);                // paddle stick
@@ -340,21 +379,21 @@ namespace JeepneyRush.Logic.Geometry
             b.Push(new V3(-0.9f, 0, -1.4f), new Rot(0, 0.5f, 0));
             b.CylinderX("paint", "#16161A", 0.32f, 0.12f, 12, 0, 0.32f, 0.72f, true);
             b.CylinderX("paint", "#16161A", 0.32f, 0.14f, 12, 0, 0.32f, -0.72f, true);
-            b.Box("paint", "#F8F9FA", 0.4f, 0.4f, 1.2f, 0, 0.68f, 0);
+            b.Box("paint", bikeBody, 0.4f, 0.4f, 1.2f, 0, 0.68f, 0);
             b.Box("paint", blue, 0.42f, 0.12f, 1.22f, 0, 0.62f, 0);
             b.Box("paint", "#111111", 0.32f, 0.12f, 0.6f, 0, 0.94f, -0.25f);
             b.Box("chrome", "#E6EBF2", 0.7f, 0.04f, 0.04f, 0, 1.12f, 0.55f);
             b.Box("glass", "#A0C4FF", 0.4f, 0.3f, 0.04f, 0, 1.25f, 0.62f, new Rot(-0.3f, 0, 0));
             b.Box("paint", "#333333", 0.06f, 0.5f, 0.06f, 0, 1.25f, -0.55f);                                // siren mast
             b.Pop();
-            // A-frame "MMDA CHECKPOINT" sign facing the oncoming traffic (+Z)
+            // A-frame checkpoint sign facing the oncoming traffic (+Z)
             b.Push(new V3(0.9f, 0, 0.6f), Rot.None);
             b.Box("paint", "#444444", 0.05f, 1.2f, 0.05f, -0.55f, 0.6f, -0.1f, new Rot(0.15f, 0, 0));
             b.Box("paint", "#444444", 0.05f, 1.2f, 0.05f, 0.55f, 0.6f, -0.1f, new Rot(0.15f, 0, 0));
             b.Box("paint", "#222222", 1.24f, 0.66f, 0.04f, 0, 0.95f, 0, new Rot(0.15f, 0, 0));
             b.Push(new V3(0, 0.95f, 0.025f), new Rot(0.15f, 0, 0));
             // seen from the front (+Z looking -Z): -X is on the viewer's right
-            b.Quad("tex:mmda_sign", new V3(0.6f, -0.3f, 0), new V3(-0.6f, -0.3f, 0), new V3(-0.6f, 0.3f, 0), new V3(0.6f, 0.3f, 0), new V3(0, 0, 1),
+            b.Quad("tex:" + signTex, new V3(0.6f, -0.3f, 0), new V3(-0.6f, -0.3f, 0), new V3(-0.6f, 0.3f, 0), new V3(0.6f, 0.3f, 0), new V3(0, 0, 1),
                 new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
             b.Pop();
             b.Pop();
