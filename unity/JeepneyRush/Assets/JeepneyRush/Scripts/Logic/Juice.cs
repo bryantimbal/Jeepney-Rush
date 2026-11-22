@@ -78,6 +78,20 @@ namespace JeepneyRush.Logic
     }
 
     /// <summary>Lines spoken by passengers and enforcers (Filipino / Taglish flavour).</summary>
+    /// <summary>Stop barkers: who has one and how often they call.</summary>
+    public static class Barkers
+    {
+        /// <summary>Busy city stops nearly always have a barker; quiet mountain stops rarely.</summary>
+        public static float Chance(EnvironmentKind env) =>
+            env == EnvironmentKind.Mountain ? 0.3f : env == EnvironmentKind.Provincial || env == EnvironmentKind.Beach ? 0.5f : 0.8f;
+        /// <summary>Starts calling when the stop is this close ahead (m).</summary>
+        public const float CallRange = 55f;
+        public const float CallEvery = 2.4f;
+        public const int MaxCalls = 3;
+        /// <summary>Delay after boarding before the slap on the side and the send-off.</summary>
+        public const float SendOffDelay = 0.7f;
+    }
+
     public static class Lines
     {
         public static readonly string[] Bump = { "ARAY KO!", "DAHAN-DAHAN PO!", "KUYA, INGAT!", "ANO BA 'YAN?!", "NAKU PO!", "SAN KA NATUTONG MAGMANEHO?!" };
@@ -125,6 +139,33 @@ namespace JeepneyRush.Logic
         public static readonly string[] Panic = { "KUYA, LAMPAS NA AKO!", "SAAN MO KAMI DADALHIN?!", "PARA! PARA! PARA!", "BABABA NA KAMI!", "TULONG! AYAW HUMINTO!", "HINDI KA BA MARUNONG HUMINTO?!" };
         public static readonly string[] JumpOff = { "BABABA NA KAMI DITO!", "DI NA AKO MAGBABAYAD!", "BAHALA KA SA BUHAY MO!" };
         public static readonly string[] Police = { "PULL OVER! TABI!", "HOY! HUMINTO KA!", "LISENSYA MO, BOSS!" };
+
+        // ---- jeepney barkers ("barker" / "dispatcher") calling riders at the stops
+        public static readonly string[] BarkerFill = { "ISA NA LANG, LARGA NA!", "KASYA PA SA KANAN!", "DALAWA PA SA KALIWA!", "USOG-USOG PO, KASYA PA!", "SAKAY NA, ALIS NA!", "MAY BAKANTE PA, SAKAY NA!" };
+        public static readonly string[] BarkerThanks = { "SIGE, LARGA!", "O, ANDAR NA!", "SALAMAT, BOSS!", "PANG-KAPE LANG, BOSS!", "INGAT, PARE!" };
+        public static readonly string[] BarkerFull = { "PUNO NA 'YAN! SUSUNOD NA LANG!", "WALA NANG UPUAN, NEXT JEEP!", "PUNO NA, BOSS!" };
+        public static readonly string[] BarkerSkipped = { "HOY! MAY SASAKAY DITO!", "BOSS! BAKIT DI KA HUMINTO?!", "SAYANG! MAY PASAHERO DITO!" };
+
+        /// <summary>
+        /// What a barker shouts while the jeepney approaches: a destination further down this
+        /// route said twice ("CUBAO! CUBAO!"), or a hurry-up line about the seats left.
+        /// </summary>
+        public static string BarkerCall(EnvironmentKind env, string here, int seatsLeft, GameRandom rng)
+        {
+            if (seatsLeft <= 0) return Pick(BarkerFull, rng);
+            if (seatsLeft == 1 && rng.Chance(0.5)) return "ISA NA LANG! ISA NA LANG!";
+            if (rng.Chance(0.35)) return Pick(BarkerFill, rng);
+            var names = StopNames.ForEnvironment(env);
+            string dest = StopNames.All[names[rng.Int(0, names.Count - 1)]];
+            for (int i = 0; i < 4 && dest == here; i++) dest = StopNames.All[names[rng.Int(0, names.Count - 1)]];
+            switch (rng.Int(0, 3))
+            {
+                case 0: return $"{dest}! {dest}! SAKAY NA!";
+                case 1: return $"O, {dest}! {dest}!";
+                case 2: return $"{dest}, LARGA NA!";
+                default: return $"{dest}! MAY BAKANTE PA!";
+            }
+        }
 
         public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
     }

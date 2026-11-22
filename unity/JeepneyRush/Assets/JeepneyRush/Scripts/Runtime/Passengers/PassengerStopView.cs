@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using JeepneyRush.Logic;
+using JeepneyRush.Logic.Geometry;
 using UnityEngine;
 
 namespace JeepneyRush
@@ -17,6 +18,11 @@ namespace JeepneyRush
         public Transform Shed, Arrow, DropArrow, Zone;
         public GameObject Sign;
         public BoxCollider Trigger;
+        /// <summary>Barker calling riders at this stop (may be switched off for quiet stops).</summary>
+        public Transform Barker, BarkerArm;
+        public bool HasBarker;
+        public float BarkT, SendOffT;
+        public int BarkerCalls;
 
         public static GameObject Create(float zoneWidth, float zoneLength)
         {
@@ -36,6 +42,11 @@ namespace JeepneyRush
             rb.isKinematic = true;
             rb.useGravity = false;
             trig.AddComponent<StopZoneTrigger>().View = v;
+            int bv = Random.Range(0, PropBuilder.PersonVariants);
+            v.Barker = ModelLibrary.Instantiate(ModelLibrary.Get("barker" + bv, () => PropBuilder.Barker(bv)), "Barker", root.transform).transform;
+            v.BarkerArm = ModelLibrary.Instantiate(ModelLibrary.Get("barker_arm" + bv, () => PropBuilder.BarkerArm(bv)), "Arm", v.Barker, castShadows: false).transform;
+            var sh = PropBuilder.BarkerShoulder;
+            v.BarkerArm.localPosition = new Vector3(sh.X, sh.Y, sh.Z);
             return root;
         }
     }

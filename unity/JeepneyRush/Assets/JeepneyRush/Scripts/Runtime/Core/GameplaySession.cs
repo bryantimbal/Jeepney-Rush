@@ -254,6 +254,7 @@ namespace JeepneyRush
             _passengers.Init(_cfg, _player.Body);
             var route = new PassengerRoute(_cfg, _rng, StopNames.ForEnvironment(_env));
             route.AllowSabit(Sabit.ExtraFor(_env)); // provincial roads: riders may hang on the back
+            _passengers.Env = _env;
             _passengers.ResetRun(route);
             _powerUps.ResetRun(_cfg, Upgrades.PowerUpDurationScale(save.UpgradeLevel(UpgradeKind.PowerUpDuration)));
             RoadCurve.Shape = new RoadShape(seed, _env);

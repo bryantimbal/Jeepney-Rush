@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -205,6 +205,15 @@ namespace JeepneyRush.Logic.Audio
                         Synth.Tone(b, Synth.Wave.Sine, t0, 0.12f, 140, 70, 0.7f, 0.001f);
                     }
                     return Synth.Normalize(b, 0.7f);
+                case Sfx.Tapik:
+                    // the barker slaps the jeepney's side twice: "sige, larga!"
+                    b = Synth.Buffer(0.45f);
+                    foreach (float t0 in new[] { 0f, 0.17f })
+                    {
+                        Synth.Noise(b, t0, 0.07f, 1f, 2600, 700, 1.6f, lowpassOnly: true);
+                        Synth.Tone(b, Synth.Wave.Sine, t0, 0.1f, 230, 120, 0.55f, 0.001f);
+                    }
+                    return Synth.Normalize(b, 0.6f);
                 case Sfx.Wiper:
                     // rubber blade swishing across wet glass, with a soft thunk at the end of the stroke
                     b = Synth.Buffer(0.45f);

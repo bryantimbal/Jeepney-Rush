@@ -20,7 +20,9 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
-        public static void AddPerson(MeshBuilder b, int i, bool seated)
+        public static void AddPerson(MeshBuilder b, int i, bool seated) => AddPerson(b, i, seated, true);
+
+        public static void AddPerson(MeshBuilder b, int i, bool seated, bool rightArm)
         {
             string shirt = VehicleBuilder.Shirts[i % VehicleBuilder.Shirts.Length];
             string skin = Skins[i % Skins.Length];
@@ -36,11 +38,43 @@ namespace JeepneyRush.Logic.Geometry
             }
             b.Box("paint", shirt, 0.44f, 0.58f, 0.26f, 0, hip + 0.28f, 0);
             b.Box("paint", shirt, 0.11f, 0.5f, 0.12f, -0.29f, hip + 0.27f, 0);
-            b.Box("paint", skin, 0.11f, 0.5f, 0.12f, 0.29f, hip + 0.27f, 0, new Rot(0, 0, seated ? 0 : -2.6f)); // waving arm
+            if (rightArm) b.Box("paint", skin, 0.11f, 0.5f, 0.12f, 0.29f, hip + 0.27f, 0, new Rot(0, 0, seated ? 0 : -2.6f)); // waving arm
             b.Sphere("paint", skin, 0.16f, 0, hip + 0.72f, 0, 8);
             b.Sphere("paint", Hair[i % Hair.Length], 0.165f, 0, hip + 0.78f, -0.03f, 8, 1, 0.7f, 1);
             if (i % 3 == 0) b.Box("paint", "#5C4033", 0.36f, 0.3f, 0.14f, 0, hip + 0.33f, -0.2f); // backpack
-            if (i % 4 == 1) b.Cylinder("paint", "#F1C40F", 0.24f, 0.24f, 0.05f, 10, 0, hip + 0.93f, 0); // sun hat
+            if (i % 4 == 1 && rightArm) b.Cylinder("paint", "#F1C40F", 0.24f, 0.24f, 0.05f, 10, 0, hip + 0.93f, 0); // sun hat
+        }
+
+        /// <summary>Shoulder of the barker's calling arm (pivot of <see cref="BarkerArm"/>).</summary>
+        public static readonly V3 BarkerShoulder = new V3(0.29f, 1.27f, 0);
+
+        /// <summary>
+        /// Jeepney barker: towel over the shoulder, cap on backwards, a fan of peso bills in the
+        /// left hand. The calling arm is a separate mesh so it can wave.
+        /// </summary>
+        public static MeshData Barker(int i)
+        {
+            var b = new MeshBuilder();
+            AddPerson(b, i, false, false);
+            b.Box("paint", "#F4F1E8", 0.16f, 0.5f, 0.3f, -0.15f, 1.12f, 0);           // good-morning towel over the shoulder
+            b.Box("paint", "#F4F1E8", 0.14f, 0.36f, 0.04f, -0.15f, 1.0f, 0.15f);
+            b.Sphere("paint", "#C8102E", 0.17f, 0, 1.6f, 0.01f, 8, 1f, 0.55f, 1f);   // cap, worn backwards
+            b.Box("paint", "#C8102E", 0.2f, 0.03f, 0.16f, 0, 1.58f, -0.2f);
+            foreach (float k in new[] { -0.03f, 0.03f })
+                b.Box("paint", "#6DBE6D", 0.02f, 0.12f, 0.07f, -0.36f, 0.78f + k, 0.06f + k * 2f); // folded bills
+            return b.Data;
+        }
+
+        /// <summary>Barker's raised arm, pivot at the shoulder, pointing +Y.</summary>
+        public static MeshData BarkerArm(int i)
+        {
+            var b = new MeshBuilder();
+            string shirt = VehicleBuilder.Shirts[i % VehicleBuilder.Shirts.Length];
+            b.Box("paint", shirt, 0.13f, 0.2f, 0.14f, 0, 0.08f, 0);
+            b.Box("paint", Skins[i % Skins.Length], 0.1f, 0.42f, 0.11f, 0, 0.32f, 0);
+            b.Sphere("paint", Skins[i % Skins.Length], 0.07f, 0, 0.56f, 0, 6);
+            b.Cylinder("paint", "#F4F1E8", 0.035f, 0.035f, 0.38f, 6, 0, 0.66f, 0.04f); // rolled-up newspaper he waves
+            return b.Data;
         }
 
         public static MeshData Coin()

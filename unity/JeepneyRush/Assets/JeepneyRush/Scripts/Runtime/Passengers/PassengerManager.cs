@@ -38,6 +38,9 @@ namespace JeepneyRush
         public System.Action<PassengerStop> Skipped;
 
         public PassengerRoute Route => _route;
+        /// <summary>Current route's environment (barker lines name its stops).</summary>
+        public EnvironmentKind Env;
+        private readonly GameRandom _lineRng = new GameRandom(7);
         public IReadOnlyList<PassengerStopView> Stops => _stops;
 
         public void Init(BalanceConfig cfg, Transform playerBody)
@@ -220,6 +223,14 @@ namespace JeepneyRush
             v.Sign.transform.localRotation = Quaternion.Euler(0, 180, 0); // face the oncoming jeepney (-Z)
             v.Arrow.gameObject.SetActive(true);
             v.DropArrow.gameObject.SetActive(false);
+            // a barker at the curb before the stop, turned toward the oncoming jeepney
+            v.HasBarker = Random.value < Barkers.Chance(Env);
+            v.Barker.gameObject.SetActive(v.HasBarker);
+            v.Barker.localPosition = new Vector3(stop.Side * (SceneryBuilder.RoadHalfWidth + 0.45f), SceneryBuilder.SidewalkHeight, -5.5f);
+            v.Barker.localRotation = Quaternion.Euler(0, 180 + (stop.Side < 0 ? 55 : -55), 0);
+            v.BarkT = Random.Range(0f, 0.8f);
+            v.SendOffT = 0;
+            v.BarkerCalls = 0;
             for (int i = 0; i < stop.Waiting; i++)
             {
                 int variant = Random.Range(0, PropBuilder.PersonVariants);
@@ -266,6 +277,7 @@ namespace JeepneyRush
                     lp.y = SceneryBuilder.SidewalkHeight + (s.Done ? 0 : Mathf.Max(0, Mathf.Sin(_time * 6f + w)) * 0.12f); // hop & wave "Para!"
                     t.localPosition = lp;
                 }
+                TickBarker(s, dt, p.z);
                 if (!s.Done && StopRules.OutOfReach(p.z, _cfg)) // still reachable by reversing until then
                 {
                     s.Done = true;
@@ -276,6 +288,7 @@ namespace JeepneyRush
                     int lost = _route.Miss(s.Stop);
                     if (lost > 0) { Missed?.Invoke(lost, s.Stop); UpdateSeats(); }
                     if (business) Skipped?.Invoke(s.Stop);
+                    if (business && s.HasBarker && s.Stop.Waiting > 0) Shout(s, Lines.Pick(Lines.BarkerSkipped, _lineRng), true);
                 }
                 if (p.z < -40f)
                 {
@@ -315,6 +328,47 @@ namespace JeepneyRush
             }
         }
 
+        private void Shout(PassengerStopView s, string text, bool angry = false)
+        {
+            var head = s.Barker;
+            Services.UI?.Say(text, () => head != null ? head.position + Vector3.up * 2.1f : Vector3.zero, angry, 1.9f);
+        }
+
+        /// <summary>
+        /// The barker waves the jeepney in and shouts the route while it approaches, then slaps
+        /// its side and sends it off once the riders are aboard.
+        /// </summary>
+        private void TickBarker(PassengerStopView s, float dt, float z)
+        {
+            if (!s.HasBarker) return;
+            // calling arm: fast beckoning while the stop is open, lazy wave afterwards
+            // (the arm mesh points +Y; −25° raises it up and out to the road side, −165° hangs it down)
+            float cur = s.BarkerArm.localEulerAngles.z > 180 ? s.BarkerArm.localEulerAngles.z - 360 : s.BarkerArm.localEulerAngles.z;
+            float wave = s.Done && s.SendOffT <= 0 ? Mathf.Lerp(cur, -165f, dt * 2.5f)
+                                                   : -25f + Mathf.Sin(_time * 9f + z) * 25f;
+            s.BarkerArm.localRotation = Quaternion.Euler(s.Done ? 0 : Mathf.Sin(_time * 4.5f) * 20f, 0, wave);
+            var bp = s.Barker.localPosition;
+            bp.y = SceneryBuilder.SidewalkHeight + (s.Done ? 0 : Mathf.Max(0, Mathf.Sin(_time * 7f)) * 0.05f);
+            s.Barker.localPosition = bp;
+            if (s.SendOffT > 0)
+            {
+                s.SendOffT -= dt;
+                if (s.SendOffT <= 0)
+                {
+                    Services.Audio?.Play(Logic.Audio.Sfx.Tapik, 0.9f, Random.Range(0.95f, 1.08f));
+                    Shout(s, Lines.Pick(Lines.BarkerThanks, _lineRng));
+                }
+                return;
+            }
+            if (s.Done || s.BarkerCalls >= Barkers.MaxCalls || z <= 0f || z > Barkers.CallRange) return;
+            s.BarkT -= dt;
+            if (s.BarkT > 0) return;
+            s.BarkT = Barkers.CallEvery * Random.Range(0.85f, 1.25f);
+            s.BarkerCalls++;
+            int left = _route != null ? _route.Capacity - _route.Count + _route.AlightingAt(s.Stop.Id) : 1;
+            Shout(s, Lines.BarkerCall(Env, s.Stop.Name, left, _lineRng));
+        }
+
         /// <summary>The jeepney drove into the PARA zone.</summary>
         public PickupResult Serve(PassengerStopView s)
         {
@@ -323,6 +377,7 @@ namespace JeepneyRush
             s.Arrow.gameObject.SetActive(false);
             s.DropArrow.gameObject.SetActive(false);
             var r = _route.Serve(s.Stop);
+            if (s.HasBarker && r.Boarded > 0) s.SendOffT = Barkers.SendOffDelay + r.Boarded * 0.15f;
             for (int b = 0; b < r.Boarded && s.Waiting.Count > 0; b++)
             {
                 var t = s.Waiting[0];
