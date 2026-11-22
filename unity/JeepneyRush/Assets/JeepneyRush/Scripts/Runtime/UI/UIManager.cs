@@ -592,6 +592,15 @@ namespace JeepneyRush
             _clock.style.unityTextAlign = TextAnchor.MiddleLeft;
             _clock.style.marginTop = 2;
             scoreCol.Add(_clock);
+            _ratingRow = UiKit.Box();
+            _ratingRow.style.flexDirection = FlexDirection.Row;
+            _ratingRow.style.alignItems = Align.Center;
+            _ratingRow.style.marginTop = 2;
+            _ratingRow.Add(UiKit.Icon("ui_star", 34));
+            _ratingLabel = UiKit.Text("RATING 4.0", 30, new Color(0.6f, 1f, 0.6f), true, 2f);
+            _ratingLabel.style.marginLeft = 6;
+            _ratingRow.Add(_ratingLabel);
+            scoreCol.Add(_ratingRow);
             _jamLabel = UiKit.Text("", 28, new Color(1f, 0.55f, 0.45f), true, 2f);
             _jamLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
             _jamLabel.style.marginTop = 2;
@@ -913,7 +922,7 @@ namespace JeepneyRush
         }
 
         // ======================================================================= game over
-        private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge, _goDelivered;
+        private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge, _goDelivered, _goReason, _goRating;
         private VisualElement _goRewards;
 
         private void BuildGameOver()
@@ -926,8 +935,14 @@ namespace JeepneyRush
             _goBadge.style.alignSelf = Align.Center;
             _goBadge.style.rotate = new Rotate(-4);
             card.Add(_goBadge);
+            _goReason = UiKit.Text("", 40, UiKit.Red, true);
+            _goReason.style.marginBottom = 6;
+            card.Add(_goReason);
             _goScore = UiKit.Text("0", 150, UiKit.Blue, true, 4f);
             card.Add(_goScore);
+            _goRating = UiKit.Text("", 34, UiKit.Ink, false);
+            _goRating.style.marginBottom = 4;
+            card.Add(_goRating);
             var grid = UiKit.Box();
             grid.style.flexDirection = FlexDirection.Row;
             grid.style.flexWrap = Wrap.Wrap;
@@ -979,6 +994,13 @@ namespace JeepneyRush
             _goPax.text = r.Passengers.ToString();
             _goDelivered.text = r.Deliveries.ToString();
             _goBest.text = $"Best score {r.BestScore:N0} · best distance {Mathf.FloorToInt(r.BestDistance):N0} m";
+            var sess = Services.Game.Session;
+            string reason = sess != null ? sess.LastEndReason : null;
+            _goReason.text = reason ?? "";
+            Show(_goReason, !string.IsNullOrEmpty(reason));
+            string rating = sess != null ? sess.LastRating : null;
+            _goRating.text = string.IsNullOrEmpty(rating) ? "" : $"Driver rating: {rating} / 5";
+            Show(_goRating, !string.IsNullOrEmpty(rating));
             _goRewards.Clear();
             PrepareOnlineGameOver();
             PrepareDoubleCoins(r);

@@ -39,3 +39,19 @@ made-up shop brands. No real logos.
 135 .NET tests (new: routes/stops, tricycle bans, jam schedule and speed cap, day/night clock, commuter lines, palette
 headroom; the fairness bot now drives EDSA/Cebu/Baguio and slows in jams). Server catalog migration regenerated
 (7 routes); Supabase tests pass.
+
+## Driver rating, panic and police chase
+* **Rating ★1.0–5.0**, starts at ★4.0 every run (HUD under the clock, final value on Game Over).
+  +0.1 serving a stop · +0.05 smooth hump · +0.1 slow past a checkpoint · −0.4 skipped stop (someone waiting or
+  getting off) · −0.2 crash · −0.1 hump too fast with riders · −0.3 red light · −0.2 ticket · −0.2 rider walks off.
+  Fares/tips scale with it: ★5 +20 %, ★3.5 normal, ★2 −20 % (floor −30 %).
+* **Panic**: 3 skipped stops in a row → riders shout ("KUYA, LAMPAS NA AKO!", "PARA! PARA! PARA!"), bang on the roof
+  (sound + shake), and 1–2 jump off without paying at the next stop you serve, which also calms the rest down.
+* **Police chase** at ★1.0: patrol car with lights and siren starts 75 m behind and closes at 3.2 m/s (~23 s).
+  Come to a full stop for 1.5 s (pull over, or stop at a PARA) → warning, fine, rating back to ★2.0.
+  Keep driving → **BUSTED · HULI KA NG PULIS**, game over (no revive offer). Always police, on every route.
+
+## Fixes
+* EDSA billboards were wider than the sidewalk (half inside the buildings) and mall signs sat inside the mall wall:
+  roadside boards now fit between curb and building line; mall signs stand on the roof.
+* Speech bubbles stay fully on screen (clamped to the edges, long lines wrap).

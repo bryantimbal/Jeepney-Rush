@@ -63,6 +63,28 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Police patrol car: white sedan with a blue stripe and a light bar (lamps are separate so they can flash).</summary>
+        public static MeshData PoliceCar()
+        {
+            var m = Sedan("#F4F6F8");
+            var b = new MeshBuilder();
+            b.Box("paint", "#1D3FA0", 1.84f, 0.16f, 4.3f, 0, 0.72f, 0);          // side stripe
+            b.Box("paint", "#1D3FA0", 1.6f, 0.06f, 1.1f, 0, 1.47f, -0.35f);       // roof panel
+            b.Box("paint", "#222428", 1.3f, 0.12f, 0.36f, 0, 1.55f, -0.35f);      // light bar base
+            b.Box("paint", "#111111", 1.86f, 0.3f, 0.12f, 0, 0.55f, 2.3f);        // push bumper
+            MeshOps.Append(m, b.Data, V3.Zero);
+            return m;
+        }
+
+        /// <summary>One half of the police light bar (red left, blue right) – toggled to flash.</summary>
+        public static MeshData PoliceLamp(bool red)
+        {
+            var b = new MeshBuilder();
+            b.Box("glow", red ? "#FF2A2A" : "#2A6BFF", 0.55f, 0.16f, 0.3f, red ? -0.33f : 0.33f, 1.66f, -0.35f);
+            b.Sphere("bubble", red ? "#FF4040" : "#4080FF", 0.5f, red ? -0.33f : 0.33f, 1.66f, -0.35f, 8);
+            return b.Data;
+        }
+
         public static MeshData Suv(string color)
         {
             var b = new MeshBuilder();

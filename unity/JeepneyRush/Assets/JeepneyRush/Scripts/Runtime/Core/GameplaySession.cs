@@ -26,6 +26,17 @@ namespace JeepneyRush
         public string LastRunId { get; private set; }
         public int LastRunCoins { get; private set; }
         public float LastRunSeconds { get; private set; }
+        /// <summary>Why the last run ended (shown on Game Over), e.g. "BUSTED · HULI KA NG PULIS".</summary>
+        public string LastEndReason { get; private set; }
+        /// <summary>Driver rating at the end of the last run ("3.7").</summary>
+        public string LastRating { get; private set; }
+        /// <summary>The driver rating for the current run.</summary>
+        public DriverRating Rating => _rating;
+        private DriverRating _rating = new DriverRating();
+        private PoliceChaseManager _police;
+        private float _panicT;
+        private bool _wasPanicking;
+        private string _endReason;
         public bool CoinsDoubled { get; set; }
         private bool _revived;
         private int _seed;
@@ -149,6 +160,7 @@ namespace JeepneyRush
             _passengers = GetOrAdd<PassengerManager>(Child("PassengerManager"));
             _passengers.Init(_cfg, _player.Body);
             _passengers.Missed = OnMissed;
+            _passengers.Skipped = OnSkipped;
             _passengers.FarePaid = pos =>
             {
                 if (_dying) return;
@@ -158,6 +170,7 @@ namespace JeepneyRush
             _powerUps = GetOrAdd<PowerUpManager>(Child("PowerUpManager"));
             _powerUps.Init(_cfg, _player.transform);
             _enforcer = GetOrAdd<EnforcerManager>(Child("EnforcerManager"));
+            _police = GetOrAdd<PoliceChaseManager>(Child("PoliceChase"));
             _enforcer.Init(_env);
             _enforcer.Passed = OnEnforcerPassed;
             _spawner = new LevelSpawner(_traffic, _obstacles, _coins, _passengers, _powerUps);
@@ -244,6 +257,10 @@ namespace JeepneyRush
             _jamCap = 1f; _jam = _stuckT = _complainT = 0; _jamComplaints = 0; _inJam = false; _dayPhase = -1;
             Services.UI.SetJam("");
             _enforcer.ResetRun();
+            _rating = new DriverRating();
+            _police.ResetRun();
+            _panicT = 0; _wasPanicking = false; _endReason = null;
+            Services.UI.SetRating(_rating.Display, _rating.Value, false);
             _combo.Reset();
             _input.Sensitivity = save.swipeSensitivity;
             _player.ResetRun();
@@ -463,7 +480,9 @@ namespace JeepneyRush
             }
 
             // ---- world + power-up effects
-            _passengers.Route.FareMultiplier = pu.FareMultiplier;
+            _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier; // good drivers get better tips
+            if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
+            else _police.Tick(dt, _player.Lanes.X);
             _coins.MagnetRadius = pu.IsActive(PowerUpKind.Magnet) ? _cfg.magnetRadius : 0f;
             _coins.MagnetTarget = _player.transform.position;
             _road.Scroll(dz);
@@ -481,7 +500,9 @@ namespace JeepneyRush
             var next = _passengers.NextStop();
             float nextZ = next != null ? next.transform.localPosition.z - _cfg.stopZoneLength / 2f : -1f;
             if (!_dying) { PullCordBell(next, nextZ); TurboSafety(pu, next, nextZ); }
-            if (_enforcer.Active && _enforcer.Z > 0)
+            if (_police.Chase.Active)
+                Services.UI.SetEnforcerBanner(Mathf.Abs(_speed) <= _cfg.stopSpeed ? "TUMABI KA... HINTAY LANG" : $"PULIS! TUMABI AT HUMINTO! · {Mathf.CeilToInt(_police.Chase.Gap)} m");
+            else if (_enforcer.Active && _enforcer.Z > 0)
                 Services.UI.SetEnforcerBanner($"{_enforcer.CheckpointName} · BRAKE! {Mathf.CeilToInt(_enforcer.Z)} m");
             else if (LightBanner(out string light))
                 Services.UI.SetEnforcerBanner(light);
@@ -600,6 +621,7 @@ namespace JeepneyRush
                     _score.AddScore(HumpRules.SmoothBonusScore);
                     Services.UI.Float($"DAHAN-DAHAN! +{HumpRules.SmoothBonusScore}", UIManager.FloatKind.Good);
                     if (_passengers.Route.Count > 0 && _rng.Chance(0.5)) Services.UI.Say(Lines.Pick(Lines.Smooth, _rng), _passengers.RandomRiderHead);
+                    Rate(RatingEvent.Smooth);
                 }
                 return;
             }
@@ -611,6 +633,7 @@ namespace JeepneyRush
             Haptics.Pulse(30);
             _fx.Dust(pos + new Vector3(0, 0.1f, -1.5f));
             Services.UI.Float(isHump ? "HUMP! ARAY!" : "LUBAK! ARAY!", UIManager.FloatKind.Bad);
+            if (_passengers.Route.Count > 0) Rate(RatingEvent.HumpFast);
             var route = _passengers.Route;
             if (route.Count > 0)
             {
@@ -618,7 +641,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Complain);
                 if (_rng.Chance(0.3) && route.EjectAngry() > 0)
                 {
-                    _passengers.AngryHopOut();
+                    _passengers.AngryHopOut(); Rate(RatingEvent.AngryWalkOff);
                     Services.UI.Say(Lines.Pick(Lines.Leave, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
                     Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
                 }
@@ -711,7 +734,7 @@ namespace JeepneyRush
             Services.Audio.Play(Logic.Audio.Sfx.Complain, 0.8f);
             if (_jamComplaints > JamRules.PatienceComplaints && _rng.Chance(JamRules.WalkOffChance) && _passengers.Route.EjectAngry() > 0)
             {
-                _passengers.AngryHopOut();
+                _passengers.AngryHopOut(); Rate(RatingEvent.AngryWalkOff);
                 ui.Say(_rng.Chance(0.5) ? "MAGLALAKAD NA LANG AKO!" : "MAS MABILIS PA MAGLAKAD!", () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
                 ui.Float("-1 PASAHERO · NAINIP", UIManager.FloatKind.Bad);
             }
@@ -764,6 +787,7 @@ namespace JeepneyRush
             if (!c.TryDamage()) return;
             _hits++;
             _cleanDistance = 0;
+            Rate(RatingEvent.Crash);
             _player.OnCrash(sideSwipe);
             manager.Knock(h, _player.transform.position.x);
             _fx.Crash(hitPos);
@@ -785,7 +809,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Complain);
                 if (_rng.Chance(0.6) && route.EjectAngry() > 0)
                 {
-                    _passengers.AngryHopOut();
+                    _passengers.AngryHopOut(); Rate(RatingEvent.AngryWalkOff);
                     Services.UI.Say(Lines.Pick(Lines.Leave, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
                     Services.UI.Float("-1 PASAHERO", UIManager.FloatKind.Bad);
                 }
@@ -807,6 +831,7 @@ namespace JeepneyRush
                 _score.AddScore(EnforcerRules.PoliteBonusScore);
                 Services.UI.Say(Lines.Pick(Lines.Polite, _rng), () => _enforcer.HeadPosition);
                 Services.UI.Float($"MABAGAL! +{EnforcerRules.PoliteBonusScore}", UIManager.FloatKind.Good);
+                Rate(RatingEvent.PoliteCheckpoint);
             }
             else
             {
@@ -815,6 +840,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Whistle);
                 Services.UI.Say(Lines.Pick(Lines.Ticket, _rng), () => _enforcer.HeadPosition, true, 2.2f);
                 Services.UI.Float(fine > 0 ? $"TICKET! -{fine} COINS" : "WARNING!", UIManager.FloatKind.Bad);
+                Rate(RatingEvent.Ticket);
                 if (_passengers.Route.Count > 0) Services.UI.Say("KUYA NAMAN!", _passengers.RandomRiderHead, true);
             }
         }
@@ -893,6 +919,7 @@ namespace JeepneyRush
             Haptics.Pulse(40);
             _camera.AddShake(0.15f);
             Services.UI.Float(fine > 0 ? $"BEATING THE RED LIGHT! -{fine} COINS" : "BEATING THE RED LIGHT!", UIManager.FloatKind.Bad);
+            Rate(RatingEvent.RedLight);
             var head = v.transform;
             Services.UI.Say("PRRRT! PULA NA, BOSS!", () => head.position + new Vector3(SceneryBuilderRoadEdge(), 2.4f, -6.5f), true, 2.2f);
             if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, PULA NA!", _passengers.RandomRiderHead, true);
@@ -1059,7 +1086,21 @@ namespace JeepneyRush
         private PickupResult ServeStop(PassengerStopView stop)
         {
             if (_dying || stop.Done) return default;
+            // panicking riders don't wait for their stop: one or two jump off here without paying
+            if (_rating.Panicking && _passengers.Route.Count > 0)
+            {
+                int n = Mathf.Min(_passengers.Route.Count, _rng.Int(1, 2));
+                for (int i = 0; i < n; i++) if (_passengers.Route.EjectAngry() > 0) _passengers.AngryHopOut();
+                Services.UI.Say(Lines.Pick(Lines.JumpOff, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
+                Services.UI.Float($"-{n} PASAHERO · TUMALON!", UIManager.FloatKind.Bad);
+            }
             var r = _passengers.Serve(stop);
+            if (r.Alighted > 0 || r.Boarded > 0)
+            {
+                bool calmed = _rating.Panicking;
+                Rate(RatingEvent.Served);
+                if (calmed) Services.UI.Float("KUMALMA NA ANG MGA PASAHERO", UIManager.FloatKind.Good);
+            }
             _score.AddPickup(r);
             if (r.Alighted > 0)
             {
@@ -1077,6 +1118,83 @@ namespace JeepneyRush
             if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);
             GameEvents.RaisePassengers(r);
             return r;
+        }
+
+        /// <summary>Applies a rating event, updates the HUD and shows a small +/- float for big changes.</summary>
+        private void Rate(RatingEvent e)
+        {
+            float d = _rating.Apply(e);
+            Services.UI.SetRating(_rating.Display, _rating.Value, _rating.Panicking);
+            if (d <= -0.25f) Services.UI.Float($"RATING {d:0.0}", UIManager.FloatKind.Bad);
+        }
+
+        /// <summary>Drove past a stop where someone was waiting or wanted to get off.</summary>
+        private void OnSkipped(PassengerStop stop)
+        {
+            if (_dying) return;
+            Rate(RatingEvent.SkippedStop);
+            if (_rating.SkippedInARow == DriverRating.PanicAfterSkips - 1 && _passengers.Route.Count > 0)
+                Services.UI.Say("KUYA, HUMINTO KA NAMAN!", _passengers.RandomRiderHead, true);
+        }
+
+        /// <summary>3+ skipped stops in a row: riders panic, shout and bang on the roof until you serve a stop.</summary>
+        private void UpdatePanic(float dt)
+        {
+            bool panic = _rating.Panicking && _passengers.Route.Count > 0;
+            if (panic && !_wasPanicking)
+            {
+                Services.UI.Float("GALIT NA ANG MGA PASAHERO!", UIManager.FloatKind.Bad);
+                _panicT = 0.5f;
+            }
+            _wasPanicking = panic;
+            if (!panic) return;
+            _panicT -= dt;
+            if (_panicT > 0) return;
+            _panicT = Random.Range(2.4f, 3.6f);
+            Services.UI.Say(Lines.Pick(Lines.Panic, _rng), _passengers.RandomRiderHead, true);
+            Services.Audio.Play(Logic.Audio.Sfx.RoofBang, 0.9f);
+            _camera.AddShake(0.12f);
+            Haptics.Pulse(25);
+        }
+
+        /// <summary>Rating hit ★1.0: the police chase. Pull over (full stop) before they reach you, or you're busted.</summary>
+        private void UpdateChase(float dt)
+        {
+            var chase = _police.Chase;
+            if (!chase.Active && _rating.AtBottom)
+            {
+                _police.Begin(_player.Lanes.X);
+                Services.UI.Float("HINAHABOL KA NG PULIS!", UIManager.FloatKind.Big);
+                Services.UI.Float("TUMABI AT HUMINTO!", UIManager.FloatKind.Bad);
+                Haptics.Pulse(60);
+            }
+            if (chase.Active)
+            {
+                var outcome = chase.Tick(dt, Mathf.Abs(_speed) <= _cfg.stopSpeed);
+                if (outcome == PoliceChase.Outcome.PulledOver)
+                {
+                    int fine = EnforcerRules.Fine(_score.Coins);
+                    _score.SpendCoins(fine);
+                    _rating.Pardon();
+                    Services.UI.SetRating(_rating.Display, _rating.Value, false);
+                    _police.PullUp(3.5f);
+                    Services.Audio.Play(Logic.Audio.Sfx.Whistle);
+                    Services.UI.Say("SIGE, WARNING MUNA. AYUSIN MO!", () => _police.HeadPosition, true, 2.6f);
+                    Services.UI.Float(fine > 0 ? $"WARNING! -{fine} COINS" : "WARNING!", UIManager.FloatKind.Info);
+                }
+                else if (outcome == PoliceChase.Outcome.Busted)
+                {
+                    _police.PullUp(30f);
+                    Services.Audio.Play(Logic.Audio.Sfx.Whistle);
+                    Services.UI.Say("HULI KA!", () => _police.HeadPosition, true, 3f);
+                    Services.UI.Float("BUSTED! HULI KA!", UIManager.FloatKind.Big);
+                    Haptics.Pulse(80);
+                    _endReason = "BUSTED · HULI KA NG PULIS";
+                    BeginDeath(); // no revive offer for this one
+                }
+                else if (_rng.Chance(dt * 0.25f)) Services.UI.Say(Lines.Pick(Lines.Police, _rng), () => _police.HeadPosition, true, 1.8f);
+            }
+            _police.Tick(dt, _player.Lanes.X);
         }
 
         private void OnMissed(int lost, PassengerStop stop)
@@ -1150,6 +1268,8 @@ namespace JeepneyRush
             var rewards = Services.Save.RecordRun(summary);
             var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);
             LastRunId = report.run_id;
+            LastEndReason = _endReason;
+            LastRating = _rating.Display;
             LastRunCoins = summary.Coins;
             LastRunSeconds = _runTime;
             CoinsDoubled = false;

@@ -33,6 +33,8 @@ namespace JeepneyRush
         public System.Action<Vector3> FarePaid;
         /// <summary>Raised when riders miss their stop (count, stop).</summary>
         public System.Action<int, PassengerStop> Missed;
+        /// <summary>Drove past a stop where someone was waiting or wanted to get off.</summary>
+        public System.Action<PassengerStop> Skipped;
 
         public PassengerRoute Route => _route;
         public IReadOnlyList<PassengerStopView> Stops => _stops;
@@ -256,8 +258,11 @@ namespace JeepneyRush
                     s.Done = true;
                     s.Arrow.gameObject.SetActive(false);
                     s.DropArrow.gameObject.SetActive(false);
+                    // someone was waiting (and there was room) or wanted to get off here: a skipped stop
+                    bool business = (s.Stop.Waiting > 0 && _route.Count < _cfg.passengerCapacity) || _route.AlightingAt(s.Stop.Id) > 0;
                     int lost = _route.Miss(s.Stop);
                     if (lost > 0) { Missed?.Invoke(lost, s.Stop); UpdateSeats(); }
+                    if (business) Skipped?.Invoke(s.Stop);
                 }
                 if (p.z < -40f)
                 {

@@ -142,7 +142,8 @@ namespace JeepneyRush.Logic.Geometry
                     b.Box("glass", "#35526B", 0.15f, h * 0.55f, w - 3f, s * BL - 0.05f, SY + 2.2f + h * 0.27f, cz);
                     NightKit.WindowGrid(b, rng, s * BL - 0.1f, false, cz, w - 3f, SY + 2.4f, SY + 2.2f + h * 0.55f, 1.8f, 0.8f);
                     b.Box("paint", Palette.Shade(wall, 0.8f), d + 0.4f, 0.6f, w, cx, SY + h + 0.3f, cz);
-                    Billboard(b, rng, cx, cz - w / 2 + 0.6f, Math.Min(10f, w - 2), 3.2f, SY + h - 4.5f);
+                    // big lit sign standing on the roof at the front edge, facing the traffic (fully in the open)
+                    Billboard(b, rng, cx, cz - (w - 0.4f) / 2 + 1.2f, Math.Min(10f, d - 2f), 3.2f, SY + h + 0.7f);
                     zc += w;
                 }
                 else
@@ -152,7 +153,8 @@ namespace JeepneyRush.Logic.Geometry
                     zc += w;
                 }
             }
-            if (rng.Chance(0.7)) Billboard(b, rng, s * (R + 3.2f), rng.Range(-L / 2 + 4, L / 2 - 4), 7.5f, 3.2f, SY + 6.5f);
+            // roadside billboard: must fit on the sidewalk between the curb and the building line (3.4 m)
+            if (rng.Chance(0.7)) Billboard(b, rng, s * ((R + BL) / 2f), rng.Range(-L / 2 + 4, L / 2 - 4), BL - R - 0.5f, 1.25f, SY + 5.2f);
             if (station || rng.Chance(0.18))
             {
                 // pedestrian footbridge across EDSA
@@ -226,7 +228,7 @@ namespace JeepneyRush.Logic.Geometry
                     for (float az = z + 1f; az < z + w - 0.5f; az += 2.6f) b.Box("paint", Palette.Shade(wall, 0.85f), 0.35f, 3.2f, 0.35f, front - side * 1.7f, SY + 1.6f, az);
                     b.Box("paint", "#2F2A2A", 0.2f, 2.8f, w - 0.8f, front + side * 0.05f, SY + 1.4f, cz);
                     b.Box("nightglow", "#FFE4A3", 0.22f, 2.2f, w - 1.6f, front - side * 0.02f, SY + 1.3f, cz); // lit shop fronts
-                    if (rng.Chance(0.6)) Billboard(b, rng, front - side * 1.2f, cz - w / 2 + 0.8f, 2.6f, 0.9f, SY + rng.Range(4.2f, Math.Max(4.4f, h - 1.5f)));
+                    if (rng.Chance(0.6)) Billboard(b, rng, front - side * 1.5f, cz - w / 2 + 0.8f, 2.6f, 0.9f, SY + rng.Range(4.2f, Math.Max(4.4f, h - 1.5f)));
                     z += w;
                 }
                 // IT Park glass towers behind

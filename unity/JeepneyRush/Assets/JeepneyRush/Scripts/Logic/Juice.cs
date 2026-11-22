@@ -121,6 +121,11 @@ namespace JeepneyRush.Logic
         // Patok jeepney: the music is too loud to hear "PARA!", so riders pull the cord to ring the bell
         public static readonly string[] PullCord = { "*HILA* DING-DING!", "*HILA* BABABA PO!", "DING! DITO LANG PO!" };
 
+        // riders after 3 skipped stops in a row
+        public static readonly string[] Panic = { "KUYA, LAMPAS NA AKO!", "SAAN MO KAMI DADALHIN?!", "PARA! PARA! PARA!", "BABABA NA KAMI!", "TULONG! AYAW HUMINTO!", "HINDI KA BA MARUNONG HUMINTO?!" };
+        public static readonly string[] JumpOff = { "BABABA NA KAMI DITO!", "DI NA AKO MAGBABAYAD!", "BAHALA KA SA BUHAY MO!" };
+        public static readonly string[] Police = { "PULL OVER! TABI!", "HOY! HUMINTO KA!", "LISENSYA MO, BOSS!" };
+
         public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
     }
 }

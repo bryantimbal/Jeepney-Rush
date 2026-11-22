@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -181,6 +181,30 @@ namespace JeepneyRush.Logic.Audio
                     Synth.Noise(b, 0.02f, 0.75f, 0.9f, 5200, 3000, 0.7f, highpass: true);
                     Synth.Noise(b, 0, 0.12f, 0.6f, 1500, 900, 1.5f);
                     return Synth.Normalize(b, 0.5f);
+                case Sfx.Siren:
+                    // police wail: rising and falling square/saw tone (one cycle; replayed while chasing)
+                    b = Synth.Buffer(1.3f);
+                    {
+                        double p = 0;
+                        for (int i = 0; i < b.Length; i++)
+                        {
+                            float t = i / (float)Synth.Rate;
+                            double f = 720 + 520 * (0.5 - 0.5 * Math.Cos(t / 1.3 * 2 * Math.PI));
+                            p += f / Synth.Rate;
+                            float env = Math.Min(1f, t / 0.05f) * Math.Min(1f, (1.3f - t) / 0.05f);
+                            b[i] = (Synth.Osc(Synth.Wave.Square, p) * 0.35f + Synth.Osc(Synth.Wave.Saw, p * 2) * 0.15f) * env;
+                        }
+                    }
+                    return Synth.Normalize(b, 0.5f);
+                case Sfx.RoofBang:
+                    // panicking riders banging on the jeepney roof
+                    b = Synth.Buffer(0.6f);
+                    foreach (float t0 in new[] { 0f, 0.16f, 0.3f })
+                    {
+                        Synth.Noise(b, t0, 0.12f, 0.9f, 900, 300, 1.2f, lowpassOnly: true);
+                        Synth.Tone(b, Synth.Wave.Sine, t0, 0.12f, 140, 70, 0.7f, 0.001f);
+                    }
+                    return Synth.Normalize(b, 0.7f);
                 case Sfx.Sputter:
                     // engine coughing on the last drops of diesel
                     b = Synth.Buffer(0.9f);

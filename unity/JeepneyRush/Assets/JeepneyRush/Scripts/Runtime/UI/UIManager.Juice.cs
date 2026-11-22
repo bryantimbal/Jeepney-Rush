@@ -157,7 +157,8 @@ namespace JeepneyRush
             b.style.minWidth = 220;
             b.style.unityBackgroundImageTintColor = angry ? UiKit.Hex("#FFD6D6") : Color.white;
             var l = UiKit.Text(text, 38, angry ? UiKit.Red : UiKit.Ink, true);
-            l.style.whiteSpace = WhiteSpace.NoWrap;
+            l.style.whiteSpace = WhiteSpace.Normal; // long lines wrap instead of running off the screen
+            b.style.maxWidth = 760;
             b.Add(l);
             _fxLayer.Add(b);
             _bubbles.Add(b);
@@ -167,10 +168,18 @@ namespace JeepneyRush
                 var p = WorldToPanel(anchor());
                 if (p == null) { b.style.display = DisplayStyle.None; return; }
                 b.style.display = DisplayStyle.Flex;
-                float w = b.resolvedStyle.width;
-                if (float.IsNaN(w)) w = 300;
-                b.style.left = p.Value.x - 60 + jitter;
-                b.style.top = p.Value.y - 150 - k * 40f;
+                float w = b.resolvedStyle.width, h = b.resolvedStyle.height;
+                if (float.IsNaN(w) || w <= 0) w = 300;
+                if (float.IsNaN(h) || h <= 0) h = 130;
+                // keep the whole bubble on screen (the driver sits at the left edge of the view)
+                float pw = _fxLayer.resolvedStyle.width, ph = _fxLayer.resolvedStyle.height;
+                if (float.IsNaN(pw) || pw <= 0) pw = 1080;
+                if (float.IsNaN(ph) || ph <= 0) ph = 1920;
+                const float margin = 24f;
+                float x = Mathf.Clamp(p.Value.x - 60 + jitter, margin, Mathf.Max(margin, pw - w - margin));
+                float y = Mathf.Clamp(p.Value.y - 150 - k * 40f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
+                b.style.left = x;
+                b.style.top = y;
                 float pop = k < 0.1f ? Mathf.Lerp(0.3f, 1.1f, k / 0.1f) : k < 0.18f ? Mathf.Lerp(1.1f, 1f, (k - 0.1f) / 0.08f) : 1f;
                 b.style.scale = new Scale(new Vector3(pop, pop, 1));
                 b.style.opacity = k > 0.85f ? (1 - k) / 0.15f : 1f;
@@ -320,6 +329,17 @@ namespace JeepneyRush
         {
             if (_jamLabel == null) return;
             _jamLabel.text = text ?? "";
+        }
+
+        private Label _ratingLabel;
+        private VisualElement _ratingRow;
+
+        /// <summary>Driver rating on the HUD (★ icon + "4.0"): green when good, amber, red when the riders are angry.</summary>
+        public void SetRating(string display, float value, bool panic)
+        {
+            if (_ratingLabel == null) return;
+            _ratingLabel.text = $"RATING {display}";
+            _ratingLabel.style.color = panic || value < 2f ? new Color(1f, 0.45f, 0.4f) : value < 3.2f ? new Color(1f, 0.8f, 0.35f) : new Color(0.6f, 1f, 0.6f);
         }
 
         public void SetWeather(string text, Color color)
