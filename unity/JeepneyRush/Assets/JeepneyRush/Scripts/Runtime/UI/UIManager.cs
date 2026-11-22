@@ -732,7 +732,8 @@ namespace JeepneyRush
             var panel = UiKit.Box("stopPanel");
             panel.style.flexDirection = FlexDirection.Row;
             panel.style.alignSelf = Align.FlexStart;
-            panel.style.marginLeft = 30;
+            panel.style.marginTop = 12;
+            panel.style.maxWidth = 620;
             panel.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.8f);
             UiKit.Border(panel.style, 4, new Color(1, 1, 1, 0.2f), 30);
             UiKit.Pad(panel.style, 12, 22);
@@ -754,7 +755,7 @@ namespace JeepneyRush
             nameRow.style.flexDirection = FlexDirection.Row;
             nameRow.style.alignItems = Align.Center;
             _stopArrowL = UiKit.Icon("ui_arrow_left", 46);
-            _stopName = UiKit.Text("-", 46, Color.white);
+            _stopName = UiKit.Text("-", 40, Color.white);
             _stopName.style.marginLeft = _stopName.style.marginRight = 8;
             _stopArrowR = UiKit.Icon("ui_arrow_right", 46);
             nameRow.Add(_stopArrowL);
@@ -765,7 +766,10 @@ namespace JeepneyRush
             _stopMeta.style.unityTextAlign = TextAnchor.MiddleLeft;
             stopCol.Add(_stopMeta);
             panel.Add(stopCol);
-            _hud.Add(panel);
+            // sits in the left column right under the rating, level with the speedometer on the right
+            var leftCol = _ratingRow.parent;
+            leftCol.Insert(leftCol.IndexOf(_ratingRow) + 1, panel);
+            leftCol.style.flexShrink = 1;
 
             // active power-ups with draining timer bars
             _powerRow = UiKit.Box("powerups");

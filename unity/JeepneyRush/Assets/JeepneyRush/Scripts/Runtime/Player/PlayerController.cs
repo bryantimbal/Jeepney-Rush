@@ -165,13 +165,15 @@ namespace JeepneyRush
         private void UpdateCockpit(float dt)
         {
             if (!DriverView || _cockpit == null) return;
-            // steering wheel follows the lane change (left = counter-clockwise as the driver sees it)
-            float steer = Mathf.Clamp(Lanes.VelocityX * 12f, -110f, 110f);
+            // steering wheel follows the lane change. Seen from the driver's seat (looking +Z), a positive
+            // Z rotation turns counter-clockwise, so steering right (+X) needs a negative angle.
+            float steer = Mathf.Clamp(-Lanes.VelocityX * 12f, -110f, 110f);
             _wheelT.localRotation = Quaternion.Euler(0, 0, steer);
             // old gauges lag and shake a little
             _gaugeShown = Mathf.Lerp(_gaugeShown, _gaugeKmh, 1f - Mathf.Exp(-dt * 4f));
             float wobble = _gaugeShown > 2f ? Mathf.Sin(_time * 23f) * 0.9f + Mathf.Sin(_time * 7.3f) * 0.6f : 0f;
-            _needleT.localRotation = Quaternion.Euler(0, 0, Logic.Speedometer.NeedleAngle(_gaugeShown + wobble));
+            // NeedleAngle is clockwise-positive (as on the HUD); the 3D needle needs the opposite sign
+            _needleT.localRotation = Quaternion.Euler(0, 0, -Logic.Speedometer.NeedleAngle(_gaugeShown + wobble));
             // rosary swings with turns, braking and bumps
             float swayZ = Mathf.Clamp(Lanes.VelocityX * 3.5f, -25f, 25f) + Mathf.Sin(_time * 2.1f) * 3f;
             float swayX = Mathf.Clamp(_pitch * 4f + _bumpV * 20f, -30f, 30f);

@@ -321,7 +321,7 @@ namespace JeepneyRush
         private Button _viewBtn;
         private float _speedTarget, _speedShown;
 
-        private const float SpeedoSize = 210f;
+        private const float SpeedoSize = 175f;
 
         private VisualElement BuildSpeedometer()
         {

@@ -17,7 +17,7 @@ namespace JeepneyRush.Logic.Geometry
         public const float PitchDeg = 10f, MaxVerticalFov = 100f;
         public static readonly V3 GaugePos = new V3(-0.34f, 1.75f, 0.98f);   // pod on the dash, just right of the wheel (in view on tall phones)
         public const float GaugeTiltDeg = 18f;
-        public const float GaugeSize = 0.15f;
+        public const float GaugeSize = 0.12f;
         public static readonly V3 MirrorPos = new V3(-0.36f, 2.0f, 1.12f);
 
         public static MeshData Extras(JeepneyLivery L)
@@ -78,7 +78,7 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
-        /// <summary>The needle, pointing up; rotate around Z (positive = clockwise as the driver sees it).</summary>
+        /// <summary>The needle, pointing up; rotate around Z (positive = counter-clockwise as the driver sees it).</summary>
         public static MeshData GaugeNeedle()
         {
             var b = new MeshBuilder();
