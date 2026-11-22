@@ -41,6 +41,10 @@ namespace JeepneyRush
         private Transform _wheelT, _needleT, _rosaryT;
         private readonly System.Collections.Generic.List<(Renderer r, Material[] mats)> _glassSwap = new System.Collections.Generic.List<(Renderer, Material[])>();
         private float _gaugeKmh, _gaugeShown;
+        // rain on the windshield + wipers (driver view)
+        private Transform _wiperL, _wiperR;
+        private float _wet, _wipePhase, _dropsL, _dropsR, _dropSlide;
+        private bool _wipersOn;
         public bool DriverView { get; private set; }
         private CockpitLayout _layout;
         private int _mirrorRiders = -1;
@@ -138,12 +142,59 @@ namespace JeepneyRush
             gauge.localPosition = new Vector3(gp.X, gp.Y, gp.Z);
             gauge.localRotation = Quaternion.Euler(CockpitBuilder.GaugeTiltDeg, 0, 0);
             _needleT = ModelLibrary.Instantiate(ModelLibrary.Get("dash_needle", CockpitBuilder.GaugeNeedle), "Needle", gauge, castShadows: false).transform;
+            ModelLibrary.Instantiate(ModelLibrary.Get("windshield_drops_" + (_layout.Modern ? "modern" : "classic"), () => CockpitBuilder.WindshieldDrops(livery)), "WindshieldRain", _cockpit.transform, castShadows: false);
+            _wiperL = AddWiper(true);
+            _wiperR = AddWiper(false);
             var mp = _layout.MirrorPos;
             _rosaryT = ModelLibrary.Instantiate(ModelLibrary.Get("rosary", CockpitBuilder.Rosary), "Rosary", _cockpit.transform, castShadows: false).transform;
             _rosaryT.localPosition = new Vector3(mp.X - 0.05f, mp.Y - 0.035f, mp.Z - 0.01f);
             // remember the windshield materials so the glass can turn see-through from inside
             foreach (var r in _bodyModel.GetComponentsInChildren<Renderer>()) _glassSwap.Add((r, r.sharedMaterials));
             ApplyDriverView();
+        }
+
+        private Transform AddWiper(bool left)
+        {
+            var p = CockpitBuilder.WiperPivot(_layout, left);
+            var w = ModelLibrary.Instantiate(ModelLibrary.Get("wiper", CockpitBuilder.Wiper), left ? "WiperL" : "WiperR", _cockpit.transform, castShadows: false).transform;
+            w.localPosition = new Vector3(p.X, p.Y, p.Z);
+            return w;
+        }
+
+        /// <summary>Rain on the windshield (0 dry .. 1 typhoon): drops build up and the wipers run.</summary>
+        public void SetRain(float wetness) => _wet = Mathf.Clamp01(wetness);
+
+        private void UpdateRainAndWipers(float dt)
+        {
+            // drops gather on the glass (faster in a storm) and slowly creep down
+            float rate = _wet < 0.05f ? -0.6f : 0.25f + 1.1f * _wet;
+            _dropsL = Mathf.Clamp(_dropsL + rate * dt, 0f, 0.95f);
+            _dropsR = Mathf.Clamp(_dropsR + rate * dt * 0.93f, 0f, 0.95f);
+            // wipers: on in rain, faster in a typhoon, park at rest when it stops
+            _wipersOn = _wet > 0.08f || (_wipersOn && _wipePhase % 1f > 0.02f && _wipePhase % 1f < 0.98f);
+            float period = _wet > 0.7f ? 0.95f : 1.7f;
+            float before = _wipePhase % 1f;
+            if (_wipersOn) _wipePhase += dt / period;
+            else _wipePhase = 0f;
+            float k = _wipePhase % 1f;
+            float sweep = 0.5f - 0.5f * Mathf.Cos(k * Mathf.PI * 2f);      // 0 → 1 → 0 over one cycle
+            float angle = CockpitBuilder.WiperSweepDeg * sweep;
+            // seen from the driver's seat a positive Z rotation is counter-clockwise: up and over to the left
+            if (_wiperL != null) _wiperL.localRotation = Quaternion.Euler(0, 0, angle);
+            if (_wiperR != null) _wiperR.localRotation = Quaternion.Euler(0, 0, angle);
+            // the blades clear the glass as they pass the top of the stroke
+            if (_wipersOn && before < 0.5f && k >= 0.5f)
+            {
+                _dropsL = 0.05f; _dropsR = 0.08f;
+                if (DriverView && SignalSound && Services.Audio != null) Services.Audio.Play(Logic.Audio.Sfx.Wiper, 0.35f, Random.Range(0.95f, 1.05f));
+            }
+            _dropSlide += dt * (0.015f + 0.03f * _wet);
+            // unlit drops would glow at night: dim them with the darkness
+            float light = Mathf.Lerp(1f, 0.38f, MaterialLibrary.Night);
+            MaterialLibrary.SetTint("utexa:windshield_drops_a", new Color(light, light, light, _dropsL));
+            MaterialLibrary.SetTint("utexa:windshield_drops_b", new Color(light, light, light, _dropsR));
+            MaterialLibrary.SetOffset("utexa:windshield_drops_a", new Vector2(0, _dropSlide));
+            MaterialLibrary.SetOffset("utexa:windshield_drops_b", new Vector2(0.37f, _dropSlide * 1.13f));
         }
 
         /// <summary>Driver's-seat view on/off: cockpit visible, windshield see-through from inside.</summary>
@@ -183,6 +234,7 @@ namespace JeepneyRush
         private void UpdateCockpit(float dt)
         {
             if (!DriverView || _cockpit == null) return;
+            UpdateRainAndWipers(dt);
             // steering wheel follows the lane change. Seen from the driver's seat (looking +Z), a positive
             // Z rotation turns counter-clockwise, so steering right (+X) needs a negative angle.
             float steer = Mathf.Clamp(-Lanes.VelocityX * 12f, -110f, 110f);

@@ -644,6 +644,31 @@ const textures = await page.evaluate(() => {
     x.fillStyle = '#FCD116'; x.beginPath(); x.roundRect(2, 2, 508, 92, 16); x.fill(); x.strokeStyle = '#c8102e'; x.lineWidth = 6; x.stroke();
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#c8102e'; fit(x, 'GOD BLESS OUR TRIP', 0, 0, 470, 54, (z) => `${z}px ${D}`); x.fillText('GOD BLESS OUR TRIP', 256, 52);
     save('dash_sign', c);
+    // raindrops on the windshield (two variations so the left and right halves differ); transparent
+    for (const [name, seed] of [['windshield_drops_a', 7], ['windshield_drops_b', 19]]) {
+      [c, x] = cv(512, 512);
+      let r = seed; const rnd = () => { r = (r * 16807) % 2147483647; return r / 2147483647; };
+      const drop = (px, py, rad, stretch) => {
+        // refracted body (lighter top, darker bottom), dark rim, bright highlight
+        let g = x.createRadialGradient(px - rad * 0.3, py - rad * 0.35, rad * 0.1, px, py, rad);
+        g.addColorStop(0, 'rgba(235,245,255,0.55)'); g.addColorStop(0.6, 'rgba(170,195,220,0.32)'); g.addColorStop(1, 'rgba(40,55,75,0.45)');
+        x.fillStyle = g; x.beginPath(); x.ellipse(px, py, rad, rad * stretch, 0, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.ellipse(px - rad * 0.35, py - rad * 0.4 * stretch, rad * 0.22, rad * 0.16, -0.5, 0, Math.PI * 2); x.fill();
+      };
+      // trails left by sliding drops
+      for (let i = 0; i < 14; i++) {
+        const px = rnd() * 512, py0 = rnd() * 300, len = 60 + rnd() * 200, w = 1.5 + rnd() * 3;
+        const g = x.createLinearGradient(0, py0, 0, py0 + len); g.addColorStop(0, 'rgba(210,228,245,0)'); g.addColorStop(1, 'rgba(210,228,245,0.28)');
+        x.strokeStyle = g; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(px, py0); x.bezierCurveTo(px + (rnd() - 0.5) * 12, py0 + len * 0.4, px + (rnd() - 0.5) * 12, py0 + len * 0.7, px, py0 + len); x.stroke();
+        drop(px, py0 + len, w * 2.2, 1.25);
+      }
+      // scattered drops of many sizes (wrap around the edges so the texture can tile)
+      for (let i = 0; i < 260; i++) {
+        const rad = rnd() < 0.8 ? 1.5 + rnd() * 4 : 5 + rnd() * 8, px = rnd() * 512, py = rnd() * 512;
+        for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) if (px + ox > -20 && px + ox < 532 && py + oy > -20 && py + oy < 532) drop(px + ox, py + oy, rad, 1 + rnd() * 0.25);
+      }
+      save(name, c);
+    }
     [c, x] = cv(256, 128);
     x.fillStyle = '#FFFFFF'; x.strokeStyle = '#1b1033'; x.lineWidth = 8; x.beginPath(); x.roundRect(6, 6, 244, 96, 36); x.fill(); x.stroke();
     x.beginPath(); x.moveTo(60, 98); x.lineTo(48, 124); x.lineTo(92, 98); x.closePath(); x.fill(); x.stroke();

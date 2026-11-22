@@ -433,6 +433,7 @@ namespace JeepneyRush
             // ---- weather + road shape
             _weather.Tick(_score.Distance, dt);
             float wet = _weather.Wetness;
+            _player.SetRain(wet); // drops on the windshield + wipers (driver view)
             // unpaved mountain road: loose, slippery ground and constant small jolts
             float rough = Environments.Roughness(_env);
             _player.SetWetness(Mathf.Max(wet, 0.35f * rough));

@@ -177,6 +177,23 @@ namespace JeepneyRush
 
         public static float Night => _night;
 
+        /// <summary>Sets the tint (incl. alpha) of a cached material (windshield rain, fades).</summary>
+        public static void SetTint(string key, Color c)
+        {
+            var m = ForKey(key);
+            if (m != null) SetColor(m, c);
+        }
+
+        /// <summary>Makes a material's texture repeat and slides it (e.g. raindrops creeping down the glass).</summary>
+        public static void SetOffset(string key, Vector2 offset)
+        {
+            var m = ForKey(key);
+            if (m == null) return;
+            var t = m.mainTexture;
+            if (t != null && t.wrapMode != TextureWrapMode.Repeat) t.wrapMode = TextureWrapMode.Repeat;
+            m.mainTextureOffset = offset;
+        }
+
         /// <summary>Swaps the texture of a cached material (e.g. the rear-view mirror picture).</summary>
         public static void SetTexture(string key, string texture)
         {

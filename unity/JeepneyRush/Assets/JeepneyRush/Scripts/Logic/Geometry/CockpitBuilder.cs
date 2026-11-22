@@ -122,6 +122,44 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Wiper pivots at the bottom of the windshield (left = driver's side, right = passenger side).</summary>
+        public static V3 WiperPivot(CockpitLayout lay, bool left) =>
+            new V3(left ? -0.62f : 0.28f, JeepneyBuilder.BeltY + 0.04f, lay.Windshield + 0.03f); // outside the glass
+        public const float WiperLength = 0.56f;
+        /// <summary>Wiper sweep: 0° = parked flat along the bottom (pointing right), up to this angle.</summary>
+        public const float WiperSweepDeg = 112f;
+
+        /// <summary>
+        /// Raindrops on the inside view of the windshield: one quad per half (split screen), each with its
+        /// own drop texture so the halves differ. Material alpha is driven at runtime (rain, wipers).
+        /// </summary>
+        public static MeshData WindshieldDrops(JeepneyLivery L)
+        {
+            var b = new MeshBuilder();
+            var lay = Layout(L);
+            float z = lay.Windshield - 0.03f, y0 = JeepneyBuilder.BeltY + 0.02f, y1 = JeepneyBuilder.RoofY - 0.03f;
+            float tile = 0.55f; // metres per texture repeat
+            void Half(string key, float x0, float x1)
+            {
+                b.Quad(key, new V3(x0, y0, z), new V3(x1, y0, z), new V3(x1, y1, z), new V3(x0, y1, z), new V3(0, 0, -1),
+                    new V2(0, 0), new V2((x1 - x0) / tile, 0), new V2((x1 - x0) / tile, (y1 - y0) / tile), new V2(0, (y1 - y0) / tile));
+            }
+            Half("utexa:windshield_drops_a", -0.95f, -0.015f);
+            Half("utexa:windshield_drops_b", 0.015f, 0.95f);
+            return b.Data;
+        }
+
+        /// <summary>One wiper (arm + rubber blade) lying along +X from its pivot at the origin; rotate around Z to sweep.</summary>
+        public static MeshData Wiper()
+        {
+            var b = new MeshBuilder();
+            b.Cylinder("paint", "#1A1A1A", 0.022f, 0.022f, 0.02f, 10, 0, 0, 0, new Rot((float)(Math.PI / 2), 0, 0)); // pivot cap
+            b.Box("paint", "#222222", WiperLength * 0.78f, 0.014f, 0.012f, WiperLength * 0.39f, 0, -0.006f);       // arm
+            b.Box("paint", "#2E2E2E", WiperLength * 0.62f, 0.012f, 0.02f, WiperLength * 0.62f, 0.012f, -0.014f);  // blade holder
+            b.Box("paint", "#0E0E0E", WiperLength * 0.6f, 0.006f, 0.008f, WiperLength * 0.62f, 0.003f, -0.026f);  // rubber
+            return b.Data;
+        }
+
         /// <summary>Big thin steering wheel, axis along +Z, centred at the origin (rotate around Z to steer).</summary>
         public static MeshData SteeringWheel()
         {

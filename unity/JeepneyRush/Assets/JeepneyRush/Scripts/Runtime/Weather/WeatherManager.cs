@@ -13,7 +13,7 @@ namespace JeepneyRush
     public sealed class WeatherManager : MonoBehaviour
     {
         private WeatherSchedule _schedule;
-        private ParticleSystem _rain;
+        private ParticleSystem _rain, _splash;
         private Camera _cam;
         private RoadManager _road;
         private Light _sun;
@@ -101,6 +101,7 @@ namespace JeepneyRush
             MaterialLibrary.SetNight(0);
             _schedule = null;
             if (_rain != null) { var em = _rain.emission; em.rateOverTime = 0; _rain.Clear(); }
+            if (_splash != null) { var se = _splash.emission; se.rateOverTime = 0; _splash.Clear(); }
             Services.Audio?.SetRain(0);
             _road?.SetWetness(0);
         }
@@ -120,8 +121,9 @@ namespace JeepneyRush
             main.maxParticles = 2500;
             main.startLifetime = 0.9f;
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.045f);
-            main.startColor = new Color(0.78f, 0.85f, 0.95f, 0.55f);
+            // thin, varied streaks (some brighter, some barely visible) read much more like real rain
+            main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.03f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.78f, 0.85f, 0.95f, 0.18f), new Color(0.9f, 0.94f, 1f, 0.6f));
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             var shape = _rain.shape;
             shape.enabled = true;
@@ -138,12 +140,54 @@ namespace JeepneyRush
             em.rateOverTime = 0;
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Stretch;
-            r.velocityScale = 0.035f;
-            r.lengthScale = 1f;
+            r.velocityScale = 0.045f;
+            r.lengthScale = 1.4f;
             r.sharedMaterial = MaterialLibrary.Particle();
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
             _rain.Play();
+            BuildSplashes();
+        }
+
+        /// <summary>Little rings splashing up on the road and sidewalk around the jeepney while it rains.</summary>
+        private void BuildSplashes()
+        {
+            var go = new GameObject("RainSplashes");
+            go.transform.SetParent(transform, false);
+            go.transform.position = new Vector3(0, 0.06f, 14f);
+            _splash = go.AddComponent<ParticleSystem>();
+            _splash.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = _splash.main;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.maxParticles = 900;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.32f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.3f);
+            main.startColor = new Color(0.85f, 0.9f, 1f, 0.45f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var shape = _splash.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(20f, 0.01f, 44f);
+            var size = _splash.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.2f, 1, 1f)); // ring grows
+            var col = _splash.colorOverLifetime;
+            col.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                         new[] { new GradientAlphaKey(1f, 0), new GradientAlphaKey(0f, 1) });
+            col.color = grad;
+            var em = _splash.emission;
+            em.enabled = true;
+            em.rateOverTime = 0;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.HorizontalBillboard; // lying flat on the road
+            r.sharedMaterial = MaterialLibrary.Particle();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            _splash.Play();
         }
 
         public void Tick(float distance, float dt)
@@ -199,6 +243,7 @@ namespace JeepneyRush
             {
                 var em = _rain.emission;
                 em.rateOverTime = wet < 0.05f ? 0f : 300f + 2000f * wet;
+                if (_splash != null) { var se = _splash.emission; se.rateOverTime = wet < 0.05f ? 0f : 120f + 700f * wet; }
                 var vel = _rain.velocityOverLifetime;
                 float wind = Mathf.Clamp01((wet - 0.6f) / 0.4f);
                 vel.x = new ParticleSystem.MinMaxCurve(-9f * wind - 1f, -4f * wind);

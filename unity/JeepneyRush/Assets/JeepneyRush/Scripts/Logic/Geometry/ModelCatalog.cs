@@ -42,6 +42,9 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("cockpit_shell_cogeo", CockpitBuilder.Shell(JeepneyCatalog.Get("cogeo")));
             yield return ("cockpit_shell_modern", CockpitBuilder.Shell(JeepneyCatalog.Get("modern")));
             yield return ("steering_wheel", CockpitBuilder.SteeringWheel());
+            yield return ("windshield_drops_classic", CockpitBuilder.WindshieldDrops(JeepneyCatalog.Get("pilipinas")));
+            yield return ("windshield_drops_modern", CockpitBuilder.WindshieldDrops(JeepneyCatalog.Get("modern")));
+            yield return ("wiper", CockpitBuilder.Wiper());
             yield return ("dash_gauge", CockpitBuilder.GaugeFace());
             yield return ("dash_needle", CockpitBuilder.GaugeNeedle());
             yield return ("rosary", CockpitBuilder.Rosary());
