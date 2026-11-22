@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JeepneyRush.Logic
@@ -94,6 +95,21 @@ namespace JeepneyRush.Logic
         };
 
         public const int AtlasColumns = 4, AtlasRows = 23;
+
+        /// <summary>
+        /// Each stop has its own sign picture named after the stop ("stop_sadanga"), so a sign can
+        /// only ever show its own name – no atlas index that could drift out of sync.
+        /// </summary>
+        public static string SignTexture(int index)
+        {
+            index = Math.Max(0, Math.Min(All.Length - 1, index));
+            var n = All[index].ToLowerInvariant();
+            // the route goes in the name too: CUBAO and MONUMENTO exist on both Manila streets and EDSA (different sign colours)
+            string route = index <= ManilaTo ? "mnl" : index <= ProvincialTo ? "prov" : index <= BeachTo ? "beach" : index <= MountainTo ? "mtn" : index <= EdsaTo ? "edsa" : index <= CebuTo ? "cebu" : "bgo";
+            var sb = new System.Text.StringBuilder("stop_" + route + "_");
+            foreach (char ch in n) sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+            return sb.ToString().Replace("__", "_").TrimEnd('_');
+        }
         public const int ManilaFrom = 0, ManilaTo = 19, ProvincialFrom = 20, ProvincialTo = 31, BeachFrom = 32, BeachTo = 43, MountainFrom = 44, MountainTo = 55;
         public const int EdsaFrom = 56, EdsaTo = 67, CebuFrom = 68, CebuTo = 79, BaguioFrom = 80, BaguioTo = 91;
 

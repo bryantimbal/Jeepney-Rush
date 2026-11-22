@@ -229,10 +229,9 @@ namespace JeepneyRush.Logic.Geometry
             var b = new MeshBuilder();
             b.Cylinder("paint", "#888888", 0.06f, 0.06f, 3.3f, 6, 0, 1.65f, 0);
             b.Box("paint", "#222222", 2.1f, 1.08f, 0.06f, 0, 3.4f, -0.04f);
-            var (u0, v0, u1, v1) = AtlasCell(nameIndex, StopNames.AtlasColumns, StopNames.AtlasRows);
             // seen from the front (+Z looking toward -Z), -X is on the viewer's right
-            b.Quad("tex:stop_signs", new V3(1.0f, 2.9f, 0), new V3(-1.0f, 2.9f, 0), new V3(-1.0f, 3.9f, 0), new V3(1.0f, 3.9f, 0), new V3(0, 0, 1),
-                new V2(u0, v0), new V2(u1, v0), new V2(u1, v1), new V2(u0, v1));
+            b.Quad("tex:" + StopNames.SignTexture(nameIndex), new V3(1.0f, 2.9f, 0), new V3(-1.0f, 2.9f, 0), new V3(-1.0f, 3.9f, 0), new V3(1.0f, 3.9f, 0), new V3(0, 0, 1),
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
             return b.Data;
         }
 

@@ -221,6 +221,14 @@ const textures = await page.evaluate(() => {
       x.fillStyle = '#fff'; fit(x, n, 0, 0, CW - 30, 52, (z) => `${z}px ${D}`); x.fillText(n, ox + CW / 2, oy + CH * 0.65);
     });
     save('stop_signs', c);
+    // one sign per stop, named after the stop (must match StopNames.SignTexture)
+    names.forEach((n, i) => {
+      const [c1, x1] = cv(CW, CH);
+      x1.drawImage(c, (i % 4) * CW, Math.floor(i / 4) * CH, CW, CH, 0, 0, CW, CH);
+      const route = i < 20 ? 'mnl' : i < 32 ? 'prov' : i < 44 ? 'beach' : i < 56 ? 'mtn' : i < 68 ? 'edsa' : i < 80 ? 'cebu' : 'bgo';
+      const slug = ('stop_' + route + '_' + n.toLowerCase().replace(/[^a-z0-9]/g, '_')).replace(/__/g, '_').replace(/_+$/, '');
+      save(slug, c1);
+    });
   }
   // -------------------------------------------------- PARA zone road decal
   {
