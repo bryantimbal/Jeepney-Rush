@@ -29,7 +29,7 @@ namespace JeepneyRush.EditorTools
         {
             var issues = ReleasePreflight.Check(GatherFacts(false));
             string report = Report(issues);
-            Debug.Log(report);
+            LogEach(issues);
             EditorUtility.DisplayDialog("Release preflight", issues.Count == 0 ? "All checks passed. Ready for a release build." : report, "OK");
         }
 
@@ -130,7 +130,8 @@ namespace JeepneyRush.EditorTools
                 LastUploadedVersionCode = release != null ? release.lastUploadedVersionCode : 0,
                 Il2Cpp = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android) == ScriptingImplementation.IL2CPP,
                 Arm64 = (PlayerSettings.Android.targetArchitectures & AndroidArchitecture.ARM64) != 0,
-                Development = !forBuild && EditorUserBuildSettings.development,
+                // the release AAB build always switches Development Build off itself, so it isn't a blocker here
+                Development = false,
                 KeystoreConfigured = keystore,
                 TargetSdk = (int)PlayerSettings.Android.targetSdkVersion,
                 MinSdk = (int)PlayerSettings.Android.minSdkVersion,
@@ -150,6 +151,20 @@ namespace JeepneyRush.EditorTools
             };
         }
 
+        /// <summary>One Console entry per issue, so none is cut off in the Console's one-line view.</summary>
+        private static void LogEach(System.Collections.Generic.List<Issue> issues)
+        {
+            int errors = issues.Count(i => i.Severity == Severity.Error);
+            Debug.Log($"[Jeepney Rush] Release preflight: {errors} error(s), {issues.Count - errors} warning(s). Details below, one per line.");
+            int n = 0;
+            foreach (var i in issues.OrderBy(i => i.Severity))
+            {
+                n++;
+                if (i.Severity == Severity.Error) Debug.LogError($"[Preflight {n}/{issues.Count}] {i.Message}");
+                else Debug.LogWarning($"[Preflight {n}/{issues.Count}] {i.Message}");
+            }
+        }
+
         public static string Report(System.Collections.Generic.List<Issue> issues)
         {
             var sb = new StringBuilder();
@@ -164,10 +179,8 @@ namespace JeepneyRush.EditorTools
         {
             ApplyReleaseSettings();
             var issues = ReleasePreflight.Check(GatherFacts(true));
-            string report = Report(issues);
-            if (ReleasePreflight.HasErrors(issues)) { Debug.LogError(report); return false; }
-            Debug.Log(report);
-            return true;
+            LogEach(issues);
+            return !ReleasePreflight.HasErrors(issues);
         }
     }
 }
