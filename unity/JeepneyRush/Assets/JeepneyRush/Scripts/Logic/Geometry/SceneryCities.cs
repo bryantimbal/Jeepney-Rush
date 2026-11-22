@@ -180,6 +180,7 @@ namespace JeepneyRush.Logic.Geometry
                 Pedestrians(b, rng, s, R + 1.2f, R + 2.8f, 3);
             }
             NightKit.StreetLamp(b, s, R, rng.Range(-L / 2 + 6, L / 2 - 6), 7f, "#5C5F66");
+            if (rng.Chance(0.4)) VendorBuilder.Random(b, rng, EnvironmentKind.Edsa, s, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
             Pedestrians(b, rng, s, R + 1f, BL - 0.6f, 3);
             return b.Data;
         }
@@ -242,6 +243,7 @@ namespace JeepneyRush.Logic.Geometry
                     b.CylinderX("paint", "#18181C", 0.28f, 0.12f, 8, mx, SY + 0.28f, mz - 0.6f);
                     b.CylinderX("paint", "#18181C", 0.28f, 0.12f, 8, mx, SY + 0.28f, mz + 0.6f);
                 }
+                if (rng.Chance(0.5)) VendorBuilder.Random(b, rng, EnvironmentKind.Cebu, side, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
                 Pedestrians(b, rng, side, R + 0.9f, BL - 0.5f, 3);
                 if (side < 0 || !seaside) NightKit.StreetLamp(b, side, R, rng.Range(-L / 2 + 6, L / 2 - 6), 6f, "#3D5A80");
             }
@@ -319,6 +321,9 @@ namespace JeepneyRush.Logic.Geometry
                         b.Box("nightglow", "#FFE4A3", 0.22f, 2.0f, w - 1.2f, side * (R + 3.38f), SY + 1.2f, cz);
                         z += w;
                     }
+                    // Session Road vendors sit in front of the shops (R + 3.4 is the shop line)
+                    if (rng.Chance(0.55))
+                        VendorBuilder.Vendor(b, rng.Pick(VendorBuilder.KindsFor(EnvironmentKind.Baguio)), side * (R + 2.7f), SY, rng.Range(-L / 2 + 4, L / 2 - 4), side, rng.Int(0, 99), EnvironmentKind.Baguio);
                     Pedestrians(b, rng, side, R + 1.2f, R + 3f, 4);
                 }
                 // hillside terraces rising away from the road, with houses and pines

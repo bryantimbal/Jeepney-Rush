@@ -13,7 +13,7 @@ namespace JeepneyRush
     /// </summary>
     public sealed class LifeManager : MonoBehaviour
     {
-        private sealed class Walker { public Transform T, Umbrella; public float X, Z, Dir, Speed, Phase; public bool Umbrellas, Visible = true; public bool Animal; }
+        private sealed class Walker { public Transform T, Umbrella; public float X, ShownX, Z, Dir, Speed, Phase; public bool Umbrellas, Visible = true; public bool Animal; }
         private sealed class Bird { public Transform T, WingL, WingR; public Vector3 Offset; public float Phase, Rate; }
         private sealed class Flock { public Transform T; public Vector3 Vel; public readonly List<Bird> Birds = new List<Bird>(); }
 
@@ -24,6 +24,8 @@ namespace JeepneyRush
         private float _time;
         /// <summary>Walkers and animals – bent along the road curve by the RoadBender.</summary>
         public Transform GroundRoot => _ground;
+        /// <summary>Intersections, so walkers squeeze past the tricycle terminals along the curb.</summary>
+        public IntersectionManager Crossings;
 
         private static readonly string[] UmbrellaColors = { "#E63946", "#1D3557", "#2A9D8F", "#F4A261", "#8338EC", "#111111" };
 
@@ -93,13 +95,14 @@ namespace JeepneyRush
             float r = SceneryBuilder.RoadHalfWidth;
             bool city = _env == EnvironmentKind.Manila || _env == EnvironmentKind.Edsa || _env == EnvironmentKind.Cebu;
             if (_env == EnvironmentKind.Edsa && side < 0) side = 1f; // the left side of EDSA is the busway and the MRT
-            float far = city ? SceneryBuilder.SidewalkOuter - 0.6f : r + 2.6f;
+            // stay in front of the vendors at the building line
+            float far = city ? SceneryBuilder.SidewalkOuter - 1.6f : r + 1.8f;
             return side * Random.Range(r + (animal ? 0.7f : 0.9f), animal ? r + 1.8f : far);
         }
 
         private void Respawn(Walker w, float z)
         {
-            w.X = SidewalkX(w.Animal);
+            w.X = w.ShownX = SidewalkX(w.Animal);
             w.Z = z;
             w.Dir = Random.value < 0.5f ? 1f : -1f;
             w.Phase = Random.Range(0f, 10f);
@@ -141,6 +144,19 @@ namespace JeepneyRush
             f.T.localRotation = Quaternion.LookRotation(f.Vel.normalized);
         }
 
+        /// <summary>Is (x, z) next to a corner tricycle terminal (with a little run-up)?</summary>
+        private bool TerminalAt(float x, float z)
+        {
+            if (Crossings == null || !Environments.Tricycles(_env)) return false;
+            foreach (var v in Crossings.Items)
+            {
+                float lz = z - v.transform.localPosition.z;
+                foreach (var t in PropBuilder.TodaZones)
+                    if (t.Side * x > 0 && lz > t.Z0 - 2f && lz < t.Z0 + t.Length + 1.5f) return true;
+            }
+            return false;
+        }
+
         /// <param name="speed">Jeepney speed (m/s): the world slides back toward the jeepney.</param>
         public void Tick(float dt, float speed, float night, float wet)
         {
@@ -159,7 +175,9 @@ namespace JeepneyRush
                 if (!show) continue;
                 float step = _time * w.Speed * (w.Animal ? 7f : 5.5f) + w.Phase;
                 float bob = Mathf.Abs(Mathf.Sin(step)) * (w.Animal ? 0.03f : 0.05f);
-                w.T.localPosition = new Vector3(w.X, SceneryBuilder.SidewalkHeight + bob, w.Z);
+                float tx = TerminalAt(w.X, w.Z) ? Mathf.Sign(w.X) * VendorBuilder.CurbWalkX : w.X;
+                w.ShownX = Mathf.MoveTowards(w.ShownX, tx, 2.5f * dt);
+                w.T.localPosition = new Vector3(w.ShownX, SceneryBuilder.SidewalkHeight + bob, w.Z);
                 w.T.localRotation = Quaternion.Euler(0, w.Dir > 0 ? 0f : 180f, Mathf.Sin(step) * (w.Animal ? 4f : 2.5f));
                 if (w.Umbrella != null)
                 {

@@ -38,21 +38,22 @@ namespace JeepneyRush
     /// </summary>
     public sealed class IntersectionManager : MonoBehaviour
     {
-        private const string Pool = "intersection";
+        private string Pool = "intersection";
         private BalanceConfig _cfg;
         private readonly List<IntersectionView> _items = new List<IntersectionView>();
         private float _time;
         public IReadOnlyList<IntersectionView> Items => _items;
         public System.Action<IntersectionView> RanRed;
 
-        public void Init(BalanceConfig cfg)
+        public void Init(BalanceConfig cfg, EnvironmentKind env)
         {
             _cfg = cfg;
+            Pool = "intersection_" + env;
             if (Services.Pools.Has(Pool)) return;
             var colors = new[] { "#FF2A2A", "#FFC400", "#2BFF6A" };
             Services.Pools.Register(Pool, () =>
             {
-                var go = ModelLibrary.Instantiate(ModelLibrary.Get("intersection", PropBuilder.Intersection), "Intersection");
+                var go = ModelLibrary.Instantiate(ModelLibrary.Get(Pool, () => PropBuilder.Intersection(env)), "Intersection");
                 var v = go.AddComponent<IntersectionView>();
                 var lamps = PropBuilder.SignalLamps();
                 v.Lamps = new GameObject[lamps.Length];

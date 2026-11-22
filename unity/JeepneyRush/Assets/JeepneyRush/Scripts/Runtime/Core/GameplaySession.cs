@@ -189,6 +189,7 @@ namespace JeepneyRush
             // birds, walkers with umbrellas, dogs and chickens (visual only)
             _life = GetOrAdd<LifeManager>(Child("Life"));
             _life.Init(_env);
+            _life.Crossings = _crossings;
             _bender.AddRoot(_life.GroundRoot);
             foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _crossings.transform, _road.SegmentRoot })
                 _bender.AddRoot(root);
@@ -234,7 +235,7 @@ namespace JeepneyRush
             _stations.Clear();
             _stations.Init(_cfg);
             _crossings.Clear();
-            _crossings.Init(_cfg);
+            _crossings.Init(_cfg, _env);
             _coins.Clear();
             _traffic.Init(_cfg, _rng);
             _obstacles.Init(_cfg, _rng);

@@ -555,6 +555,18 @@ const textures = await page.evaluate(() => {
     x.fillStyle = '#FF8C1A'; x.beginPath(); x.roundRect(4, 4, 248, 120, 26); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 8; x.stroke();
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#FFFFFF'; fit(x, 'GAS', 0, 0, 200, 90, (z) => `${z}px ${D}`); x.fillText('GAS', 128, 70);
     save('gas_label', c);
+    // corner tricycle terminal sign (generic TODA, no real association name)
+    [c, x] = cv(512, 212);
+    x.fillStyle = '#1B263B'; x.fillRect(0, 0, 512, 212); x.fillStyle = '#FCD116'; x.fillRect(0, 0, 512, 16); x.fillRect(0, 196, 512, 16);
+    x.fillStyle = '#C8102E'; x.fillRect(0, 16, 512, 10); x.fillRect(0, 186, 512, 10);
+    // little tricycle icon
+    x.fillStyle = '#FFFFFF'; x.fillRect(40, 48, 84, 44); x.fillRect(32, 40, 100, 9); x.fillRect(120, 66, 44, 11);
+    x.beginPath(); x.arc(60, 104, 14, 0, Math.PI * 2); x.arc(150, 104, 14, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#1B263B'; x.beginPath(); x.arc(60, 104, 6, 0, Math.PI * 2); x.arc(150, 104, 6, 0, Math.PI * 2); x.fill();
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = '#FCD116'; fit(x, 'TODA', 0, 0, 300, 92, (z) => `${z}px ${D}`); x.fillText('TODA', 340, 80);
+    x.fillStyle = '#FFFFFF'; fit(x, 'PARADAHAN NG TRICYCLE', 0, 0, 440, 32, (z) => `900 ${z}px ${B}`); x.fillText('PARADAHAN NG TRICYCLE', 256, 160);
+    save('toda_sign', c);
     // patok jeepney: "pull the cord if you're getting off" (the music drowns out "PARA!")
     [c, x] = cv(512, 128);
     x.fillStyle = '#111114'; x.fillRect(0, 0, 512, 128); x.strokeStyle = '#FFC300'; x.lineWidth = 6; x.strokeRect(5, 5, 502, 118);

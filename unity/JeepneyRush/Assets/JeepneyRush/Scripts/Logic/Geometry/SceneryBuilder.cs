@@ -136,16 +136,9 @@ namespace JeepneyRush.Logic.Geometry
                     b.Sphere("paint", leaf, 1.6f, tx, sy + 3.8f, tz, 7, 1.1f, 0.8f, 1.1f);
                     b.Sphere("paint", leaf, 1.1f, tx + side * 0.6f, sy + 4.6f, tz + 0.5f, 6);
                 }
-                // ---- street vendor cart with umbrella
-                if (rng.Chance(0.45))
-                {
-                    float vz = rng.Range(-L / 2 + 5, L / 2 - 5), vx = side * (RoadHalfWidth + 1.4f);
-                    b.Box("paint", rng.Pick(new[] { "#E9C46A", "#2A9D8F", "#E76F51" }), 0.9f, 0.8f, 1.5f, vx, sy + 0.75f, vz);
-                    b.CylinderX("paint", "#222222", 0.25f, 0.1f, 8, vx + 0.5f, sy + 0.25f, vz);
-                    b.Cylinder("paint", "#333333", 0.03f, 0.03f, 1.6f, 5, vx, sy + 1.9f, vz);
-                    b.Cylinder("paint", rng.Pick(new[] { "#EF476F", "#FFD166", "#06D6A0", "#118AB2" }), 0.05f, 1.3f, 0.5f, 8, vx, sy + 2.75f, vz);
-                    b.Cylinder("chrome", "#C0C0C0", 0.3f, 0.3f, 0.3f, 8, vx, sy + 1.3f, vz - 0.3f);
-                }
+                // ---- street vendors: fishball, taho, sorbetes, balut, banana-cue, fruit
+                for (int vi = 0; vi < 2; vi++)
+                    if (rng.Chance(vi == 0 ? 0.6 : 0.3)) VendorBuilder.Random(b, rng, EnvironmentKind.Manila, side, sy, rng.Range(-L / 2 + 4, L / 2 - 4) * 0.5f + (vi - 0.5f) * L * 0.45f);
                 // ---- idle pedestrians
                 int nPeds = rng.Int(0, 3);
                 for (int i = 0; i < nPeds; i++)

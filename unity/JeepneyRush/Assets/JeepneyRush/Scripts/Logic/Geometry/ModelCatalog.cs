@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Geometry
@@ -29,6 +30,7 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("shed", PropBuilder.WaitingShed());
             yield return ("intersection", PropBuilder.Intersection());
             yield return ("gas_station", PropBuilder.GasStation(3.2f, 2.7f, 14f));
+            yield return ("vendor_row", VendorRow());
             yield return ("stop_sign", PropBuilder.StopSign(0));
             yield return ("chunk", SceneryBuilder.ManilaChunk(1000, true));
             yield return ("enforcer", PropBuilder.Enforcer());
@@ -69,5 +71,15 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("rocks", VehicleBuilder.Rocks(2));
             foreach (PowerUpKind k in System.Enum.GetValues(typeof(PowerUpKind))) yield return ("pu_" + k, PropBuilder.PowerUp(k));
         }
-    }
+    
+        /// <summary>Preview only: every vendor kind in a row on the right sidewalk.</summary>
+        private static MeshData VendorRow()
+        {
+            var b = new MeshBuilder();
+            int n = 0;
+            foreach (VendorKind k in Enum.GetValues(typeof(VendorKind)))
+                VendorBuilder.Vendor(b, k, VendorBuilder.VendorX, SceneryBuilder.SidewalkHeight, -n++ * 3.2f, 1f, n);
+            return b.Data;
+        }
+}
 }

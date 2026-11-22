@@ -154,9 +154,26 @@ namespace JeepneyRush.Logic.Geometry
         /// streets, zebra crossings, the stop line and two traffic-light poles. The lit lamps
         /// are separate objects switched at runtime; this mesh has the dark lenses.
         /// </summary>
-        public static MeshData Intersection()
+        /// <summary>Corner tricycle terminals (side, start z, length) in intersection-local space.</summary>
+        public static readonly (float Side, float Z0, float Length)[] TodaZones = { (1f, 9.5f, 9f), (-1f, -20f, 9f) };
+
+        public static MeshData Intersection() => Intersection(EnvironmentKind.Manila);
+
+        /// <summary>
+        /// Signalised crossing. On routes that allow tricycles the corners get a TODA terminal
+        /// with tricycles waiting for passengers; every route gets a street vendor on two corners.
+        /// </summary>
+        public static MeshData Intersection(EnvironmentKind env)
         {
             var b = new MeshBuilder();
+            if (Environments.Tricycles(env))
+                for (int i = 0; i < TodaZones.Length; i++)
+                    VendorBuilder.TodaTerminal(b, TodaZones[i].Side, TodaZones[i].Z0, TodaZones[i].Length, 11 + i * 7 + (int)env);
+            var kinds = VendorBuilder.KindsFor(env);
+            VendorBuilder.Vendor(b, kinds[0], VendorBuilder.VendorX, SceneryBuilder.SidewalkHeight, -13f, 1f, (int)env, env);
+            // on EDSA the left side is the busway and the MRT: no sidewalk to sell on
+            if (env != EnvironmentKind.Edsa)
+                VendorBuilder.Vendor(b, kinds[1 % kinds.Length], -VendorBuilder.VendorX, SceneryBuilder.SidewalkHeight, 13f, -1f, (int)env + 3, env);
             float rw = SceneryBuilder.RoadHalfWidth, so = SceneryBuilder.SidewalkOuter, sh = SceneryBuilder.SidewalkHeight;
             const float half = 5f;
             const string asphalt = "#3C3C42", white = "#F2F2F2";

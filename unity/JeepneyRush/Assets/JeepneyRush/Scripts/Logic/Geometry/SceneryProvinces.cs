@@ -144,6 +144,7 @@ namespace JeepneyRush.Logic.Geometry
                     b.Box("paint", "#9E9E9E", 7f, 0.05f, 10f, side * 14f, 0.15f, hz);
                     BasketballHoop(b, side * 14f, hz + 4.5f, side);
                 }
+                if (rng.Chance(0.35)) VendorBuilder.Random(b, rng, EnvironmentKind.Provincial, side, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
                 if (rng.Chance(0.35)) Carabao(b, side * rng.Range(18f, 30f), rng.Range(-15, 15), rng.Range(0, 6.28f));
                 // idle townsfolk
                 for (int i = 0; i < rng.Int(0, 2); i++)
@@ -237,6 +238,8 @@ namespace JeepneyRush.Logic.Geometry
             for (int i = 0; i < rng.Int(1, 3); i++) CoconutTree(b, rng, rng.Range(R + 1.2f, SceneryBuilder.SidewalkOuter - 0.5f), SY, rng.Range(-L / 2, L / 2), rng.Range(6f, 9f));
             for (int i = 0; i < 2; i++) b.Sphere("paint", rng.Pick(new[] { "#52B788", "#40916C", "#74C69D" }), rng.Range(9, 14), rng.Range(48, 70), 0, rng.Range(-L / 2, L / 2), 7, 1.4f, 0.7f, 1.2f);
             PowerPole(b, rng, 1f);
+            // buko / sorbetes / fishball sellers on the beach-side walk
+            if (rng.Chance(0.55)) VendorBuilder.Random(b, rng, EnvironmentKind.Beach, -1f, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
             for (int i = 0; i < rng.Int(0, 3); i++)
             {
                 b.Push(new V3(rng.Range(-SceneryBuilder.SidewalkOuter, SceneryBuilder.SidewalkOuter) > 0 ? rng.Range(R + 1f, 8.5f) : -rng.Range(R + 1f, 12f), SY, rng.Range(-L / 2, L / 2)), new Rot(0, rng.Range(0, 6.28f), 0));
@@ -347,6 +350,7 @@ namespace JeepneyRush.Logic.Geometry
                         foreach (float sz in new[] { -0.8f, 0.8f }) b.Box("paint", "#5B4331", 0.08f, 2.2f, 0.08f, vx - side * 1.2f, SY + 1.1f, hz + sz);
                     }
                     for (int i = 0; i < rng.Int(0, 2); i++) Boulder(b, rng, side * rng.Range(R + 1.8f, R + 4f), SY, rng.Range(-L / 2, L / 2), rng.Range(0.3f, 0.7f));
+                    if (rng.Chance(0.3)) VendorBuilder.Random(b, rng, EnvironmentKind.Mountain, side, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
                     // villagers
                     for (int i = 0; i < rng.Int(0, 2); i++)
                     {

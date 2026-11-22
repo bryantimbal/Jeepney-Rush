@@ -173,6 +173,13 @@ namespace JeepneyRush.Logic.Geometry
         public static MeshData Tricycle(string color, string shirt, string accent)
         {
             var b = new MeshBuilder();
+            AddTricycle(b, color, shirt, accent);
+            return b.Data;
+        }
+
+        /// <summary>Appends a tricycle (facing +Z, sidecar on +X) into the builder's current frame.</summary>
+        public static void AddTricycle(MeshBuilder b, string color, string shirt, string accent)
+        {
             b.Push(new V3(-0.35f, 0, 0), Rot.None);
             AddMotorcycle(b, color, shirt);
             b.Pop();
@@ -185,7 +192,6 @@ namespace JeepneyRush.Logic.Geometry
             b.Box("paint", accent, 0.97f, 0.12f, 1.72f, 0.5f, 1.25f, -0.05f);
             b.CylinderX("paint", Tire, 0.3f, 0.14f, 12, 0.85f, 0.3f, -0.2f, true);
             b.Box("glow", "#FF2121", 0.18f, 0.1f, 0.04f, 0.8f, 0.72f, -0.92f);
-            return b.Data;
         }
 
         /// <summary>Simplified palette-only jeepney for parked/background use.</summary>
