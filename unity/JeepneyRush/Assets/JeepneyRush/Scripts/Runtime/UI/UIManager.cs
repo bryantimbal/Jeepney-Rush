@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -102,7 +102,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -162,16 +162,105 @@ namespace JeepneyRush
             }).Every(16);
         }
 
+        // ------------------------------------------------------------------ developer splash (Ninja Tech)
+        private VisualElement _dev, _devLogo, _devFill;
+        private Label _devText;
+        private float _devTarget, _devShown, _devStart;
+        private static readonly Color DevNavy = new Color32(10, 24, 63, 255);
+
+        /// <summary>
+        /// Startup screen: the Ninja Tech logo (fades and settles in like the studio's intro video)
+        /// with a REAL loading bar that follows the game's actual loading progress.
+        /// </summary>
+        private void BuildDevSplash()
+        {
+            _dev = MakeScreen("devSplash", false);
+            _dev.style.backgroundColor = DevNavy;
+            _dev.style.alignItems = Align.Center;
+            _dev.style.justifyContent = Justify.Center;
+            _devLogo = UiKit.Icon("ninjatech_logo", 720);
+            _devLogo.style.height = 820;
+            _dev.Add(_devLogo);
+            var track = UiKit.Box();
+            track.style.width = 646;
+            track.style.height = 20;
+            track.style.marginTop = 190;
+            track.style.backgroundColor = (Color)new Color32(36, 49, 93, 255);
+            UiKit.Border(track.style, 0, Color.clear, 10);
+            track.style.overflow = Overflow.Hidden;
+            _devFill = UiKit.Box();
+            _devFill.style.height = Length.Percent(100);
+            _devFill.style.width = Length.Percent(0);
+            _devFill.style.backgroundColor = (Color)new Color32(205, 15, 36, 255);
+            UiKit.Border(_devFill.style, 0, Color.clear, 10);
+            track.Add(_devFill);
+            _dev.Add(track);
+            _devText = UiKit.Text("LOADING", 28, (Color)new Color32(205, 206, 238, 255), false);
+            _devText.style.letterSpacing = 8;
+            _devText.style.marginTop = 46;
+            _dev.Add(_devText);
+            // Philippine flag stripe along the bottom (blue · yellow · red)
+            var stripe = UiKit.Box();
+            stripe.style.position = Position.Absolute;
+            stripe.style.left = stripe.style.right = stripe.style.bottom = 0;
+            stripe.style.height = 36;
+            stripe.style.flexDirection = FlexDirection.Row;
+            foreach (var (c, w) in new[] { (new Color32(10, 58, 167, 255), 47f), (new Color32(253, 208, 30, 255), 6f), (new Color32(205, 15, 36, 255), 47f) })
+            {
+                var seg = UiKit.Box();
+                seg.style.width = Length.Percent(w);
+                seg.style.backgroundColor = (Color)c;
+                stripe.Add(seg);
+            }
+            _dev.Add(stripe);
+            // logo intro + a bar that glides toward the real progress (never jumps, never fakes it)
+            _dev.schedule.Execute(() =>
+            {
+                if (_dev.style.display == DisplayStyle.None) return;
+                float t = Time.realtimeSinceStartup - _devStart;
+                float k = Mathf.Clamp01(t / 0.7f);
+                float ease = 1f - Mathf.Pow(1f - k, 3f);
+                _devLogo.style.opacity = ease;
+                _devLogo.style.scale = new Scale(new Vector3(0.86f + 0.14f * ease, 0.86f + 0.14f * ease, 1));
+                _devShown = Mathf.MoveTowards(_devShown, _devTarget, Mathf.Max(0.004f, (_devTarget - _devShown) * 0.12f));
+                _devFill.style.width = Length.Percent(_devShown * 100f);
+                _devText.text = $"LOADING  {Mathf.RoundToInt(_devShown * 100f)}%";
+            }).Every(16);
+        }
+
         public void ShowSplash()
         {
             HideAll();
-            Show(_splash, true);
+            _devTarget = _devShown = 0;
+            _devStart = Time.realtimeSinceStartup;
+            Show(_dev, true);
         }
+
+        /// <summary>Fades the developer splash out (unscaled time), then hides it.</summary>
+        public System.Collections.IEnumerator FadeOutSplash(float seconds = 0.35f)
+        {
+            if (_dev == null || _dev.style.display == DisplayStyle.None) yield break;
+            float t = 0;
+            while (t < seconds)
+            {
+                t += Time.unscaledDeltaTime;
+                _dev.style.opacity = 1f - Mathf.Clamp01(t / seconds);
+                yield return null;
+            }
+            Show(_dev, false);
+            _dev.style.opacity = 1f;
+        }
+
+        /// <summary>Seconds the developer splash has been on screen.</summary>
+        public float SplashSeconds => Time.realtimeSinceStartup - _devStart;
+        /// <summary>True once the on-screen bar has caught up with 100 %.</summary>
+        public bool SplashBarFull => _devShown >= 0.995f;
 
         public void SetSplashProgress(float p, string text)
         {
-            _splashBar.style.width = Length.Percent(Mathf.Clamp01(p) * 100f);
-            _splashText.text = text;
+            _devTarget = Mathf.Max(_devTarget, Mathf.Clamp01(p)); // a loading bar only ever moves forward
+            if (_splashBar != null) _splashBar.style.width = Length.Percent(Mathf.Clamp01(p) * 100f);
+            if (_splashText != null) _splashText.text = text;
         }
 
         private void BuildLoading()

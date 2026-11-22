@@ -103,6 +103,10 @@ namespace JeepneyRush
             bool done = false;
             Services.Scenes.Load(SceneLoader.MainMenuScene, p => ui.SetSplashProgress(0.85f + p * 0.15f, "Opening the terminal…"), () => done = true);
             while (!done && Services.Scenes.IsLoading) yield return null;
+            ui.SetSplashProgress(1f, "Ready!");
+            // keep the studio logo up long enough to be seen, and let the bar visibly reach 100 %
+            while ((ui.SplashSeconds < 2.4f || !ui.SplashBarFull) && ui.SplashSeconds < 8f) yield return null;
+            yield return ui.FadeOutSplash();
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene) Services.Game.SetState(GameState.MainMenu);
             // Phase 3: sign in (guest or saved account) in the background – the game never waits for it
             // Phase 3/4: sign-in, ads and store start after the splash (never block the menu).

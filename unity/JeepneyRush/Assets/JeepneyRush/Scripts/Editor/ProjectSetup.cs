@@ -64,6 +64,14 @@ namespace JeepneyRush.EditorTools
             if (string.IsNullOrEmpty(PlayerSettings.bundleVersion) || PlayerSettings.bundleVersion == "0.1") PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.allowedAutorotateToPortrait = true;
+            // the game shows its own Ninja Tech startup screen: match its navy so the hand-over is seamless
+            try
+            {
+                PlayerSettings.SplashScreen.backgroundColor = new Color32(10, 24, 63, 255);
+                PlayerSettings.SplashScreen.showUnityLogo = false; // allowed on Unity 6 (all plans); ignored where not
+                PlayerSettings.SplashScreen.show = false;
+            }
+            catch (Exception e) { Debug.Log("[Jeepney Rush] Unity splash settings left as they are: " + e.Message); }
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
             PlayerSettings.allowedAutorotateToLandscapeRight = false;
@@ -148,7 +156,7 @@ namespace JeepneyRush.EditorTools
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter imp)) continue;
                 string name = Path.GetFileNameWithoutExtension(path);
-                bool ui = name.StartsWith("ui_") || name == "logo";
+                bool ui = name.StartsWith("ui_") || name == "logo" || name == "ninjatech_logo";
                 imp.textureType = TextureImporterType.Default;
                 imp.sRGBTexture = true;
                 imp.alphaIsTransparency = true;
