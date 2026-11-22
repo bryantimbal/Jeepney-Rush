@@ -61,7 +61,7 @@ namespace JeepneyRush.Tests
             {
                 var m = CockpitBuilder.Extras(l);
                 Assert.IsTrue(m.SubmeshKeys.Contains("utex:dash_sign"), l.Id);
-                Assert.IsTrue(m.SubmeshKeys.Contains("utex:mirror_pax"), l.Id);
+                Assert.IsTrue(m.SubmeshKeys.Contains("utex:mirror_view_0"), l.Id);
                 Assert.AreEqual(l.SoundSystem, m.SubmeshKeys.Contains("glow"), $"{l.Id}: Patok LED strip");
             }
             Assert.Greater(CockpitBuilder.SteeringWheel().TriangleCount, 50);

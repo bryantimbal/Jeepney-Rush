@@ -177,6 +177,13 @@ namespace JeepneyRush
 
         public static float Night => _night;
 
+        /// <summary>Swaps the texture of a cached material (e.g. the rear-view mirror picture).</summary>
+        public static void SetTexture(string key, string texture)
+        {
+            var m = ForKey(key);
+            if (m != null) SetTex(m, LoadTexture(texture));
+        }
+
         private static void SetAlpha(string key, Color c)
         {
             if (Cache.TryGetValue(key, out var m) && m != null) SetColor(m, c);

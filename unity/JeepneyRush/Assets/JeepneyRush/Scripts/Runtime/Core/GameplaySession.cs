@@ -546,6 +546,7 @@ namespace JeepneyRush
             // speedometer: HUD gauge (behind view) and the dashboard gauge (driver view)
             float kmh = Logic.Speedometer.Kmh(_speed);
             _player.SetGauge(kmh);
+            _player.SetMirrorRiders(Mathf.Min(_passengers.Route.Count, _passengers.Route.SeatCapacity));
             Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
             if (!_dying)
@@ -1146,6 +1147,7 @@ namespace JeepneyRush
             _player.SetDriverView(driver);
             _camera.DriverView = driver;
             _camera.DriverAnchor = _player.Body;
+            _camera.DriverEye = _player.DriverEye;
             _passengers.SetDriverVisible(!driver);
             Services.UI.SetViewMode(driver);
             if (!driver) _camera.Snap(_player.transform.position);

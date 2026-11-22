@@ -37,6 +37,10 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("gas_marker", PropBuilder.GasMarker());
             yield return ("cockpit_pilipinas", CockpitBuilder.Extras(JeepneyCatalog.Get("pilipinas")));
             yield return ("cockpit_cogeo", CockpitBuilder.Extras(JeepneyCatalog.Get("cogeo")));
+            yield return ("cockpit_modern", CockpitBuilder.Extras(JeepneyCatalog.Get("modern")));
+            yield return ("cockpit_shell_pilipinas", CockpitBuilder.Shell(JeepneyCatalog.Get("pilipinas")));
+            yield return ("cockpit_shell_cogeo", CockpitBuilder.Shell(JeepneyCatalog.Get("cogeo")));
+            yield return ("cockpit_shell_modern", CockpitBuilder.Shell(JeepneyCatalog.Get("modern")));
             yield return ("steering_wheel", CockpitBuilder.SteeringWheel());
             yield return ("dash_gauge", CockpitBuilder.GaugeFace());
             yield return ("dash_needle", CockpitBuilder.GaugeNeedle());

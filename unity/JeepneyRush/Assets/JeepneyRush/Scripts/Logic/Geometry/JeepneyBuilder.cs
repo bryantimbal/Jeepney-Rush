@@ -267,7 +267,7 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
-        private static void Horse(MeshBuilder b, float x, float y, float z, float s, string chrome)
+        internal static void Horse(MeshBuilder b, float x, float y, float z, float s, string chrome)
         {
             b.Push(new V3(x, y, z), Rot.None, s);
             b.Box("chrome", chrome, 0.16f, 0.03f, 0.3f, 0, 0.015f, 0);        // plinth

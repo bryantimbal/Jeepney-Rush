@@ -42,6 +42,10 @@ namespace JeepneyRush
         private readonly System.Collections.Generic.List<(Renderer r, Material[] mats)> _glassSwap = new System.Collections.Generic.List<(Renderer, Material[])>();
         private float _gaugeKmh, _gaugeShown;
         public bool DriverView { get; private set; }
+        private CockpitLayout _layout;
+        private int _mirrorRiders = -1;
+        /// <summary>The driver's eye for this jeepney (body coordinates) – the camera sits here in driver view.</summary>
+        public Vector3 DriverEye => new Vector3(_layout.Eye.X, _layout.Eye.Y, _layout.Eye.Z);
         private Light _headlight;
 
         public bool Braking => _brakeT > 0 || BrakeHeld;
@@ -118,19 +122,23 @@ namespace JeepneyRush
             if (_cockpit != null) Destroy(_cockpit);
             _glassSwap.Clear();
             var livery = JeepneyCatalog.Get(_livery);
+            _layout = CockpitBuilder.Layout(livery);
+            _mirrorRiders = -1;
             _cockpit = ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_" + _livery, () => CockpitBuilder.Extras(livery)), "Cockpit", Body, castShadows: false);
+            // the clean open cab (hood, thin pillars, low dash) replaces the full body in this view
+            ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_shell_" + _livery, () => CockpitBuilder.Shell(livery)), "CabShell", _cockpit.transform, castShadows: false);
             var wheelPivot = new GameObject("WheelPivot").transform;
             wheelPivot.SetParent(_cockpit.transform, false);
-            var wp = CockpitBuilder.WheelPos;
+            var wp = _layout.WheelPos;
             wheelPivot.localPosition = new Vector3(wp.X, wp.Y, wp.Z);
             wheelPivot.localRotation = Quaternion.Euler(CockpitBuilder.WheelTiltDeg, 0, 0);
             _wheelT = ModelLibrary.Instantiate(ModelLibrary.Get("steering_wheel", CockpitBuilder.SteeringWheel), "SteeringWheel", wheelPivot, castShadows: false).transform;
-            var gp = CockpitBuilder.GaugePos;
+            var gp = _layout.GaugePos;
             var gauge = ModelLibrary.Instantiate(ModelLibrary.Get("dash_gauge", CockpitBuilder.GaugeFace), "DashGauge", _cockpit.transform, castShadows: false).transform;
             gauge.localPosition = new Vector3(gp.X, gp.Y, gp.Z);
             gauge.localRotation = Quaternion.Euler(CockpitBuilder.GaugeTiltDeg, 0, 0);
             _needleT = ModelLibrary.Instantiate(ModelLibrary.Get("dash_needle", CockpitBuilder.GaugeNeedle), "Needle", gauge, castShadows: false).transform;
-            var mp = CockpitBuilder.MirrorPos;
+            var mp = _layout.MirrorPos;
             _rosaryT = ModelLibrary.Instantiate(ModelLibrary.Get("rosary", CockpitBuilder.Rosary), "Rosary", _cockpit.transform, castShadows: false).transform;
             _rosaryT.localPosition = new Vector3(mp.X - 0.05f, mp.Y - 0.035f, mp.Z - 0.01f);
             // remember the windshield materials so the glass can turn see-through from inside
@@ -148,6 +156,7 @@ namespace JeepneyRush
         private void ApplyDriverView()
         {
             if (_cockpit != null && _cockpit.activeSelf != DriverView) _cockpit.SetActive(DriverView);
+            if (_bodyModel != null && _bodyModel.activeSelf == DriverView) _bodyModel.SetActive(!DriverView); // the full body would crowd the view
             var clear = MaterialLibrary.ForKey("glass_clear");
             foreach (var (r, mats) in _glassSwap)
             {
@@ -157,6 +166,15 @@ namespace JeepneyRush
                 for (int i = 0; i < swapped.Length; i++) if (swapped[i] != null && swapped[i].name == "JR_glass") swapped[i] = clear;
                 r.sharedMaterials = swapped;
             }
+        }
+
+        /// <summary>The rear-view mirror shows as many riders as are aboard (0–10).</summary>
+        public void SetMirrorRiders(int n)
+        {
+            n = Mathf.Clamp(n, 0, 10);
+            if (n == _mirrorRiders || !DriverView) return;
+            _mirrorRiders = n;
+            MaterialLibrary.SetTexture("utex:mirror_view_0", "mirror_view_" + n);
         }
 
         /// <summary>Speed for the dashboard speedometer (km/h).</summary>
@@ -417,6 +435,7 @@ namespace JeepneyRush
             // invulnerability blink
             // gentle blink: mostly visible, short off-beats at 5 Hz (avoids a strobe/flicker look)
             bool visible = !Collisions.Invulnerable || (Collisions.InvulnerableTime * 5f) % 1f > 0.3f;
+            visible &= !DriverView; // in the driver's seat the body is replaced by the cab shell
             if (_bodyModel.activeSelf != visible) _bodyModel.SetActive(visible);
         }
     }

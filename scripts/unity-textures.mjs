@@ -600,6 +600,45 @@ const textures = await page.evaluate(() => {
       for (let i = 0; i < 7; i++) { const px = 22 + i * 35, py = 44 + (i % 2) * 10; x.fillStyle = ['#e63946', '#2a9d8f', '#f4a261', '#457b9d', '#ffd166'][i % 5]; x.fillRect(px - 12, py + 12, 24, 40); x.fillStyle = ['#8D5524', '#C68642', '#A86B3C', '#7A4A26'][i % 4]; x.beginPath(); x.arc(px, py, 12, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1b1b1b'; x.beginPath(); x.arc(px, py - 6, 12, Math.PI, 0); x.fill(); }
       x.fillStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.moveTo(0, 0); x.lineTo(90, 0); x.lineTo(40, 96); x.lineTo(0, 96); x.fill(); }
     save('mirror_pax', c);
+    // realistic rear-view mirror: looking back down the aisle to the open rear doorway, benches on both
+    // sides converging, ceiling lights and grab rails, and as many riders as are aboard (0..10)
+    for (let n = 0; n <= 10; n++) {
+      [c, x] = cv(512, 168);
+      const W = 512, H = 168, vx = W / 2, vy = H * 0.46;
+      // ceiling, walls, floor in perspective
+      const quad = (pts, col) => { x.fillStyle = col; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); };
+      const dw = 70, dh = 62; // rear doorway at the vanishing point
+      const d0 = [vx - dw / 2, vy - dh / 2], d1 = [vx + dw / 2, vy + dh / 2];
+      quad([[0, 0], [W, 0], [d1[0], d0[1]], [d0[0], d0[1]]], '#e8e1d0');                // ceiling
+      quad([[0, 0], [d0[0], d0[1]], [d0[0], d1[1]], [0, H]], '#5a3d48');                 // left wall
+      quad([[W, 0], [d1[0], d0[1]], [d1[0], d1[1]], [W, H]], '#5a3d48');                 // right wall
+      quad([[0, H], [d0[0], d1[1]], [d1[0], d1[1]], [W, H]], '#3a2e36');                 // floor
+      // the road behind, seen through the doorway (bright, with a car following)
+      let g = x.createLinearGradient(0, d0[1], 0, d1[1]); g.addColorStop(0, '#bfe3f7'); g.addColorStop(0.55, '#f4e6d0'); g.addColorStop(0.56, '#6b6d72'); g.addColorStop(1, '#55575c');
+      x.fillStyle = g; x.fillRect(d0[0], d0[1], dw, dh);
+      x.fillStyle = '#1D4ED8'; x.fillRect(vx - 14, vy + 8, 28, 12); x.fillStyle = '#ffe9a8'; x.fillRect(vx - 12, vy + 16, 5, 3); x.fillRect(vx + 7, vy + 16, 5, 3);
+      // ceiling lights + grab rails
+      for (const t of [0.25, 0.55, 0.8]) { const y = vy - dh / 2 - (vy - dh / 2) * (1 - t); const hw = 18 + (1 - t) * 40; x.fillStyle = '#fff4c8'; x.fillRect(vx - hw / 2, y - 3, hw, 5); }
+      x.strokeStyle = '#c9ced6'; x.lineWidth = 3; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(vx + s * W * 0.32, 6); x.lineTo(vx + s * dw * 0.32, d0[1] + 4); x.stroke(); }
+      // benches along both walls
+      for (const s of [-1, 1]) quad([[vx + s * W / 2, H * 0.86], [vx + s * dw / 2, vy + 10], [vx + s * dw / 2, vy + 18], [vx + s * W / 2, H]], '#8B1E2D');
+      // riders: nearest first, alternating sides; nearer = bigger and lower
+      const shirts = ['#e63946', '#2a9d8f', '#f4a261', '#457b9d', '#ffd166', '#8338ec', '#06d6a0', '#ef476f', '#118ab2', '#f77f00'];
+      const skins = ['#8D5524', '#C68642', '#A86B3C', '#7A4A26', '#B5835A'];
+      const slots = []; for (let k = 0; k < 5; k++) for (const s of [-1, 1]) slots.push([s, k]);
+      for (let i = n - 1; i >= 0; i--) {                                                // far ones first (painter's order)
+        const [s, k] = slots[i]; const t = 1 - k / 5.2;                                  // t: 1 near .. small far
+        const px = vx + s * (dw / 2 + (W / 2 - dw / 2) * t * 0.86), py = vy + 6 + (H * 0.5) * t * 0.62, r = 7 + 22 * t;
+        x.fillStyle = shirts[(i * 3) % 10]; x.beginPath(); x.ellipse(px, py + r * 1.3, r * 1.05, r * 1.1, 0, 0, Math.PI * 2); x.fill();
+        x.fillStyle = skins[i % 5]; x.beginPath(); x.arc(px, py, r * 0.62, 0, Math.PI * 2); x.fill();
+        x.fillStyle = '#1b1414'; x.beginPath(); x.arc(px, py - r * 0.18, r * 0.64, Math.PI * 1.02, Math.PI * 1.98); x.fill();
+      }
+      // a little haze, the glass reflection and a dark vignette at the mirror's edge
+      x.fillStyle = 'rgba(255,255,255,0.06)'; x.fillRect(0, 0, W, H);
+      g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.42, 'rgba(255,255,255,0)'); g.addColorStop(0.47, 'rgba(255,255,255,0.22)'); g.addColorStop(0.55, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+      g = x.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, W * 0.6); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.45)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+      save('mirror_view_' + n, c);
+    }
     // dashboard sign
     [c, x] = cv(512, 96);
     x.fillStyle = '#FCD116'; x.beginPath(); x.roundRect(2, 2, 508, 92, 16); x.fill(); x.strokeStyle = '#c8102e'; x.lineWidth = 6; x.stroke();

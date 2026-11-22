@@ -24,6 +24,8 @@ namespace JeepneyRush
         /// <summary>Driver's-seat view: the camera rides in the jeepney body at the driver's eye.</summary>
         public bool DriverView;
         public Transform DriverAnchor;
+        /// <summary>Driver's eye in the anchor's local space (depends on the jeepney: the modern PUV sits further forward).</summary>
+        public Vector3 DriverEye = new Vector3(-0.45f, 1.93f, 0.72f);
         [Tooltip("Horizontal field of view from the driver's seat.")]
         public float driverHorizontalFov = 84f;
 
@@ -65,8 +67,7 @@ namespace JeepneyRush
                 _shakeT += dt;
                 var sh = Vector3.zero;
                 if (_shake > 0.001f) { sh = new Vector3(Mathf.Sin(_shakeT * 61f), Mathf.Cos(_shakeT * 47f) * 0.7f, 0) * _shake * 0.25f; _shake *= Mathf.Pow(0.02f, dt); }
-                var e = Logic.Geometry.CockpitBuilder.Eye;
-                transform.position = DriverAnchor.TransformPoint(new Vector3(e.X, e.Y, e.Z)) + sh;
+                transform.position = DriverAnchor.TransformPoint(DriverEye) + sh;
                 // look a little down the road and slightly toward where we're steering
                 float yaw = Mathf.Clamp(lateralVelocity * 0.8f, -6f, 6f);
                 transform.rotation = DriverAnchor.rotation * Quaternion.Euler(Logic.Geometry.CockpitBuilder.PitchDeg, yaw + 2f, 0);
