@@ -28,6 +28,10 @@ namespace JeepneyRush.Logic
         public float swipeSensitivity = 1f;
         public int graphicsQuality = 3; // 0 low, 1 medium, 2 high, 3 auto (adapts to the device)
         public bool tutorialDone;
+        /// <summary>Shows a camera button on the HUD for taking screenshots (F12 / F11 on PC always work).</summary>
+        public bool screenshotButton;
+        /// <summary>Letterboxes the game to 9:16 so screenshots are accepted by Google Play as they are.</summary>
+        public bool storeFrame;
 
         // lifetime stats
         public int runs;

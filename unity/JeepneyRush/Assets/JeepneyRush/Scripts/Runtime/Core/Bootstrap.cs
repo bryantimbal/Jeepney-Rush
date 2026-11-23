@@ -57,6 +57,7 @@ namespace JeepneyRush
             Services.Store = _systems.AddComponent<StoreService>();
             Services.UI = _systems.AddComponent<UIManager>();
             _systems.AddComponent<Haptics>();
+            _systems.AddComponent<Screenshots>();
             _systems.AddComponent<BackButtonListener>();
             GraphicsQuality.Apply(Services.Save.Data.graphicsQuality);
         }

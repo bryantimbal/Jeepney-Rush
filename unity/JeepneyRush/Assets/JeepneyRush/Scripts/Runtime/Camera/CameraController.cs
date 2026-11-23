@@ -40,9 +40,10 @@ namespace JeepneyRush
 
         private void UpdateFov()
         {
-            _lastW = Screen.width;
-            _lastH = Screen.height;
-            float aspect = Mathf.Max(0.3f, (float)Screen.width / Mathf.Max(1, Screen.height));
+            // the camera's own viewport (it is letterboxed to 9:16 while taking store screenshots)
+            _lastW = _cam.pixelWidth;
+            _lastH = _cam.pixelHeight;
+            float aspect = Mathf.Max(0.3f, (float)_cam.pixelWidth / Mathf.Max(1, _cam.pixelHeight));
             float v = 2f * Mathf.Atan(Mathf.Tan(horizontalFov * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
             _baseFov = Mathf.Clamp(v, 50f, 78f);
         }
@@ -60,7 +61,7 @@ namespace JeepneyRush
         /// <param name="lateralVelocity">player X velocity for the lane-change tilt.</param>
         public void Follow(Vector3 player, float lateralVelocity, float speed01, float dt)
         {
-            if (Screen.width != _lastW || Screen.height != _lastH) UpdateFov();
+            if (_cam.pixelWidth != _lastW || _cam.pixelHeight != _lastH) UpdateFov();
             if (DriverView && DriverAnchor != null)
             {
                 _cam.nearClipPlane = 0.04f;
@@ -71,7 +72,7 @@ namespace JeepneyRush
                 // look a little down the road and slightly toward where we're steering
                 float yaw = Mathf.Clamp(lateralVelocity * 0.8f, -6f, 6f);
                 transform.rotation = DriverAnchor.rotation * Quaternion.Euler(Logic.Geometry.CockpitBuilder.PitchDeg, yaw + 2f, 0);
-                float aspect = Mathf.Max(0.3f, (float)Screen.width / Mathf.Max(1, Screen.height));
+                float aspect = Mathf.Max(0.3f, (float)_cam.pixelWidth / Mathf.Max(1, _cam.pixelHeight));
                 float v = 2f * Mathf.Atan(Mathf.Tan(driverHorizontalFov * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
                 _fovBoost = Mathf.Lerp(_fovBoost, speed01 * 5f, 1f - Mathf.Exp(-dt * 3f));
                 _cam.fieldOfView = Mathf.Clamp(v, 60f, Logic.Geometry.CockpitBuilder.MaxVerticalFov) + _fovBoost; // tall phones: don't stare at the ceiling

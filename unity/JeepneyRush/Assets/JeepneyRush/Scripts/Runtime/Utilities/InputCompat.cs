@@ -13,7 +13,7 @@ namespace JeepneyRush
     /// </summary>
     public static class InputCompat
     {
-        public enum Key { Left, Right, Up, Down, Jump, Horn, Pause, Gear }
+        public enum Key { Left, Right, Down, Horn, Pause, Gear, Screenshot, ScreenshotClean }
         public enum HoldKey { Gas, Brake }
 
         public struct Pointer
@@ -52,12 +52,12 @@ namespace JeepneyRush
             {
                 case Key.Left: return kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame;
                 case Key.Right: return kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame;
-                case Key.Up: return kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame;
-                case Key.Jump: return kb.spaceKey.wasPressedThisFrame;
                 case Key.Down: return kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame;
-                case Key.Horn: return kb.hKey.wasPressedThisFrame;
+                case Key.Horn: return kb.leftCtrlKey.wasPressedThisFrame || kb.rightCtrlKey.wasPressedThisFrame || kb.hKey.wasPressedThisFrame;
                 case Key.Gear: return kb.rKey.wasPressedThisFrame;
                 case Key.Pause: return kb.pKey.wasPressedThisFrame;
+                case Key.Screenshot: return kb.f12Key.wasPressedThisFrame;
+                case Key.ScreenshotClean: return kb.f11Key.wasPressedThisFrame;
             }
             return false;
 #else
@@ -65,26 +65,31 @@ namespace JeepneyRush
             {
                 case Key.Left: return Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A);
                 case Key.Right: return Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D);
-                case Key.Up: return Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W);
-                case Key.Jump: return Input.GetKeyDown(KeyCode.Space);
                 case Key.Down: return Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S);
-                case Key.Horn: return Input.GetKeyDown(KeyCode.H);
+                case Key.Horn: return Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.RightControl) || Input.GetKeyDown(KeyCode.H);
                 case Key.Gear: return Input.GetKeyDown(KeyCode.R);
                 case Key.Pause: return Input.GetKeyDown(KeyCode.P);
+                case Key.Screenshot: return Input.GetKeyDown(KeyCode.F12);
+                case Key.ScreenshotClean: return Input.GetKeyDown(KeyCode.F11);
             }
             return false;
 #endif
         }
 
-        /// <summary>Desktop: hold Shift for gas, hold B or Ctrl for brake.</summary>
+        /// <summary>
+        /// PC controls: hold ↑ (or W / Shift) to accelerate, hold Space (or B) to brake.
+        /// Ctrl (or H) honks, ←/→ (A/D) change lanes, R shifts gear, P pauses, F12 screenshot.
+        /// </summary>
         public static bool KeyHeld(HoldKey k)
         {
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return false;
-            return k == HoldKey.Gas ? kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed : kb.bKey.isPressed || kb.leftCtrlKey.isPressed;
+            return k == HoldKey.Gas ? kb.upArrowKey.isPressed || kb.wKey.isPressed || kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed
+                                    : kb.spaceKey.isPressed || kb.bKey.isPressed;
 #else
-            return k == HoldKey.Gas ? Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) : Input.GetKey(KeyCode.B) || Input.GetKey(KeyCode.LeftControl);
+            return k == HoldKey.Gas ? Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
+                                    : Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.B);
 #endif
         }
 

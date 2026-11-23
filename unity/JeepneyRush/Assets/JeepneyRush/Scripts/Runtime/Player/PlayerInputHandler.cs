@@ -41,7 +41,6 @@ namespace JeepneyRush
             }
             if (InputCompat.KeyPressed(InputCompat.Key.Left)) Fire(Action.Left);
             if (InputCompat.KeyPressed(InputCompat.Key.Right)) Fire(Action.Right);
-            if (InputCompat.KeyPressed(InputCompat.Key.Up) || InputCompat.KeyPressed(InputCompat.Key.Jump)) Fire(Action.Horn); // jeepneys don't jump: honk instead
             if (InputCompat.KeyPressed(InputCompat.Key.Down)) Fire(Action.Down);
             if (InputCompat.KeyPressed(InputCompat.Key.Horn)) Fire(Action.Horn);
             if (InputCompat.KeyPressed(InputCompat.Key.Pause)) Fire(Action.Pause);

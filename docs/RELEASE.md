@@ -148,3 +148,34 @@ AdMob ▸ *Privacy & messaging* before release. The Philippines doesn't require 
 **Profile on a real phone before release**: Development Build ▸ *Autoconnect Profiler*, then
 drive EDSA at night in the rain (the heaviest scene). Aim for a CPU main thread under
 **12 ms** on a mid-range phone.
+
+---
+
+## 7. Taking real store screenshots
+
+1. **Settings ▸ Screenshot button: ON** – a camera button appears next to pause during a run.
+2. **Settings ▸ Store frame 9:16: ON** – the game letterboxes itself to 9:16 (black bars on
+   tall phones). Google Play rejects screenshots longer than 2:1, and most phones today are
+   19.5:9 or taller, so keep this on while you take store shots.
+3. Drive, and tap the **camera button** for a shot with the HUD. For a clean shot without the
+   HUD, **pause** and tap **PHOTO WITHOUT HUD** (the scene is frozen while paused).
+4. Find them in the **Gallery ▸ Pictures/Jeepney Rush** (Android 10+), or in
+   `Android/data/ph.jeepneyrush.game/files/Screenshots` on Android 8–9 (copy over USB).
+   In the Unity Editor they go to `unity/JeepneyRush/Screenshots/`, on PC to Pictures/Jeepney Rush.
+5. Turn both options off again before playing normally.
+
+Shots are saved as 24-bit PNG at the phone's resolution (1080 px wide or more = eligible for
+Play's promotional placements). For tablet shots, take them on a tablet (or the Unity Editor's
+Game view set to a tablet resolution).
+
+## 8. PC / keyboard controls (Editor, Chromebooks, Play Games on PC)
+
+| Action | Keys |
+|---|---|
+| Accelerate (gas) | hold **↑** (or W / Shift) |
+| Brake | hold **Space** (or B) |
+| Horn (busina) | **Ctrl** (or H) |
+| Change lane | **← →** (or A / D) |
+| Gear D / R | **R** |
+| Pause | **P** / Esc |
+| Screenshot with HUD / without HUD | **F12** / **F11** |

@@ -75,6 +75,7 @@ namespace JeepneyRush
             UiKit.Border(_flash.style, 60, new Color(1, 0, 0, 0.6f), 0);
             _flash.style.opacity = 0;
             _root.Add(_flash);
+            BuildScreenshotUi();
             HideAll();
             GameEvents.StateChanged += OnState;
         }
@@ -85,10 +86,15 @@ namespace JeepneyRush
             if (float.IsNaN(w) || w <= 0 || Screen.width <= 0) return;
             float k = w / Screen.width;
             var sa = Screen.safeArea;
-            _safe.style.left = sa.xMin * k;
-            _safe.style.right = (Screen.width - sa.xMax) * k;
-            _safe.style.top = (Screen.height - sa.yMax) * k;
-            _safe.style.bottom = sa.yMin * k;
+            // while the 9:16 store frame is on, the UI lives inside the frame too
+            var f = Screenshots.Frame;
+            float xMin = Mathf.Max(sa.xMin, f.X), xMax = Mathf.Min(sa.xMax, f.X + f.W);
+            float yMin = Mathf.Max(sa.yMin, f.Y), yMax = Mathf.Min(sa.yMax, f.Y + f.H);
+            _safe.style.left = xMin * k;
+            _safe.style.right = (Screen.width - xMax) * k;
+            _safe.style.top = (Screen.height - yMax) * k;
+            _safe.style.bottom = yMin * k;
+            LayoutFrameBars(k);
         }
 
         private VisualElement MakeScreen(string name, bool safe = true)
@@ -582,6 +588,8 @@ namespace JeepneyRush
             var rel = ReleaseConfig.Active;
             if (!string.IsNullOrWhiteSpace(rel.privacyPolicyUrl))
                 card.Add(UiKit.Button("PRIVACY POLICY", () => Application.OpenURL(rel.privacyPolicyUrl.Trim()), Color.white, UiKit.Ink, 36, 96));
+            card.Add(Toggle("Screenshot button", () => d().screenshotButton, v => { d().screenshotButton = v; RefreshScreenshotUi(); }));
+            card.Add(Toggle("Store frame 9:16", () => d().storeFrame, v => { d().storeFrame = v; RefreshScreenshotUi(); }));
             card.Add(Toggle("Show FPS", () => _showDebug, v => { _showDebug = v; if (_debug != null) Show(_debug, v); }));
             card.Add(UiKit.Button("RESET PROGRESS", () => Confirm("Reset progress?", "Erases coins, best scores and stats on this device.", () =>
             {
@@ -708,6 +716,10 @@ namespace JeepneyRush
             rowR.style.alignItems = Align.Center;
             _coins = UiKit.Text("0", 46, Color.white);
             rowR.Add(UiKit.Pill(UiKit.Icon("ui_coin", 58), _coins));
+            _shotBtn = UiKit.IconButton("ui_camera", () => Screenshots.Instance?.Take(false), 112, Color.white);
+            _shotBtn.name = "screenshot";
+            _shotBtn.style.marginLeft = 18;
+            rowR.Add(_shotBtn);
             var pause = UiKit.IconButton("ui_pause", () => Services.Game.Pause(), 112, Color.white);
             pause.name = "pause";
             pause.style.marginLeft = 18;
@@ -1025,6 +1037,9 @@ namespace JeepneyRush
             card.Add(UiKit.Button("RESUME", () => Services.Game.Resume(), UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("RESTART", () => Services.Game.Restart(), Color.white, UiKit.Ink, 48, 128));
             card.Add(UiKit.Button("MAIN MENU", () => Services.Game.GoToMainMenu(), Color.white, UiKit.Ink, 48, 128));
+            // the scene is frozen while paused: perfect moment for a clean store screenshot
+            _pausePhoto = UiKit.Button("PHOTO WITHOUT HUD", () => Screenshots.Instance?.Take(true), UiKit.Hex("#D8D3FF"), UiKit.Ink, 40, 110);
+            card.Add(_pausePhoto);
             var d = (System.Func<SaveData>)(() => Services.Save.Data);
             card.Add(Toggle("Music", () => d().music, v => { d().music = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));

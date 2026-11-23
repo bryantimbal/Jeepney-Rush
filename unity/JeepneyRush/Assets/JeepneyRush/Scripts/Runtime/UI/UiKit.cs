@@ -83,6 +83,7 @@ namespace JeepneyRush
                 onClick?.Invoke();
             });
             b.text = text;
+            b.focusable = false; // otherwise Space/Enter (brake on PC) would "click" the last pressed button
             var s = b.style;
             if (Display != null) s.unityFontDefinition = new StyleFontDefinition(Display);
             s.fontSize = fontSize;
