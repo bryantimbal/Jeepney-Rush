@@ -80,7 +80,9 @@ namespace JeepneyRush
         public static Model Zone(float w, float l) => Get($"zone{w}x{l}", () => PropBuilder.ParaZone(w, l));
         public static Model Chunk(int i) => Chunk(EnvironmentKind.Manila, i);
         public static Model Chunk(EnvironmentKind env, int i) =>
-            Get($"chunk_{env}_{i}", () => SceneryProvinces.Chunk(env, (int)env * 100000 + 1000 + i * 7919, i == 2 || i == 6));
+            Get($"chunk_{env}_{i}", () => SceneryProvinces.Chunk(env, (int)env * 100000 + 1000 + i * 7919, i == 2 || i == 6, i == FeatureChunk));
+        /// <summary>The variant used for the route's landmark slice (EDSA flyover, coastal bridge).</summary>
+        public const int FeatureChunk = 4;
         public static Model PowerUp(PowerUpKind k) => Get("pu_" + k, () => PropBuilder.PowerUp(k));
         public static Model Bubble() => Get("bubble", PropBuilder.Bubble);
         public static Model WheelFor(string liveryId)

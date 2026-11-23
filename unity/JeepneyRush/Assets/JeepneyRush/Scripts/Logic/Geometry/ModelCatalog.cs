@@ -74,6 +74,8 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("chunk_mountain_falls", SceneryProvinces.MountainProvince(4001, true));
             yield return ("chunk_edsa", SceneryCities.Edsa(5000, false));
             yield return ("chunk_edsa_station", SceneryCities.Edsa(5001, true));
+            yield return ("chunk_edsa_flyover", SceneryCities.Edsa(5002, false, true));
+            yield return ("chunk_beach_bridge", SceneryProvinces.CoastalBridge(3001));
             yield return ("chunk_cebu", SceneryCities.Cebu(6001, false));
             yield return ("chunk_cebu_sea", SceneryCities.Cebu(6000, true));
             yield return ("chunk_baguio", SceneryCities.Baguio(7000, false));

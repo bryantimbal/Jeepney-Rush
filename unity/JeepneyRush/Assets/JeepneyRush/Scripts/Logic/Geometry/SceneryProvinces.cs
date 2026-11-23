@@ -9,14 +9,15 @@ namespace JeepneyRush.Logic.Geometry
         private const float R = SceneryBuilder.RoadHalfWidth;
         private const float SY = SceneryBuilder.SidewalkHeight;
 
-        public static MeshData Chunk(EnvironmentKind env, int seed, bool special)
+        /// <param name="feature">the route's landmark slice: EDSA flyover, coastal bridge</param>
+        public static MeshData Chunk(EnvironmentKind env, int seed, bool special, bool feature = false)
         {
             switch (env)
             {
                 case EnvironmentKind.Provincial: return Provincial(seed, special);
-                case EnvironmentKind.Beach: return Beach(seed, special);
+                case EnvironmentKind.Beach: return feature ? CoastalBridge(seed) : Beach(seed, special);
                 case EnvironmentKind.Mountain: return MountainProvince(seed, special);
-                case EnvironmentKind.Edsa: return SceneryCities.Edsa(seed, special);
+                case EnvironmentKind.Edsa: return SceneryCities.Edsa(seed, special && !feature, feature);
                 case EnvironmentKind.Cebu: return SceneryCities.Cebu(seed, special);
                 case EnvironmentKind.Baguio: return SceneryCities.Baguio(seed, special);
                 default: return SceneryBuilder.ManilaChunk(seed, special);
@@ -247,6 +248,67 @@ namespace JeepneyRush.Logic.Geometry
                 b.Pop();
             }
             NightKit.StreetLamp(b, rng.Chance(0.5) ? -1f : 1f, R, rng.Range(-L / 2 + 6, L / 2 - 6), 5.5f, "#6D6875"); // one lamp per 40 m
+            return b.Data;
+        }
+
+        /// <summary>
+        /// Coastal highway bridge over a river mouth: water on both sides (covering the
+        /// shoulder strip), concrete parapets with railings on the road edge, steel arch
+        /// trusses, lamp posts, a bangka or two and the sea opening up to the left.
+        /// </summary>
+        public const float ArchRise = 9.5f;
+        public static MeshData CoastalBridge(int seed)
+        {
+            var rng = new GameRandom(seed);
+            var b = new MeshBuilder();
+            float edge = R + 0.25f;
+            // the river: covers the shoulders/sand strip on both sides for the whole slice
+            foreach (float s in new[] { -1f, 1f })
+            {
+                b.Box("paint", "#2E8FA8", 120f, 0.04f, L, s * (edge + 60f), SY + 0.04f, 0);
+                b.Box("paint", "#5FC4D8", 6f, 0.05f, L, s * (edge + 8f), SY + 0.05f, 0);                 // shallow
+                for (int i = 0; i < 4; i++)
+                    b.Box("glow", "#E8FBFF", rng.Range(1.5f, 4f), 0.03f, 0.12f, s * rng.Range(edge + 4f, edge + 30f), SY + 0.08f, rng.Range(-L / 2, L / 2), new Rot(0, (float)(Math.PI / 2) + rng.Range(-0.3f, 0.3f), 0));
+                // bridge deck edge, parapet, railing
+                b.Box("paint", "#B9BCC0", 0.6f, 1.4f, L, s * (edge + 0.3f), SY - 0.4f, 0);
+                b.Box("paint", "#D7D9DC", 0.35f, 0.75f, L, s * (edge + 0.15f), SY + 0.37f, 0);
+                b.Box("chrome", "#A9AEB4", 0.08f, 0.08f, L, s * (edge + 0.15f), SY + 1.15f, 0);
+                for (float z = -L / 2 + 1; z < L / 2; z += 2) b.Box("chrome", "#A9AEB4", 0.06f, 0.42f, 0.06f, s * (edge + 0.15f), SY + 0.95f, z);
+                // steel arch truss (painted blue), hangers to the deck
+                float ax = s * (edge + 0.9f);
+                const int seg = 10;
+                for (int i = 0; i < seg; i++)
+                {
+                    float t0 = i / (float)seg, t1 = (i + 1) / (float)seg;
+                    float z0 = -L / 2 + 2 + t0 * (L - 4), z1 = -L / 2 + 2 + t1 * (L - 4);
+                    float y0 = (float)Math.Sin(t0 * Math.PI) * ArchRise, y1 = (float)Math.Sin(t1 * Math.PI) * ArchRise;
+                    float len = (float)Math.Sqrt((z1 - z0) * (z1 - z0) + (y1 - y0) * (y1 - y0));
+                    float pitch = (float)Math.Atan2(y1 - y0, z1 - z0);
+                    b.Box("paint", "#2F6FB0", 0.45f, 0.5f, len + 0.1f, ax, SY + 1f + (y0 + y1) / 2, (z0 + z1) / 2, new Rot(-pitch, 0, 0));
+                    if (i > 0) b.Box("paint", "#6D8FB5", 0.08f, y0, 0.08f, ax, SY + 1f + y0 / 2, z0);
+                }
+                b.Box("paint", "#9EA1A6", 1.2f, 1.2f, 1.2f, ax, SY + 0.6f, -L / 2 + 2);
+                b.Box("paint", "#9EA1A6", 1.2f, 1.2f, 1.2f, ax, SY + 0.6f, L / 2 - 2);
+                // piers in the river
+                foreach (float pz in new[] { -L / 4, L / 4 }) b.Box("paint", "#A3A6AA", 1.4f, 3f, 2.4f, s * (edge + 0.6f), SY - 1.6f, pz);
+            }
+            // top bracing across the road near the crown (above every vehicle and the chase camera)
+            b.Box("paint", "#2F6FB0", (edge + 0.9f) * 2, 0.35f, 0.35f, 0, SY + 1f + ArchRise - 0.2f, 0);
+            foreach (float bz in new[] { -7f, 7f }) b.Box("paint", "#2F6FB0", (edge + 0.9f) * 2, 0.3f, 0.3f, 0, SY + 1f + ArchRise * (float)Math.Sin((bz + L / 2 - 2) / (L - 4) * Math.PI) - 0.2f, bz);
+            // lamps on the parapet, one each side
+            foreach (float s in new[] { -1f, 1f })
+            {
+                float lz = s * 10f;
+                b.Cylinder("paint", "#6D6875", 0.07f, 0.09f, 5f, 6, s * (edge + 0.15f), SY + 3.2f, lz);
+                b.Box("paint", "#6D6875", 1.4f, 0.08f, 0.1f, s * (edge - 0.5f), SY + 5.7f, lz);
+                b.Box("glow", "#FFF1C1", 0.5f, 0.1f, 0.3f, s * (edge - 1.0f), SY + 5.62f, lz);
+                NightKit.Pool(b, s * (edge - 1.4f), 0.035f, lz, 3.4f);
+            }
+            for (int i = 0; i < rng.Int(1, 3); i++) Bangka(b, rng, (rng.Chance(0.5) ? -1 : 1) * rng.Range(edge + 8f, edge + 30f), rng.Range(-L / 2 + 4, L / 2 - 4), rng.Range(-0.6f, 0.6f));
+            // the sea beyond the river mouth on the left, green hills upriver on the right
+            b.Box("paint", "#1F7EA1", 200f, 0.04f, L, -(edge + 160f), SY + 0.03f, 0);
+            for (int i = 0; i < 2; i++) b.Sphere("paint", rng.Pick(new[] { "#52B788", "#40916C", "#74C69D" }), rng.Range(10, 16), rng.Range(55, 80), 0, rng.Range(-L / 2, L / 2), 8, 1.4f, 0.7f, 1.2f);
+            for (int i = 0; i < 2; i++) CoconutTree(b, rng, rng.Range(40f, 60f), SY, rng.Range(-L / 2, L / 2), rng.Range(7f, 9f));
             return b.Data;
         }
 

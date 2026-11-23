@@ -124,14 +124,16 @@ namespace JeepneyRush.Tests
                     maxSlope = Math.Max(maxSlope, Math.Abs(r.Slope(d)));
                 }
                 Assert.Greater(maxH, 0.8f, $"{env} road has no slopes");
-                Assert.Less(maxSlope, 0.12f, $"{env} slope too steep for a jeepney");
+                Assert.Less(maxSlope, RoadShape.MaxGrade(env), $"{env} slope too steep for a jeepney");
             }
         }
 
-        [Test]
-        public void RoadUnderTheJeepneyIsAlwaysStraightAhead()
+        [TestCase(EnvironmentKind.Beach)]
+        [TestCase(EnvironmentKind.Baguio)]
+        [TestCase(EnvironmentKind.Mountain)]
+        public void RoadUnderTheJeepneyIsAlwaysStraightAhead(EnvironmentKind env)
         {
-            var r = new RoadShape(2, EnvironmentKind.Beach);
+            var r = new RoadShape(2, env);
             for (float d = 0; d < 3000; d += 50)
             {
                 Assert.AreEqual(0f, r.RelLateral(d, 0), 1e-4);
@@ -139,6 +141,41 @@ namespace JeepneyRush.Tests
                 Assert.AreEqual(0f, r.RelYaw(d, 0), 1e-4);
                 Assert.Less(Math.Abs(r.RelLateral(d, 10)), 0.3f); // near field nearly straight: lanes still readable
             }
+        }
+
+        [Test]
+        public void WindingRoutesBendMoreThanTheCity()
+        {
+            float Bend(EnvironmentKind env) { var r = new RoadShape(3, env); float m = 0; for (float d = 400; d < 3000; d += 10) m = Math.Max(m, Math.Abs(r.RelLateral(d, 80))); return m; }
+            Assert.Greater(Bend(EnvironmentKind.Baguio), Bend(EnvironmentKind.Manila));
+            Assert.Greater(Bend(EnvironmentKind.Beach), Bend(EnvironmentKind.Edsa));
+            float Climb(EnvironmentKind env) { var r = new RoadShape(3, env); float m = 0; for (float d = 400; d < 3000; d += 5) m = Math.Max(m, Math.Abs(r.Slope(d))); return m; }
+            Assert.Greater(Climb(EnvironmentKind.Baguio), Math.Max(0.09f, Climb(EnvironmentKind.Manila) * 1.8f), "Baguio should have properly steep streets");
+        }
+
+        [Test]
+        public void HighlandFogBanksRollInAndOut()
+        {
+            var f = new FogBanks(5, EnvironmentKind.Baguio);
+            Assert.AreEqual(0f, f.DensityAt(0));
+            Assert.AreEqual(0f, f.DensityAt(FogBanks.FirstAt - FogBanks.Ramp - 1));
+            float max = 0; int entries = 0; bool inside = false;
+            for (float d = 0; d < 5000; d += 2)
+            {
+                float v = f.DensityAt(d);
+                Assert.That(v, Is.InRange(0f, 1f));
+                max = Math.Max(max, v);
+                if (!inside && v > 0.2f) { inside = true; entries++; }
+                else if (inside && v < 0.05f) inside = false;
+                Assert.Less(Math.Abs(f.DensityAt(d + 2) - v), 0.08f, "fog must roll in smoothly");
+            }
+            Assert.Greater(max, 0.7f);
+            Assert.That(entries, Is.InRange(4, 9), "fog banks in 5 km");
+            Assert.GreaterOrEqual(FogBanks.FogEnd(160f, 1f), FogBanks.MinVisibility, "the road ahead stays visible");
+            var city = new FogBanks(5, EnvironmentKind.Manila);
+            for (float d = 0; d < 3000; d += 25) Assert.AreEqual(0f, city.DensityAt(d));
+            Assert.IsTrue(FogBanks.Has(EnvironmentKind.Baguio));
+            Assert.IsFalse(FogBanks.Has(EnvironmentKind.Edsa));
         }
 
         [Test]

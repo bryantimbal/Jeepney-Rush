@@ -142,6 +142,61 @@ namespace JeepneyRush.Logic
     }
 
     /// <summary>
+    /// Rolling fog banks in the highlands (Baguio, Mountain Province): stretches of road where
+    /// the mist thickens. Visual only (gameplay is unchanged) but the far view shrinks, so the
+    /// fog never closes in below <see cref="MinVisibility"/> metres.
+    /// </summary>
+    public sealed class FogBanks
+    {
+        public const float FirstAt = 350f, GapMin = 450f, GapMax = 900f, LengthMin = 160f, LengthMax = 300f, Ramp = 60f;
+        public const float MinVisibility = 95f;
+        private readonly List<(float from, float to, float strength)> _banks = new List<(float, float, float)>();
+        private readonly GameRandom _rng;
+        private readonly float _strength;
+        private float _plannedTo;
+
+        public static bool Has(EnvironmentKind env) => env == EnvironmentKind.Baguio || env == EnvironmentKind.Mountain;
+
+        public FogBanks(int seed, EnvironmentKind env)
+        {
+            _rng = new GameRandom(seed ^ 0x0F06);
+            _strength = env == EnvironmentKind.Baguio ? 1f : env == EnvironmentKind.Mountain ? 0.7f : 0f;
+            _plannedTo = FirstAt;
+        }
+
+        public int Count => _banks.Count;
+
+        private void PlanTo(float distance)
+        {
+            if (_strength <= 0) return;
+            while (_plannedTo < distance + 1000f)
+            {
+                float from = _plannedTo + _rng.Range(0f, 200f), to = from + _rng.Range(LengthMin, LengthMax);
+                _banks.Add((from, to, _strength * _rng.Range(0.75f, 1f)));
+                _plannedTo = to + _rng.Range(GapMin, GapMax);
+            }
+        }
+
+        /// <summary>0 = the route's normal haze .. 1 = thick mist.</summary>
+        public float DensityAt(float distance)
+        {
+            if (_strength <= 0) return 0f;
+            PlanTo(distance);
+            foreach (var (from, to, s) in _banks)
+            {
+                if (distance < from - Ramp || distance > to + Ramp) continue;
+                float t = distance < from ? (distance - (from - Ramp)) / Ramp : distance > to ? ((to + Ramp) - distance) / Ramp : 1f;
+                t = Math.Max(0, Math.Min(1, t));
+                return s * t * t * (3 - 2 * t);
+            }
+            return 0f;
+        }
+
+        /// <summary>Fog end distance (m) for a route's base value at this density.</summary>
+        public static float FogEnd(float baseEnd, float density) => baseEnd + (MinVisibility - baseEnd) * Math.Max(0, Math.Min(1, density));
+    }
+
+    /// <summary>
     /// Road shape: gentle hills (height) and bends (lateral offset) as smooth functions
     /// of world distance. Rendering only – gameplay stays in straight lane space, so the
     /// fairness guarantees are unaffected. Values are relative to the jeepney's position.
@@ -151,6 +206,9 @@ namespace JeepneyRush.Logic
         private readonly float _h1, _h2, _l1, _l2, _hp, _lp;
         private readonly float _hL1, _hL2, _lL1, _lL2;
 
+        /// <summary>Steepest grade a route may have (Baguio's city streets are famously steep).</summary>
+        public static float MaxGrade(EnvironmentKind env) => env == EnvironmentKind.Baguio ? 0.18f : 0.12f;
+
         public RoadShape(int seed, EnvironmentKind env)
         {
             var rng = new GameRandom(seed ^ 0x7A11);
@@ -158,9 +216,9 @@ namespace JeepneyRush.Logic
             // street bends, the province rolls, the coastal road winds along the shore
             // the mountain road climbs and winds the most (still ≤ 12% grade, checked by tests)
             float hills = env == EnvironmentKind.Mountain ? 5f : env == EnvironmentKind.Provincial ? 6f : env == EnvironmentKind.Beach ? 4f
-                : env == EnvironmentKind.Baguio ? 6f : env == EnvironmentKind.Cebu ? 4f : env == EnvironmentKind.Edsa ? 2.5f : 3f; // Baguio: steep city hills; EDSA: flyovers
+                : env == EnvironmentKind.Baguio ? 8f : env == EnvironmentKind.Cebu ? 4f : env == EnvironmentKind.Edsa ? 2.5f : 3f; // Baguio: steep city hills; EDSA: flyovers
             float bends = env == EnvironmentKind.Manila ? 22f : env == EnvironmentKind.Provincial ? 34f : env == EnvironmentKind.Mountain ? 48f
-                : env == EnvironmentKind.Edsa ? 14f : env == EnvironmentKind.Cebu ? 26f : env == EnvironmentKind.Baguio ? 44f : 40f;
+                : env == EnvironmentKind.Edsa ? 14f : env == EnvironmentKind.Cebu ? 26f : env == EnvironmentKind.Baguio ? 52f : 50f; // Baguio switchbacks, winding coastal road
             _h1 = hills * rng.Range(0.7f, 1f);
             _h2 = hills * rng.Range(0.3f, 0.5f);
             _l1 = bends * rng.Range(0.7f, 1f);

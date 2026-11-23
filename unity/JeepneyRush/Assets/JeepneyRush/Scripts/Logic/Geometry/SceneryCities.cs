@@ -67,7 +67,56 @@ namespace JeepneyRush.Logic.Geometry
         /// EDSA: concrete median and busway with the elevated MRT on the left, malls, towers,
         /// giant billboards and footbridges on the right, tall lamps all along the road.
         /// </summary>
-        public static MeshData Edsa(int seed, bool station)
+        /// <summary>
+        /// EDSA flyover: an elevated road crossing high over EDSA and the MRT line,
+        /// on round piers outside the lanes, with parapets, lamps, a green direction sign and
+        /// cars on top. Purely scenery: nothing stands on the jeepney's lanes.
+        /// </summary>
+        public static void Flyover(MeshBuilder b, GameRandom rng, float fz)
+        {
+            float x0 = -(R + 14f), x1 = BL - 0.4f, cx = (x0 + x1) / 2, w = x1 - x0;
+            // deck high enough to clear the MRT trains and catenary (≈13.3 m) and the chase camera (6.8 m)
+            const float y = FlyoverDeckY, deckW = 9f;
+            b.Box("paint", "#BFC1C4", w, 1.1f, deckW, cx, SY + y, fz);                                  // deck slab
+            b.Box("paint", "#A3A6AA", w, 0.5f, deckW - 2.4f, cx, SY + y - 0.75f, fz);                    // box girder underside
+            b.Box("paint", "#3E4045", w, 0.06f, deckW - 0.6f, cx, SY + y + 0.58f, fz);                   // asphalt
+            for (float lx = x0 + 3; lx < x1 - 2; lx += 6) b.Box("paint", "#F2F2F2", 2.6f, 0.02f, 0.15f, lx, SY + y + 0.62f, fz); // lane dashes
+            foreach (float e in new[] { -deckW / 2 + 0.2f, deckW / 2 - 0.2f })
+            {
+                b.Box("paint", "#D0D2D5", w, 1.0f, 0.4f, cx, SY + y + 1.05f, fz + e);                     // parapets
+                b.Box("glow", "#FFC300", w, 0.06f, 0.05f, cx, SY + y + 0.9f, fz + e + (e < 0 ? -0.21f : 0.21f)); // reflector strip
+            }
+            // piers beyond the MRT line and on the sidewalk – never on the lanes or through the viaduct
+            foreach (float px in new[] { -(R + 12.6f), R + 2.0f })
+            {
+                b.Cylinder("paint", "#B5B7BA", 0.65f, 0.7f, y - 0.9f, 10, px, SY + (y - 0.9f) / 2, fz);
+                b.Box("paint", "#A7A9AD", 1.8f, 0.6f, deckW - 1.6f, px, SY + y - 1.0f, fz);
+            }
+            // lamps on the deck
+            foreach (float lx in new[] { x0 + 5f, cx, x1 - 4f })
+            {
+                b.Cylinder("paint", "#5C5F66", 0.07f, 0.09f, 4f, 6, lx, SY + y + 2.5f, fz + deckW / 2 - 0.2f);
+                b.Box("glow", "#FFF1C1", 0.5f, 0.1f, 0.3f, lx, SY + y + 4.45f, fz + deckW / 2 - 0.9f);
+            }
+            // green direction sign hung on the side facing the traffic (towards -z)
+            b.Box("paint", "#1F7A43", 7.5f, 1.6f, 0.12f, -1.6f, SY + y - 0.2f, fz - deckW / 2 - 0.1f);
+            b.Box("paint", "#F2F2F2", 7.1f, 0.08f, 0.13f, -1.6f, SY + y + 0.4f, fz - deckW / 2 - 0.11f);
+            b.Box("paint", "#F2F2F2", 7.1f, 0.08f, 0.13f, -1.6f, SY + y - 0.8f, fz - deckW / 2 - 0.11f);
+            b.Box("paint", "#F2F2F2", 0.9f, 0.5f, 0.13f, -4.4f, SY + y - 0.2f, fz - deckW / 2 - 0.11f);   // arrow block
+            b.Box("nightglow", "#E8FFF0", 6.6f, 0.9f, 0.05f, -1.6f, SY + y - 0.2f, fz - deckW / 2 - 0.2f);
+            // cars crossing on top
+            for (int i = 0; i < rng.Int(1, 3); i++)
+            {
+                float carX = rng.Range(x0 + 3, x1 - 3), lane = rng.Chance(0.5) ? -1.8f : 1.8f;
+                string col = rng.Pick(new[] { "#D62828", "#F2F2F2", "#1D3557", "#8D99AE", "#2A9D8F" });
+                b.Box("paint", col, 4.2f, 0.9f, 1.8f, carX, SY + y + 1.1f, fz + lane);
+                b.Box("glass", "#22344A", 2.2f, 0.6f, 1.7f, carX, SY + y + 1.8f, fz + lane);
+            }
+        }
+
+        public const float FlyoverDeckY = 14.6f;
+
+        public static MeshData Edsa(int seed, bool station, bool flyover = false)
         {
             var rng = new GameRandom(seed);
             var b = new MeshBuilder();
@@ -156,7 +205,8 @@ namespace JeepneyRush.Logic.Geometry
             }
             // roadside billboard: must fit on the sidewalk between the curb and the building line (3.4 m)
             if (rng.Chance(0.7)) Billboard(b, rng, s * ((R + BL) / 2f), rng.Range(-L / 2 + 4, L / 2 - 4), BL - R - 0.5f, 1.25f, SY + 5.2f);
-            if (station || rng.Chance(0.18))
+            if (flyover) Flyover(b, rng, rng.Range(-4f, 4f));
+            else if (station || rng.Chance(0.18))
             {
                 // pedestrian footbridge across EDSA
                 float fz = station ? 14f : rng.Range(-L / 2 + 6, L / 2 - 8);

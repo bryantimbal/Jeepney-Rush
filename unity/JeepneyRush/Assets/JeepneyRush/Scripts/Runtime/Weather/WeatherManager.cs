@@ -13,6 +13,10 @@ namespace JeepneyRush
     public sealed class WeatherManager : MonoBehaviour
     {
         private WeatherSchedule _schedule;
+        private FogBanks _fogBanks;
+        private bool _inFogBank;
+        public float FogDensity { get; private set; }
+        private static readonly Color MistFog = new Color(0.86f, 0.88f, 0.9f);
         private ParticleSystem _rain, _splash;
         private Camera _cam;
         private RoadManager _road;
@@ -62,6 +66,8 @@ namespace JeepneyRush
         {
             if (_schedule != null) Apply(0, 0); // back to the dry look before capturing it
             _schedule = new WeatherSchedule(seed, env);
+            _fogBanks = new FogBanks(seed, env);
+            FogDensity = 0; _inFogBank = false;
             _sun = RenderSettings.sun;
             _baseSun = _sun != null ? _sun.intensity : 1.6f;
             _baseShadow = _sun != null ? _sun.shadowStrength : 0.75f;
@@ -197,6 +203,9 @@ namespace JeepneyRush
             if (_schedule == null) return;
             Wetness = _schedule.WetnessAt(distance);
             Kind = _schedule.KindAt(distance);
+            FogDensity = _fogBanks != null ? _fogBanks.DensityAt(distance) : 0f;
+            if (!_inFogBank && FogDensity > 0.2f) { _inFogBank = true; Services.UI?.Float("MAKAPAL ANG HAMOG! DAHAN-DAHAN", UIManager.FloatKind.Info); }
+            else if (_inFogBank && FogDensity < 0.05f) _inFogBank = false;
             // lightning in typhoons (and the odd strike in heavy rain)
             if (Wetness > 0.7f)
             {
@@ -254,9 +263,13 @@ namespace JeepneyRush
             float n = _night, du = _dusk * (1f - k * 0.8f); // no golden hour under storm clouds
             var fog = Color.Lerp(_baseFog, StormFog, Mathf.Clamp01(k * 1.1f));
             fog = Color.Lerp(fog, DuskFog, du * 0.5f);
-            RenderSettings.fogColor = Color.Lerp(fog, NightFog, n);
-            RenderSettings.fogStartDistance = Mathf.Lerp(Mathf.Lerp(_baseFogStart, 35f, k), 30f, n * 0.6f);
-            RenderSettings.fogEndDistance = Mathf.Lerp(Mathf.Lerp(_baseFogEnd, 150f, k), 150f, n);
+            float mist = FogDensity;
+            fog = Color.Lerp(fog, MistFog, mist * (1f - k * 0.5f));
+            RenderSettings.fogColor = Color.Lerp(fog, NightFog, n * (1f - mist * 0.35f)); // mist glows a little in the headlights
+            float start = Mathf.Lerp(Mathf.Lerp(_baseFogStart, 35f, k), 30f, n * 0.6f);
+            float end = Mathf.Lerp(Mathf.Lerp(_baseFogEnd, 150f, k), 150f, n);
+            RenderSettings.fogStartDistance = Mathf.Lerp(start, 8f, mist);
+            RenderSettings.fogEndDistance = Mathf.Min(end, FogBanks.FogEnd(end, mist));
             float dark = Mathf.Lerp(1f, 0.55f, k) * Mathf.Lerp(1f, 0.3f, n);
             var nightTint = Color.Lerp(Color.white, new Color(0.62f, 0.72f, 1f), n);
             RenderSettings.ambientSkyColor = Color.Lerp(_baseAmbSky * dark * nightTint, Color.white, flash);

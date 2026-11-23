@@ -61,12 +61,13 @@ function jeepney(liv, x, z, yaw = 0) { // body + its four wheels
   for (const wz of [1.95, -1.75]) for (const wx of [-0.93, 0.93]) add('wheel', wx, 0.44, wz, 0, 0, 0, grp);
   return grp;
 }
-function road(len = 500, sidewalkColor = '#b9b2a6') {
+function road(len = 500, sidewalkColor = '#b9b2a6', twoWay = false) {
   const m = (c, rough = 0.9) => new THREE.MeshStandardMaterial({ color: c, roughness: rough });
   const plane = (w, l, c, x, y, z) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, l), c); p.rotation.x = -Math.PI / 2; p.position.set(x, y, z); p.receiveShadow = true; scene.add(p); return p; };
   plane(11.2, len, m(rain ? '#2c2e33' : '#4a4c52', rain ? 0.25 : 0.9), 0, 0, -len / 2 + 40);
   for (const s of [-1, 1]) plane(3.4, len, m(sidewalkColor), s * 7.3, 0.2, -len / 2 + 40);
-  for (let z = -40; z < len; z += 8) for (const lx of [-1.6, 1.6]) { const d = plane(0.15, 3.2, new THREE.MeshBasicMaterial({ color: night ? '#9a9a9a' : '#f2f2f2' }), lx, 0.02, -z); d.receiveShadow = false; }
+  for (let z = -40; z < len; z += 8) for (const lx of twoWay ? [1.6] : [-1.6, 1.6]) { const d = plane(0.15, 3.2, new THREE.MeshBasicMaterial({ color: night ? '#9a9a9a' : '#f2f2f2' }), lx, 0.02, -z); d.receiveShadow = false; }
+  if (twoWay) for (const e of [-0.12, 0.12]) plane(0.1, len, new THREE.MeshBasicMaterial({ color: '#f5c518' }), -1.6 + e, 0.021, -len / 2 + 40); // double yellow centre line
   plane(600, 600, m('#6b6d72'), 0, -0.05, -200);
 }
 function sky(top, horizon, fogNear = 60, fogFar = 230) {
@@ -118,6 +119,30 @@ switch (mode) {
     traffic([['bus', -1.6, 9], ['sedan', 1.6, 10], ['motorcycle', 0.1, 6], ['taxi', -1.6, 22], ['suv', 1.6, 20], ['bus', 4.8, 14], ['sedan', 4.8, 28],
              ['bus', -1.6, 36], ['taxi', 1.6, 33], ['motorcycle', 3.2, 40], ['suv', -1.6, 50], ['bus', 1.6, 48], ['sedan', 4.8, 46], ['truck', -1.6, 64], ['taxi', 1.6, 62]]);
     chase(); cam.position.set(1.2, 7.2, 11); cam.lookAt(0.8, 1.5, -18);
+    break;
+  }
+  case 'flyover': { // EDSA flyover crossing high over the road and the MRT line
+    sky('#6fb7f0', '#d7ecf7', 60, 260); road();
+    for (let i = 0; i < 7; i++) add(i === 1 ? 'chunk_edsa_flyover' : i === 4 ? 'chunk_edsa_station' : 'chunk_edsa', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'pilipinas', 1.6, 0);
+    traffic([['bus', -1.6, 14], ['sedan', 1.6, 22], ['taxi', 4.8, 18], ['suv', -1.6, 40], ['bus', 1.6, 52], ['motorcycle', 3.2, 34]]);
+    chase(); cam.position.set(0.6, 6.8, 10.5); cam.lookAt(0.8, 1.6, -16);
+    break;
+  }
+  case 'bridge': { // two-way coastal highway over a river-mouth bridge
+    sky('#59b4e8', '#d4f0fb', 60, 260); road(500, '#e9d8a6', true);
+    for (let i = 0; i < 7; i++) add(i === 1 ? 'chunk_beach_bridge' : 'chunk_beach', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'fiesta', 1.6, 0);
+    traffic([['bus', -1.6, 34, Math.PI], ['motorcycle', -1.6, 16, Math.PI], ['tricycle', 4.8, 24], ['truck', -1.6, 62, Math.PI], ['sedan', 1.6, 46]]);
+    chase(); cam.position.set(1.0, 6.8, 10.5); cam.lookAt(0.6, 1.6, -16);
+    break;
+  }
+  case 'fog': { // Baguio: mist rolling over the pines on a steep, winding street
+    sky('#c9cfd3', '#dfe3e6', 8, 95); road(500, '#7da05c');
+    for (let i = 0; i < 7; i++) add(i === 2 ? 'chunk_baguio_lake' : 'chunk_baguio', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'cogeo', 1.6, 0); add('headlight_haze', 1.6, 0, 0);
+    traffic([['taxi', -1.6, 22], ['bus', 1.6, 40], ['sedan', -1.6, 58]]);
+    chase(); cam.position.set(0.4, 6.4, 10); cam.lookAt(0.8, 1.6, -16);
     break;
   }
   case 'night': { // Manila at night in the rain
