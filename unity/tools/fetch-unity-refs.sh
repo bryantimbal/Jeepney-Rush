@@ -15,4 +15,6 @@ fetch() { # id version folder
 }
 fetch unityengine.modules 2021.3.33 engine
 fetch unity3d.sdk 2021.1.14.1 editor
+# NuGet zips store entries without read permission for normal users (root doesn't notice; CI does)
+chmod -R u+rwX,go+rX "$dest"
 echo "Unity reference assemblies in $dest"
