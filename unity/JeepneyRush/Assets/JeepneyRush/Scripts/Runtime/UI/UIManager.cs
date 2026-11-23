@@ -848,6 +848,25 @@ namespace JeepneyRush
                 b.style.borderBottomWidth = 20;
                 return b;
             }
+            // TURBO: fires a stored booster (shown once one has been collected)
+            _boostBtn = HoldButton("TURBO", "ui_pu_Turbo", UiKit.Hex("#FF8A00"), v => { if (v) Services.Game.Session?.UseBoost(); });
+            _boostBtn.name = "turbo";
+            _boostBtn.style.width = _boostBtn.style.height = 170;
+            UiKit.Border(_boostBtn.style, 7, UiKit.Ink, 50);
+            _boostBtn.style.borderBottomWidth = 16;
+            _boostBtn.style.marginTop = 12;
+            _boostCount = UiKit.Text("x1", 34, Color.white, true, 2f);
+            _boostCount.style.position = Position.Absolute;
+            _boostCount.style.right = -14;
+            _boostCount.style.top = -16;
+            _boostCount.style.backgroundColor = UiKit.Ink;
+            UiKit.Border(_boostCount.style, 4, Color.white, 22);
+            UiKit.Pad(_boostCount.style, 2, 12);
+            _boostCount.pickingMode = PickingMode.Ignore;
+            _boostBtn.Add(_boostCount);
+            Show(_boostBtn, false);
+            speedCol.Add(_boostBtn);
+            _pedalButtons.Add(_boostBtn);
             var brake = Pedal(HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF3B3B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; }), "#FF3B3B", 245);
             brake.style.marginTop = 16;
             speedCol.Add(brake);
@@ -892,7 +911,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Collect TURBO boosters · tap TURBO to use one", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;
@@ -1143,6 +1162,7 @@ namespace JeepneyRush
             if (rw != null)
             {
                 if (rw.CoinBonus > 0) Line($"Coin Bonus upgrade: +{rw.CoinBonus} coins", UiKit.Ink);
+                if (rw.Gems > 0) Line($"Gems found on the road: +{rw.Gems}", UiKit.Hex("#7C3AED"));
                 Line($"+{rw.XpGained} XP", UiKit.Blue);
                 if (rw.LevelsGained > 0) { Line($"LEVEL UP! Level {Services.Save.Data.level} · +{rw.LevelReward} coins", UiKit.Green); Services.Audio.Play(Logic.Audio.Sfx.LevelUp); }
                 foreach (var m in rw.MissionsCompleted) Line($"Mission complete: {m.Text} (claim +{m.Reward})", UiKit.Green);

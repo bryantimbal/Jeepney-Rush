@@ -73,6 +73,8 @@ namespace JeepneyRush.Logic
         // ---- Phase 4 (monetization)
         /// <summary>Premium currency (from purchases; server-authoritative when online).</summary>
         public int gems;
+        /// <summary>Road gems picked up today (PH day key) – the daily cap is shared with the server.</summary>
+        public int roadGemsDay, roadGemsToday;
         /// <summary>"No Ads" purchased.</summary>
         public bool adFree;
         public List<string> ownedProducts = new List<string>();
@@ -174,6 +176,7 @@ namespace JeepneyRush.Logic
         {
             public bool NewBestScore, NewBestDistance;
             public int CoinBonus;            // from the Coin Bonus upgrade
+            public int Gems;                 // road gems credited (after the daily cap)
             public int XpGained;
             public int LevelsGained;
             public int LevelReward;
@@ -198,6 +201,15 @@ namespace JeepneyRush.Logic
             int coins = Math.Max(0, r.Coins);
             res.CoinBonus = (int)Math.Round(coins * Upgrades.CoinBonusFraction(d.UpgradeLevel(UpgradeKind.CoinBonus)));
             d.coins += coins + res.CoinBonus;
+            int gems = Math.Max(0, Math.Min(r.Gems, RoadGems.MaxForDistance(r.Distance)));
+            if (dayKey != 0)
+            {
+                if (d.roadGemsDay != dayKey) { d.roadGemsDay = dayKey; d.roadGemsToday = 0; }
+                gems = Math.Min(gems, RoadGems.LeftToday(d.roadGemsToday));
+                d.roadGemsToday += gems;
+            }
+            res.Gems = gems;
+            d.gems += gems;
             d.runs++;
             d.totalDistance += Math.Max(0, r.Distance);
             d.totalCoins += coins + res.CoinBonus;

@@ -19,6 +19,7 @@ namespace JeepneyRush
         /// <summary>Set by the GameplaySession.</summary>
         public System.Action<Hazard> HazardHit;
         public System.Action<Coin> CoinTouched;
+        public System.Action<Gem> GemTouched;
         public System.Action<PassengerStopView> ZoneEntered;
         public System.Action<PowerUpPickup> PowerUpTouched;
 
@@ -69,6 +70,8 @@ namespace JeepneyRush
             }
             var coin = other.GetComponent<Coin>();
             if (coin != null) { CoinTouched?.Invoke(coin); return; }
+            var gem = other.GetComponent<Gem>();
+            if (gem != null) { GemTouched?.Invoke(gem); return; }
             var pu = other.GetComponent<PowerUpPickup>();
             if (pu != null) { PowerUpTouched?.Invoke(pu); return; }
             var zone = other.GetComponent<StopZoneTrigger>();

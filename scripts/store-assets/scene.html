@@ -154,6 +154,15 @@ switch (mode) {
     cam.fov = 38; cam.position.set(0, 7.5, 16); cam.lookAt(0, 1.2, -6);
     break;
   }
+  case 'gas': { // gas station ahead, a gem and a TURBO booster on the road
+    sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) add('chunk', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'pilipinas', 3.2, 0);
+    const SZ = 46, laneX = 3.2; add('gas_station', 0, 0, SZ); add('gas_marker', laneX, 7.4, SZ);
+    add('gem', 0, 1.5, 16); add('pu_Turbo', -3.2, 1.0, 22);
+    traffic([['sedan', -3.2, 34], ['tricycle', 0, 60]]);
+    chase(); cam.position.set(1.4, 6.6, 10.5); cam.lookAt(1.6, 1.6, -22);
+    break;
+  }
   case 'corner': { // tricycles, vendors and the TODA terminal
     sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) if (i !== 1) add('chunk', 0, 0, -10 + i * 40);
     add('intersection', 0, 0, 32); jeepney(q.get('liv') || 'sanjuan', 1.6, 12);

@@ -384,6 +384,21 @@ namespace JeepneyRush
         }
 
         /// <summary>"TRAFFIC JAM" / "RUSH HOUR" indicator while you're in a jam (empty hides it).</summary>
+        private VisualElement _boostBtn;
+        private Label _boostCount;
+        private int _boostsShown = -1;
+
+        /// <summary>TURBO button: hidden with no boosters, pops in when the first one is collected.</summary>
+        public void SetBoosts(int count)
+        {
+            if (_boostBtn == null || count == _boostsShown) return;
+            bool was = _boostsShown > 0;
+            _boostsShown = count;
+            Show(_boostBtn, count > 0);
+            _boostCount.text = "x" + count;
+            if (count > 0 && !was) UiKit.PopIn(_boostBtn, 320);
+        }
+
         public void SetJam(string text)
         {
             if (_jamLabel == null) return;

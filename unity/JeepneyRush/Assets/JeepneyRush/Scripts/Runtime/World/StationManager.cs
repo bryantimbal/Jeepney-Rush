@@ -106,7 +106,9 @@ namespace JeepneyRush
                     {
                         var m = s.Marker.localPosition;
                         s.Marker.localPosition = new Vector3(m.x, 7.4f + Mathf.Sin(_time * 2.5f) * 0.35f, m.z);
-                        s.Marker.localRotation = Quaternion.Euler(0, Mathf.Sin(_time * 0.8f) * 35f, 0); // sways, always readable
+                        s.Marker.localRotation = Quaternion.Euler(0, Mathf.Sin(_time * 0.8f) * 20f, 0); // sways, always readable
+                        float pulse = 1f + Mathf.Max(0f, Mathf.Sin(_time * 4f)) * 0.08f;           // gentle pulse catches the eye
+                        s.Marker.localScale = new Vector3(pulse, pulse, pulse);
                     }
                 }
                 if (p.z < -60f)

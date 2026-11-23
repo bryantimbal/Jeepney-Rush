@@ -77,6 +77,21 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Road gem: a faceted violet diamond with a bright core, spinning over the lane (~0.9 m tall).</summary>
+        public static MeshData Gem()
+        {
+            var b = new MeshBuilder();
+            const string violet = "#A855F7", light = "#D8B4FE", dark = "#7C3AED";
+            b.Push(new V3(0, 0, 0), Rot.None, 1.35f); // a bit bigger than a coin so it is spotted early
+            b.Cylinder("gold", light, 0.24f, 0.42f, 0.16f, 8, 0, 0.08f, 0);   // table / crown
+            b.Cylinder("gold", violet, 0.42f, 0f, 0.62f, 8, 0, -0.31f, 0);    // pavilion down to the point
+            b.Cylinder("gold", dark, 0f, 0.24f, 0.001f, 8, 0, 0.16f, 0);      // flat top facet
+            b.Sphere("glow", "#F3E8FF", 0.12f, 0, -0.08f, 0, 6);              // inner sparkle
+            b.Sphere("bubble", "#C084FC", 0.62f, 0, -0.1f, 0, 10);            // soft halo so it reads from far away
+            b.Pop();
+            return b.Data;
+        }
+
         public static MeshData Coin()
         {
             var b = new MeshBuilder();
@@ -104,11 +119,23 @@ namespace JeepneyRush.Logic.Geometry
                 foreach (float sx in new[] { -1f, 1f })
                     b.Box("paint", white, 0.14f, 0.012f, 0.9f, laneX + sx * (hx - 0.07f), 0.008f, z + 0.45f);
             foreach (float z in new[] { -hz, hz }) b.Box("paint", white, laneWidth, 0.012f, 0.16f, laneX, 0.008f, z);
+            // translucent orange fill + glowing chevrons: the pad reads from far away, day and night
+            b.Box("bubble", orange, laneWidth - 0.3f, 0.01f, padLength - 0.3f, laneX, 0.005f, 0);
             for (int i = 0; i < 4; i++)
             {
-                float z = -hz + 2.2f + i * (padLength - 4.4f) / 3f;
-                b.Box("paint", orange, 1.1f, 0.012f, 0.22f, laneX - 0.42f, 0.009f, z, new Rot(0, -0.6f, 0));
-                b.Box("paint", orange, 1.1f, 0.012f, 0.22f, laneX + 0.42f, 0.009f, z, new Rot(0, 0.6f, 0));
+                float z = -hz + 4.6f + i * (padLength - 6.8f) / 3f;
+                b.Box("glow", orange, 1.1f, 0.012f, 0.26f, laneX - 0.42f, 0.011f, z, new Rot(0, -0.6f, 0));
+                b.Box("glow", orange, 1.1f, 0.012f, 0.26f, laneX + 0.42f, 0.011f, z, new Rot(0, 0.6f, 0));
+            }
+            // "GAS" painted on the road: on the pad, and an arrow + GAS ~15 m before it
+            RoadLabel(b, laneX, -hz + 1.6f, laneWidth - 0.6f);
+            RoadLabel(b, laneX, -hz - 15f, laneWidth - 0.6f);
+            for (int i = 0; i < 3; i++)
+            {
+                float z = -hz - 11.5f + i * 3.2f;
+                b.Box("glow", orange, 0.18f, 0.012f, 1.4f, laneX, 0.011f, z);                                     // arrow shaft
+                b.Box("glow", orange, 0.9f, 0.012f, 0.22f, laneX - 0.3f, 0.011f, z + 0.62f, new Rot(0, -0.75f, 0)); // arrow head
+                b.Box("glow", orange, 0.9f, 0.012f, 0.22f, laneX + 0.3f, 0.011f, z + 0.62f, new Rot(0, 0.75f, 0));
             }
             // ---- canopy over the curb lane and the sidewalk
             float cx0 = laneX - 1.4f, cx1 = SceneryBuilder.SidewalkOuter - 0.2f, cy = 5.2f;
@@ -306,13 +333,26 @@ namespace JeepneyRush.Logic.Geometry
         }
 
         /// <summary>Big orange marker that floats above the refuelling pad ("GAS" label + down arrow), seen from far away.</summary>
+        /// <summary>"GAS" lettering lying on the road, readable by a driver heading +Z.</summary>
+        private static void RoadLabel(MeshBuilder b, float x, float z0, float w)
+        {
+            float h = w * 0.5f, y = 0.013f;
+            b.Quad("utexa:gas_label", new V3(x - w / 2, y, z0), new V3(x + w / 2, y, z0), new V3(x + w / 2, y, z0 + h * 1.6f), new V3(x - w / 2, y, z0 + h * 1.6f), V3.Up,
+                new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1)); // stretched along the road: looks right in perspective
+        }
+
+        /// <summary>
+        /// Floating GAS marker above the refuelling pad (placed ~7.4 m up): big double-sided label,
+        /// a downward arrow and a light beam reaching down to the pad so it is visible from afar.
+        /// </summary>
         public static MeshData GasMarker()
         {
             var b = new MeshBuilder();
             const string orange = "#FF8C1A";
-            b.Cylinder("glow", orange, 0f, 0.7f, 1.0f, 4, 0, 0, 0, new Rot((float)Math.PI, 0, 0));
-            b.Box("glow", orange, 0.45f, 0.8f, 0.45f, 0, 0.85f, 0);
-            float w = 2.4f, h = 1.2f, y = 1.6f;
+            b.Cylinder("glow", orange, 0f, 1.0f, 1.4f, 4, 0, -0.2f, 0, new Rot((float)Math.PI, 0, 0));
+            b.Box("glow", orange, 0.6f, 1.1f, 0.6f, 0, 1.0f, 0);
+            b.Cylinder("bubble", orange, 0.75f, 0.35f, 6.6f, 12, 0, -4.3f, 0);  // light beam down to the pad
+            float w = 3.6f, h = 1.8f, y = 1.75f;
             // both sides of the label so it reads while it turns
             b.Quad("utexa:gas_label", new V3(-w / 2, y, -0.02f), new V3(w / 2, y, -0.02f), new V3(w / 2, y + h, -0.02f), new V3(-w / 2, y + h, -0.02f), new V3(0, 0, -1),
                 new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));

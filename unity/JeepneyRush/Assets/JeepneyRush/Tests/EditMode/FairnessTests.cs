@@ -44,6 +44,8 @@ namespace JeepneyRush.Tests
             public int PowerUps;
             public readonly List<(PowerUpKind kind, float w)> PowerUpList = new List<(PowerUpKind, float)>();
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) { PowerUps++; PowerUpList.Add((kind, Distance - z)); }
+            public int Gems;
+            public void SpawnGem(int lane, float z) { Gems++; }
             public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
             public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
             public readonly List<(Intersection x, float z)> Crossings = new List<(Intersection, float)>();
@@ -227,14 +229,10 @@ namespace JeepneyRush.Tests
                 Assert.Greater(Count(HazardKind.MudPatch), 3, "mud patches on the dirt road");
                 Assert.Greater(Count(HazardKind.Rocks), 0, "fallen rocks");
             }
-            // no Turbo right before a PARA stop, gas station or intersection (you'd fly past it)
-            foreach (var (kind, w) in world.PowerUpList)
-            {
-                if (kind != PowerUpKind.Turbo) continue;
-                foreach (var (st, _) in world.Stops) Assert.IsFalse(st.At > w - 10 && st.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before stop at {st.At:0}");
-                foreach (var (gs, _) in world.Stations) Assert.IsFalse(gs.At > w - 10 && gs.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before gas station at {gs.At:0}");
-                foreach (var (x, _) in world.Crossings) Assert.IsFalse(x.At > w - 10 && x.At < w + SpawnDirector.TurboClearance, $"Turbo at {w:0} before intersection at {x.At:0}");
-            }
+            // Turbo pickups are stored (BoostBank) and can't be USED near a stop, station or intersection,
+            // so they may lie anywhere; check a run still offers some boosters and a few gems
+            Assert.Greater(world.PowerUpList.FindAll(p => p.kind == PowerUpKind.Turbo).Count, 2, "too few TURBO boosters in 4 km");
+            Assert.That(world.Gems, Is.InRange(1, RoadGems.MaxPerRun), "road gems in 4 km");
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
             Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : env == EnvironmentKind.Edsa ? 2 : 4, "too few intersections in 4 km");

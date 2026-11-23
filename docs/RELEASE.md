@@ -175,6 +175,7 @@ Game view set to a tablet resolution).
 | Accelerate (gas) | hold **↑** (or W / Shift) |
 | Brake | hold **Space** (or B) |
 | Horn (busina) | **Ctrl** (or H) |
+| Use a TURBO booster | **E** (or Enter) |
 | Change lane | **← →** (or A / D) |
 | Gear D / R | **R** |
 | Pause | **P** / Esc |

@@ -17,6 +17,8 @@ namespace JeepneyRush.Logic
         void SpawnCoins(CoinFormation formation, int lane, int lane2, float z, int count, float spacing);
         void SpawnStop(PassengerStop stop, float z);
         void SpawnPowerUp(PowerUpKind kind, int lane, float z);
+        /// <summary>A gem pickup (premium currency) floating over a lane.</summary>
+        void SpawnGem(int lane, float z);
         void SpawnStation(GasStation station, float z);
         void SpawnIntersection(Intersection intersection, float z);
     }
@@ -61,6 +63,15 @@ namespace JeepneyRush.Logic
         private int _crossingIds;
         public int IntersectionsPlaced { get; private set; }
         private float _nextPowerUpAt;
+        // road gems use their own random stream so adding them didn't change any existing layout
+        private readonly GameRandom _gemRng;
+        private float _nextGemAt, _nextBoostAt;
+        /// <summary>Extra TURBO booster pickups (stored, used on demand) – own schedule on the same side stream.</summary>
+        public const float BoostSpacingMin = 380f, BoostSpacingMax = 650f;
+        public int BoostsPlaced { get; private set; }
+        /// <summary>Gems this run may still place (per-run and daily caps; set by the session).</summary>
+        public int GemBudget = RoadGems.MaxPerRun;
+        public int GemsPlaced { get; private set; }
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
         private readonly Func<float, float> _jam;
@@ -83,6 +94,9 @@ namespace JeepneyRush.Logic
         public SpawnDirector(BalanceConfig cfg, GameRandom rng, ISpawnSink sink, PassengerRoute route, EnvironmentKind environment = EnvironmentKind.Manila, Func<float, float> wetness = null, Func<float, float> jam = null)
         {
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
+            _gemRng = rng.Fork(0x6E3D5A11u);
+            _nextGemAt = RoadGems.FirstAt + _gemRng.Range(0, 250);
+            _nextBoostAt = 300f + _gemRng.Range(0, 200);
             _wetness = wetness ?? (_ => 0f);
             _jam = jam ?? (_ => 0f);
             _jamAware = jam != null && Environments.JamIntensity(environment) > 0;
@@ -471,6 +485,25 @@ namespace JeepneyRush.Logic
             return false;
         }
 
+        /// <summary>A gem or a TURBO booster in a clear lane (like power-ups: never behind a blocker or in a stop's lane).</summary>
+        private bool TryPlaceExtra(float z, float distance, float speed, bool gem)
+        {
+            _blockers.Clear();
+            _sink.CollectBlockers(_blockers);
+            LaneOccupancy.BlockedIntervals(_blockers, speed, MaxHorizon, _cfg.playerHalfLength, _intervals);
+            float t = -z / Math.Max(1f, speed);
+            int start = _gemRng.Int(0, _cfg.laneCount - 1);
+            for (int i = 0; i < _cfg.laneCount; i++)
+            {
+                int l = (start + i) % _cfg.laneCount;
+                if (!LaneOccupancy.LaneClear(_intervals, l, t - 0.5f, t + 0.5f) || Reserved(l, distance - z, 3)) continue;
+                if (gem) { _sink.SpawnGem(l, z); GemsPlaced++; }
+                else { _sink.SpawnPowerUp(PowerUpKind.Turbo, l, z); BoostsPlaced++; }
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>Distance a Turbo must stay away from any stop, gas station or intersection (it lasts several seconds at high speed).</summary>
         public const float TurboClearance = 220f; // ~5 s of Turbo at top speed, plus room to brake
 
@@ -499,6 +532,13 @@ namespace JeepneyRush.Logic
 
         private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool hump)
         {
+            // gems and extra boosters sit a quarter-gap ahead of the row; they never change what the row itself gets
+            if (GemsPlaced < GemBudget && Cursor - gap >= _nextGemAt)
+            {
+                if (TryPlaceExtra(rowZ - gap * 0.25f, distance, speed, true)) _nextGemAt = Cursor + _gemRng.Range(RoadGems.SpacingMin, RoadGems.SpacingMax);
+            }
+            else if (Cursor - gap >= _nextBoostAt && TryPlaceExtra(rowZ - gap * 0.25f, distance, speed, false))
+                _nextBoostAt = Cursor + _gemRng.Range(BoostSpacingMin, BoostSpacingMax);
             if (Cursor - gap >= _nextPowerUpAt && TryPlacePowerUp(rowZ - gap * 0.5f, distance, speed))
             {
                 _nextPowerUpAt = Cursor + _rng.Range(_cfg.powerUpSpacingMin, _cfg.powerUpSpacingMax);

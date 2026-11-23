@@ -13,7 +13,7 @@ namespace JeepneyRush
     /// </summary>
     public static class InputCompat
     {
-        public enum Key { Left, Right, Down, Horn, Pause, Gear, Screenshot, ScreenshotClean }
+        public enum Key { Left, Right, Down, Horn, Pause, Gear, Screenshot, ScreenshotClean, Boost }
         public enum HoldKey { Gas, Brake }
 
         public struct Pointer
@@ -57,6 +57,7 @@ namespace JeepneyRush
                 case Key.Gear: return kb.rKey.wasPressedThisFrame;
                 case Key.Pause: return kb.pKey.wasPressedThisFrame;
                 case Key.Screenshot: return kb.f12Key.wasPressedThisFrame;
+                case Key.Boost: return kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame;
                 case Key.ScreenshotClean: return kb.f11Key.wasPressedThisFrame;
             }
             return false;
@@ -70,6 +71,7 @@ namespace JeepneyRush
                 case Key.Gear: return Input.GetKeyDown(KeyCode.R);
                 case Key.Pause: return Input.GetKeyDown(KeyCode.P);
                 case Key.Screenshot: return Input.GetKeyDown(KeyCode.F12);
+                case Key.Boost: return Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return);
                 case Key.ScreenshotClean: return Input.GetKeyDown(KeyCode.F11);
             }
             return false;
@@ -78,7 +80,8 @@ namespace JeepneyRush
 
         /// <summary>
         /// PC controls: hold ↑ (or W / Shift) to accelerate, hold Space (or B) to brake.
-        /// Ctrl (or H) honks, ←/→ (A/D) change lanes, R shifts gear, P pauses, F12 screenshot.
+        /// Ctrl (or H) honks, E (or Enter) fires a TURBO booster, ←/→ (A/D) change lanes, R shifts gear,
+        /// P pauses, F12 screenshot.
         /// </summary>
         public static bool KeyHeld(HoldKey k)
         {

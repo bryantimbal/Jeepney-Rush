@@ -132,7 +132,8 @@ namespace JeepneyRush
         {
             if (p.Taken) return false;
             p.Taken = true;
-            State.Activate(p.Kind, DurationScale);
+            // TURBO boosters are stored and used later with the TURBO button (GameplaySession.UseBoost)
+            if (p.Kind != PowerUpKind.Turbo) State.Activate(p.Kind, DurationScale);
             return true;
         }
     }

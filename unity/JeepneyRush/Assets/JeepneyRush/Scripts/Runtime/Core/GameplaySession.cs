@@ -203,6 +203,7 @@ namespace JeepneyRush
             _player.Collisions.CoinTouched = OnCoinTouched;
             _player.Collisions.ZoneEntered = OnZoneEntered;
             _player.Collisions.PowerUpTouched = OnPowerUpTouched;
+            _player.Collisions.GemTouched = OnGemTouched;
             GameEvents.StateChanged += OnStateChanged;
         }
 
@@ -266,6 +267,13 @@ namespace JeepneyRush
             _weather.ResetRun(seed, _env);
             _jams = new JamSchedule(seed, _env);
             _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
+            // road gems: a few per run, capped per day (the server applies the same caps)
+            var sd = Services.Save.Data;
+            int gemsToday = sd.roadGemsDay == PhilippineTime.DayKey ? sd.roadGemsToday : 0;
+            _director.GemBudget = Mathf.Min(RoadGems.MaxPerRun, RoadGems.LeftToday(gemsToday));
+            _runGems = 0;
+            Boosts.Reset();
+            Services.UI.SetBoosts(0);
             _jamCap = 1f; _jam = _stuckT = _complainT = 0; _jamComplaints = 0; _inJam = false; _dayPhase = -1;
             Services.UI.SetJam("");
             _enforcer.ResetRun();
@@ -319,6 +327,9 @@ namespace JeepneyRush
                     break;
                 case PlayerInputHandler.Action.Gear:
                     ToggleGear();
+                    break;
+                case PlayerInputHandler.Action.Boost:
+                    UseBoost();
                     break;
             }
         }
@@ -890,10 +901,74 @@ namespace JeepneyRush
             GameEvents.RaiseCoin(v);
         }
 
+        // ---------------------------------------------------------------- boosters & gems
+        /// <summary>TURBO boosters collected and waiting for the player to use them.</summary>
+        public readonly BoostBank Boosts = new BoostBank();
+        private int _runGems;
+
+        /// <summary>TURBO button / E key: fire a stored booster (refused right before a stop, station or intersection).</summary>
+        public void UseBoost()
+        {
+            var state = Services.Game.State;
+            if (_dying || state != GameState.Playing) return;
+            var pu = _powerUps.State;
+            var result = Boosts.TryUse(pu.IsActive(PowerUpKind.Turbo), NearestStopAhead());
+            switch (result)
+            {
+                case BoostBank.UseResult.Used:
+                    pu.Activate(PowerUpKind.Turbo, _powerUps.DurationScale);
+                    Services.Audio.Play(Logic.Audio.Sfx.Turbo);
+                    Services.UI.Float("TURBO!", UIManager.FloatKind.Big);
+                    _fx.Turbo(_player.transform.position);
+                    Haptics.Pulse(20);
+                    break;
+                case BoostBank.UseResult.TooClose:
+                    Services.UI.Float("MAY HINTUAN SA UNAHAN · MAMAYA NA ANG TURBO", UIManager.FloatKind.Info);
+                    break;
+                case BoostBank.UseResult.AlreadyActive:
+                    Services.UI.Float("NAKA-TURBO NA!", UIManager.FloatKind.Info);
+                    break;
+            }
+            Services.UI.SetBoosts(Boosts.Count);
+        }
+
+        /// <summary>Metres to the nearest stop with business, gas station or intersection ahead (∞ if none).</summary>
+        private float NearestStopAhead()
+        {
+            float best = float.PositiveInfinity;
+            var next = _passengers.NextStop();
+            if (next != null && next.transform.localPosition.z >= 0 && _route_HasBusiness(next)) best = next.transform.localPosition.z;
+            if (NextStationAhead(out float stz) && stz >= 0) best = Mathf.Min(best, stz);
+            foreach (var x in _crossings.Items) { float z = x.transform.localPosition.z; if (z > 0) best = Mathf.Min(best, z); }
+            return best;
+        }
+
+        private void OnGemTouched(Gem g)
+        {
+            if (_dying || !_coins.Collect(g)) return;
+            _runGems++;
+            _fx.Confetti(g.transform.position + Vector3.up * 0.5f, 22);
+            Services.Audio.Play(Logic.Audio.Sfx.CoinRush, 0.9f, 1.25f);
+            Services.UI.Float("+1 GEM!", UIManager.FloatKind.Big);
+            Haptics.Pulse(15);
+        }
+
         private void OnPowerUpTouched(PowerUpPickup p)
         {
             if (_dying || !_powerUps.Collect(p)) return;
             _fx.Confetti(p.transform.position + Vector3.up * 1.3f, 16);
+            if (p.Kind == PowerUpKind.Turbo)
+            {
+                if (Boosts.Add()) Services.UI.Float(Boosts.Count == 1 ? "+1 TURBO · TAP TURBO TO USE" : $"+1 TURBO (x{Boosts.Count})", UIManager.FloatKind.Info);
+                else
+                {
+                    _score.AddCoins(BoostBank.FullBankCoins);
+                    Services.UI.Float($"PUNO NA ANG TURBO · +{BoostBank.FullBankCoins} COINS", UIManager.FloatKind.Good);
+                }
+                Services.UI.SetBoosts(Boosts.Count);
+                GameEvents.RaisePowerUp(p.Kind);
+                return;
+            }
             if (p.Kind == PowerUpKind.RepairKit)
             {
                 if (_player.Collisions.Heal()) Services.UI.Float("+1 BUHAY!", UIManager.FloatKind.Good);
@@ -1308,7 +1383,7 @@ namespace JeepneyRush
             var route = _passengers.Route;
             var summary = new RunSummary
             {
-                Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Passengers = route.PickedUp,
+                Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Gems = _runGems, Passengers = route.PickedUp,
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };

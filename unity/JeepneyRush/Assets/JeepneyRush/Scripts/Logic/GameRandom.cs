@@ -10,6 +10,9 @@ namespace JeepneyRush.Logic
 
         public GameRandom(int seed) { _s = unchecked((uint)seed); }
 
+        /// <summary>An independent stream derived from this one without advancing it (new features keep old sequences).</summary>
+        public GameRandom Fork(uint salt) => new GameRandom(unchecked((int)(_s ^ salt * 0x9E3779B9u)));
+
         public double Next()
         {
             unchecked

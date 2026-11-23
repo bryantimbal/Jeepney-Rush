@@ -95,4 +95,44 @@ namespace JeepneyRush.Logic
             (PowerUpKind.DoubleCoins, 1.6f), (PowerUpKind.PassengerBonus, 1.2f), (PowerUpKind.RepairKit, 1.0f),
         });
     }
+
+    /// <summary>
+    /// Collected speed boosters ("TURBO"): picked up on the road and used whenever the player
+    /// taps the TURBO button. Holds a few at a time; a pickup with a full bank turns into coins.
+    /// Using one is refused while Turbo is already running or right before a place to stop.
+    /// </summary>
+    public sealed class BoostBank
+    {
+        public const int Max = 3;
+        /// <summary>Coins given instead when the bank is already full.</summary>
+        public const int FullBankCoins = 25;
+        /// <summary>No Turbo when a stop with passengers, a gas station or an intersection is this close (m).</summary>
+        public const float BlockedWithin = 120f;
+
+        public int Count { get; private set; }
+        public int UsedThisRun { get; private set; }
+
+        public void Reset() { Count = 0; UsedThisRun = 0; }
+
+        /// <summary>Stores a booster. False when the bank is full.</summary>
+        public bool Add()
+        {
+            if (Count >= Max) return false;
+            Count++;
+            return true;
+        }
+
+        public enum UseResult { Used, Empty, AlreadyActive, TooClose }
+
+        /// <param name="nearestStopAhead">Distance to the nearest stop/station/intersection ahead (∞ if none).</param>
+        public UseResult TryUse(bool turboActive, float nearestStopAhead)
+        {
+            if (Count <= 0) return UseResult.Empty;
+            if (turboActive) return UseResult.AlreadyActive;
+            if (nearestStopAhead >= 0 && nearestStopAhead < BlockedWithin) return UseResult.TooClose;
+            Count--;
+            UsedThisRun++;
+            return UseResult.Used;
+        }
+    }
 }

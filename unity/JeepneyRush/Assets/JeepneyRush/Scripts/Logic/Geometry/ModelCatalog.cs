@@ -31,6 +31,7 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("intersection", PropBuilder.Intersection());
             yield return ("gas_station", PropBuilder.GasStation(3.2f, 2.7f, 14f));
             yield return ("vendor_row", VendorRow());
+            yield return ("gem", PropBuilder.Gem());
             yield return ("barker", PropBuilder.Barker(1));
             yield return ("barker_arm", PropBuilder.BarkerArm(1));
             yield return ("stop_sign", PropBuilder.StopSign(0));
