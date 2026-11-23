@@ -44,7 +44,8 @@ ad units.
 ### 1.5 Privacy policy and account-deletion page
 Google Play requires both because the game has ads, purchases and accounts.
 1. Publish two web pages (Google Sites, GitHub Pages or Notion all work) using
-   `docs/PRIVACY_POLICY_TEMPLATE.md` and `docs/ACCOUNT_DELETION_PAGE.md`. Fill in your name,
+   `docs/PRIVACY_POLICY_TEMPLATE.md` and `docs/ACCOUNT_DELETION_PAGE.md` (optionally also
+   `docs/TERMS_OF_SERVICE_TEMPLATE.md`). Fill in your name,
    e-mail and country.
 2. Run **Jeepney Rush ▸ Setup ▸ Config Assets** once (creates `Resources/ReleaseConfig`).
 3. In `Resources/ReleaseConfig` paste the **Privacy Policy Url** and **Account Deletion Url**.
