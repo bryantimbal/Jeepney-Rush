@@ -32,6 +32,8 @@ namespace JeepneyRush
             float x = Cfg.LaneX(lane);
             if (kind == HazardKind.ParkedSedan || kind == HazardKind.ParkedJeepney) x += lane == 0 ? -0.4f : 0.4f; // hug the curb
             h.transform.localPosition = new Vector3(x, 0, unityZ);
+            // two-way roads: oncoming traffic faces the jeepney
+            h.transform.localRotation = speed < 0 ? Quaternion.Euler(0, 180f, 0) : Quaternion.identity;
             if (kind == HazardKind.Pothole) h.Body.localRotation = Quaternion.Euler(0, Rng.Range(0, 180), 0);
             Items.Add(h);
             return h;

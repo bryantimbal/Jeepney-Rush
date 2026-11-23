@@ -18,6 +18,9 @@ namespace JeepneyRush
         public System.Func<IReadOnlyList<int>> PlayerLanes;
         /// <summary>(lane, unityZ, speed, halfLength, secondsUntilPlayerPasses) → would this vehicle occupy a PARA zone?</summary>
         public System.Func<int, float, float, float, float, bool> ZoneBlocked;
+        /// <summary>Two-way road: lane 0 is oncoming traffic – nobody weaves into or out of it.</summary>
+        public bool TwoWay;
+        private bool Allowed(int lane) => !TwoWay || lane != Environments.OncomingLane;
 
         protected override void Animate(Hazard h, float dt, ref Vector3 pos)
         {
@@ -80,7 +83,7 @@ namespace JeepneyRush
             int seen = 0;
             foreach (var h in Items)
             {
-                if (h.Hit || h.TargetLane >= 0) continue;
+                if (h.Hit || h.TargetLane >= 0 || h.Speed <= 0 || !Allowed(h.Lane)) continue;
                 if (h.Kind != HazardKind.Motorcycle && h.Kind != HazardKind.Tricycle && h.Kind != HazardKind.Sedan) continue;
                 float z = h.transform.localPosition.z;
                 if (z < 50 || z > 140) continue;
@@ -88,6 +91,8 @@ namespace JeepneyRush
             }
             if (pick == null) return;
             int to = pick.Lane == 0 ? 1 : pick.Lane == Cfg.laneCount - 1 ? pick.Lane - 1 : (Rng.Chance(0.5) ? pick.Lane - 1 : pick.Lane + 1);
+            if (!Allowed(to)) to = pick.Lane + 1;
+            if (to >= Cfg.laneCount || !Allowed(to)) return;
             TryWeave(pick, to, playerSpeed, 0.7f);
         }
 
@@ -117,7 +122,7 @@ namespace JeepneyRush
             int lane = best.Lane;
             var options = lane == 0 ? new[] { 1 } : lane == Cfg.laneCount - 1 ? new[] { lane - 1 } : (Rng.Chance(0.5) ? new[] { lane - 1, lane + 1 } : new[] { lane + 1, lane - 1 });
             foreach (int to in options)
-                if (TryWeave(best, to, playerSpeed, 0.25f)) return best;
+                if (Allowed(to) && TryWeave(best, to, playerSpeed, 0.25f)) return best;
             best.Speed = Mathf.Min(best.Speed + 2.5f, Mathf.Max(best.Speed, playerSpeed * 0.9f)); // can't move over: hurries up
             return best;
         }

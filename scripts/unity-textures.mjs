@@ -147,6 +147,13 @@ const textures = await page.evaluate(() => {
     for (const lx of [-1.6, 1.6]) for (let d = 0; d < 2; d++) x.fillRect(px(lx) - 5, d * H / 2 + H / 8, 10, H / 4);
     x.fillStyle = '#f5c518'; x.fillRect(px(-5.2) - 6, 0, 12, H); x.fillRect(px(5.2) - 6, 0, 12, H);
     save('road', c);
+    // two-way roads (provincial, coastal): the left lane carries oncoming traffic, separated by a
+    // solid double yellow line ("bawal mag-overtake" centre line)
+    const [c2, x2] = cv(W, H);
+    x2.drawImage(c, 0, 0);
+    x2.fillStyle = '#45474e'; x2.fillRect(px(-1.6) - 8, 0, 16, H);
+    x2.fillStyle = '#f5c518'; x2.fillRect(px(-1.6) - 14, 0, 9, H); x2.fillRect(px(-1.6) + 5, 0, 9, H);
+    save('road_twoway', c2);
   }
   {
     const [c, x] = cv(256, 256);

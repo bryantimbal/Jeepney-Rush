@@ -38,6 +38,10 @@ namespace JeepneyRush.Logic
         /// <summary>How bad the traffic jams get (0 = none). EDSA is the real deal; Cebu has lighter jams.</summary>
         public static float JamIntensity(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 1f : k == EnvironmentKind.Cebu ? 0.55f : 0f;
         /// <summary>Tricycles are banned on EDSA and in Baguio.</summary>
+        /// <summary>Two-way roads: the left lane (0) carries oncoming traffic (provincial and coastal highways).</summary>
+        public static bool TwoWay(EnvironmentKind k) => k == EnvironmentKind.Provincial || k == EnvironmentKind.Beach;
+        public const int OncomingLane = 0;
+
         public static bool Tricycles(EnvironmentKind k) => k != EnvironmentKind.Edsa && k != EnvironmentKind.Baguio;
         /// <summary>PARA stops are this much farther apart (remote mountain barangays).</summary>
         public static float StopSpacingScale(EnvironmentKind k) => k == EnvironmentKind.Mountain ? 1.75f : 1f;

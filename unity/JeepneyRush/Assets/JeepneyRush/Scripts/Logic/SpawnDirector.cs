@@ -71,6 +71,10 @@ namespace JeepneyRush.Logic
         public int BoostsPlaced { get; private set; }
         // road events: extra validated rows between normal rows, on their own random stream
         private readonly GameRandom _eventRng;
+        /// <summary>Side stream for the extra oncoming traffic on two-way roads (keeps the main sequence unchanged).</summary>
+        private readonly GameRandom _oncomingRng;
+        public int OncomingPlaced { get; private set; }
+        public const float OncomingChance = 0.6f;
         private float _nextEventAt;
         private readonly List<RoadEvents.Piece> _pieces = new List<RoadEvents.Piece>();
         public int EventsPlaced { get; private set; }
@@ -84,6 +88,7 @@ namespace JeepneyRush.Logic
         private float _rowJam, _trafficRef;
         private readonly bool _jamAware;
         private readonly EnvironmentKind _env;
+        private readonly bool _twoWay;
         private readonly float _density;
         private float _planWet;
         /// <summary>Slow traffic can take a long time to reach the player; plan that far ahead.</summary>
@@ -104,12 +109,14 @@ namespace JeepneyRush.Logic
             _nextGemAt = RoadGems.FirstAt + _gemRng.Range(0, 250);
             _nextBoostAt = 300f + _gemRng.Range(0, 200);
             _eventRng = rng.Fork(0x3E7A1C55u);
+            _oncomingRng = rng.Fork(0x0C0A1B2Du);
             _nextEventAt = RoadEvents.FirstAt + _eventRng.Range(0, 120);
             _wetness = wetness ?? (_ => 0f);
             _jam = jam ?? (_ => 0f);
             _jamAware = jam != null && Environments.JamIntensity(environment) > 0;
             _traffic = Environments.TrafficWeights(environment);
             _env = environment;
+            _twoWay = Environments.TwoWay(environment);
             _density = Environments.TrafficDensity(environment);
             _nextPowerUpAt = 200f + _rng.Range(0, 150);
             NextStationAt = cfg.firstStationAt + _rng.Range(0, 150);
@@ -211,6 +218,7 @@ namespace JeepneyRush.Logic
             while (_route.UpcomingCount() < 4) // passengers need future stops as destinations
             {
                 int side = _rng.Chance(0.5) ? -1 : 1;
+                if (Environments.TwoWay(_env)) side = 1; // the left lane is oncoming traffic: stops are on the right
                 int lane = side < 0 ? 0 : _cfg.laneCount - 1;
                 int g = 0;
                 while (Overlaps(lane, _nextStopAt - _cfg.stopZoneLength / 2 - 30, _nextStopAt + _cfg.stopZoneLength / 2 + 12) && g++ < 20) _nextStopAt += 40f;
@@ -231,9 +239,11 @@ namespace JeepneyRush.Logic
             foreach (var r in _reservations)
             {
                 if (r.Lane != lane) continue;
+                if (Math.Abs(s) < 0.01f) continue;
+                // oncoming traffic (s < 0) enters at the far end of the zone
                 float ta = (r.From - halfLength - w0) / s;
                 float tb = (r.To + halfLength - w0) / s;
-                if (ta < tMeet + 0.5f && tb > 0) return true;
+                if (Math.Min(ta, tb) < tMeet + 0.5f && Math.Max(ta, tb) > 0) return true;
             }
             return false;
         }
@@ -288,7 +298,26 @@ namespace JeepneyRush.Logic
                 // halfway between this row and the next; a failed attempt simply waits for the next gap
                 if (TryEventRow(z - gap * 0.5f, distance, speed)) _nextEventAt = Cursor + _eventRng.Range(RoadEvents.SpacingMin, RoadEvents.SpacingMax);
             }
+            if (_twoWay) TryOncoming(z - gap * (_oncomingRng.Chance(0.5) ? 0.25f : 0.75f), distance, speed);
             PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.HumpRow);
+        }
+
+        private static readonly HazardKind[] OncomingKinds =
+            { HazardKind.Motorcycle, HazardKind.Motorcycle, HazardKind.Sedan, HazardKind.Truck, HazardKind.Bus, HazardKind.Tricycle, HazardKind.Suv };
+
+        /// <summary>Two-way road: an oncoming vehicle in the left lane between two rows, only if it stays fair.</summary>
+        private void TryOncoming(float z, float distance, float speed)
+        {
+            if (!_oncomingRng.Chance(OncomingChance)) return;
+            var k = OncomingKinds[_oncomingRng.Int(0, OncomingKinds.Length - 1)];
+            _cands.Clear();
+            _cands.Add(new Candidate { Kind = k, Lane = Environments.OncomingLane, Speed = -OncomingSpeed(k) });
+            if (Validate(z, distance, speed))
+            {
+                _sink.SpawnHazard(k, Environments.OncomingLane, z, -OncomingSpeed(k), false);
+                OncomingPlaced++;
+            }
+            _cands.Clear();
         }
 
         private Pattern PickPattern(float d, float at)
@@ -316,6 +345,10 @@ namespace JeepneyRush.Logic
                 (Pattern.Weaver, (early ? 0f : 0.4f + 0.9f * d) * k),
             });
         }
+
+        /// <summary>Oncoming traffic speed (m/s) – a fixed table so the main random stream is unchanged.</summary>
+        public static float OncomingSpeed(HazardKind k) =>
+            k == HazardKind.Motorcycle ? 8f : k == HazardKind.Bus || k == HazardKind.Truck ? 5.5f : k == HazardKind.Tricycle ? 4.5f : 7f;
 
         private float TrafficSpeed(HazardKind k, float playerSpeed)
         {
@@ -350,7 +383,13 @@ namespace JeepneyRush.Logic
             int lanes = _cfg.laneCount;
             int lane = _rng.Int(0, lanes - 1);
             int Other(int l) => (l + _rng.Int(1, lanes - 1)) % lanes;
-            void Veh(HazardKind k, int l, float dz = 0) => _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Speed = TrafficSpeed(k, _jamAware ? _trafficRef : speed) });
+            void Veh(HazardKind k, int l, float dz = 0)
+            {
+                float v = TrafficSpeed(k, _jamAware ? _trafficRef : speed);
+                // two-way road: vehicles in the left lane come toward the jeepney
+                if (_twoWay && l == Environments.OncomingLane) v = -OncomingSpeed(k);
+                _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Speed = v });
+            }
             void Stat(HazardKind k, int l, float dz = 0, bool solid = false) => _cands.Add(new Candidate { Kind = k, Lane = l, Dz = dz, Solid = solid });
             switch (p)
             {
@@ -435,10 +474,12 @@ namespace JeepneyRush.Logic
                         if (!fullWidth && l != c.Lane) continue;
                         if (Reserved(l, meetAt, def.HalfLength + _cfg.playerHalfLength)) return false;
                         // moving traffic must not even drive THROUGH a PARA zone before the jeepney passes it
-                        if (c.Speed > 0 && CrossesReservation(l, distance - (rowZ + c.Dz), c.Speed, def.HalfLength, t)) return false;
+                        if (Math.Abs(c.Speed) > 0.01f && CrossesReservation(l, distance - (rowZ + c.Dz), c.Speed, def.HalfLength, t)) return false;
                     }
                 }
             }
+            _strict = false;
+            foreach (var c in _cands) if (c.Speed < 0) _strict = true;
             _blockers.Clear();
             _sink.CollectBlockers(_blockers);
             foreach (var c in _cands)
@@ -551,6 +592,10 @@ namespace JeepneyRush.Logic
             return false;
         }
 
+        public const float OncomingSteerFactor = 1.25f;
+        private bool _strict;
+        private readonly int[] _oneLane = new int[1];
+
         private bool PassableAt(float speed)
         {
             // horizon covers every known blocker: a new row can push the player into a lane an older row closes later
@@ -562,7 +607,18 @@ namespace JeepneyRush.Logic
                 horizon = Math.Max(horizon, (b.HalfLength + _cfg.playerHalfLength - b.Z) / closing + 0.6f);
             }
             horizon = Math.Min(horizon, MaxHorizon);
-            return LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, _cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(_cfg, _planWet) + _cfg.laneChangeSlack, _sink.PlayerLanes);
+            float move = _cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(_cfg, _planWet) + _cfg.laneChangeSlack;
+            if (!_strict) return LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, move, _sink.PlayerLanes);
+            // oncoming traffic closes very fast and can shut the only escape lane: the row must be survivable
+            // from EACH lane the player may be in (mid lane change) and with slower steering
+            var lanes = _sink.PlayerLanes;
+            if (lanes == null || lanes.Count == 0) return LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, move * OncomingSteerFactor);
+            for (int i = 0; i < lanes.Count; i++)
+            {
+                _oneLane[0] = lanes[i];
+                if (!LaneOccupancy.IsPassable(_blockers, speed, horizon, _cfg.playerHalfLength, _cfg.laneCount, move * OncomingSteerFactor, _oneLane)) return false;
+            }
+            return true;
         }
 
         private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool hump)

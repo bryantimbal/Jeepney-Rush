@@ -48,7 +48,7 @@ namespace JeepneyRush
             float centre = RoadLength / 2f - RoadNear; // spans z = -RoadNear .. RoadLength - RoadNear
             float roadW = SceneryBuilder.RoadHalfWidth * 2;
             bool paved = Environments.Paved(env);
-            _road = MaterialLibrary.Surface(paved ? "road" : "road_dirt", new Vector2(1, RoadLength / RoadTexMetres));
+            _road = MaterialLibrary.Surface(!paved ? "road_dirt" : Environments.TwoWay(env) ? "road_twoway" : "road", new Vector2(1, RoadLength / RoadTexMetres));
             if (_road.HasProperty("_Smoothness")) _roadDry = _road.GetFloat("_Smoothness");
             float swW = SceneryBuilder.SidewalkOuter - SceneryBuilder.RoadHalfWidth;
             string ground = env == EnvironmentKind.Provincial || env == EnvironmentKind.Baguio ? "grass" : env == EnvironmentKind.Beach ? "sand" : env == EnvironmentKind.Mountain ? "dirt" : "sidewalk";

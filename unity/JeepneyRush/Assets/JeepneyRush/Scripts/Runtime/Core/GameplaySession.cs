@@ -189,6 +189,7 @@ namespace JeepneyRush
             _crossings.RanRed = OnRanRed;
             _traffic.CollectAll = _spawner.CollectBlockers;
             _traffic.PlayerLanes = () => _spawner.PlayerLanes;
+            _traffic.TwoWay = Environments.TwoWay(_env);
 
             // hills & bends are applied for rendering only (gameplay stays in straight lanes)
             _bender = GetOrAdd<RoadBender>(Child("RoadBender"));

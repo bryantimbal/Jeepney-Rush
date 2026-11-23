@@ -33,11 +33,14 @@ namespace JeepneyRush.Tests
                 }
             }
 
+            public readonly List<(HazardKind kind, int lane)> Oncoming = new List<(HazardKind, int)>();
             public readonly Dictionary<HazardKind, int> Spawned = new Dictionary<HazardKind, int>();
             public void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid)
             {
                 Objs.Add(new Obj { W = Distance - z, Kind = kind, Lane = lane, Z = z, Speed = speed, Solid = solid });
+                if (Environment.GetEnvironmentVariable("DEBUG_SPAWN") is string ds && Distance > float.Parse(ds) && Distance < float.Parse(ds) + 40) Console.WriteLine($"SPAWN @{Distance:0.0} {kind} L{lane} z={z:0.0} v={speed:0.0} lanes={string.Join("/", Lanes)}");
                 Spawned[kind] = Spawned.TryGetValue(kind, out var n) ? n + 1 : 1;
+                if (speed < 0) Oncoming.Add((kind, lane));
             }
             public void SpawnCoins(CoinFormation f, int lane, int lane2, float z, int count, float spacing) => CoinFormations++;
             public void SpawnStop(PassengerStop stop, float z) => Stops.Add((stop, z));
@@ -71,7 +74,7 @@ namespace JeepneyRush.Tests
             var blockers = new List<PredictBlocker>();
             var ivs = new List<LaneInterval>();
             const float step = 0.05f;
-            int maxMove = (int)Math.Ceiling(cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, 1) / step) + 1;
+            int maxMove = (int)Math.Ceiling((cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, 1) + cfg.laneChangeSlack) / step) + 1;
             const int horizonSteps = 600; // 30 s, same as the generator
 
             while (distance < metres)
@@ -82,6 +85,8 @@ namespace JeepneyRush.Tests
                 if (brakeHold > 0) { speed = Math.Max(1.5f, speed - cfg.brakeDecel * dt); brakeHold -= dt; world.Brakes++; }
                 world.Lanes = laneT < 1 ? new[] { from, lane } : new[] { lane };
                 world.Distance = distance;
+                // like the game (GameplaySession → LevelSpawner.SetPlayerLanes): the director plans from the player's real lane(s)
+                world.Lanes = laneT < 1 && from != lane ? new[] { lane, from } : new[] { lane };
                 director.Update(distance, speed);
                 foreach (var o in world.Objs) o.Z += (speed - (o.Z > 0 && o.Speed > 0 ? Math.Min(o.Speed, speed) : o.Speed)) * dt; // like the game: traffic behind waits
                 world.Objs.RemoveAll(o => o.Z > cfg.despawnBehind + 6);
@@ -142,8 +147,10 @@ namespace JeepneyRush.Tests
                 {
                     // slippery road: steering takes longer when wet
                     laneDur = cfg.laneChangeDuration * WeatherSchedule.LaneChangeFactor(cfg, Math.Max(weather.WetnessAt(distance), weather.WetnessAt(distance + 60))); // plan for the rain that's coming
-                    int move = (int)Math.Ceiling(laneDur / step);
+                    // a careful driver steers early: plan with the generator's slower lane change first
+                    int quick = (int)Math.Ceiling(laneDur / step), careful = (int)Math.Ceiling((laneDur + cfg.laneChangeSlack) / step);
                     int best = -1;
+                    foreach (int move in new[] { careful, quick }) {
                     // speeding up after a jam: a sensible driver plans for the speed it's about to have
                     var plans = target > speed + 0.5f ? new[] { (true, Math.Min(target, speed + 3f)), (true, speed), (false, Math.Min(target, speed + 3f)), (false, speed) } : new[] { (true, speed), (false, speed) };
                     foreach (var (cautious, pv) in plans)
@@ -179,9 +186,11 @@ namespace JeepneyRush.Tests
                                 if (n >= 0 && n <= 2 && Clear(lane, 0, move) && Clear(n, 0, move) && (alive[move] & (1 << n)) != 0) { best = n; break; }
                         if (best >= 0) break;
                     }
+                    if (best >= 0) break; }
                     if (Environment.GetEnvironmentVariable("DEBUG_FROM") is string df && Environment.GetEnvironmentVariable("DEBUG_SEED") == seed.ToString() && distance > float.Parse(df) && distance < float.Parse(df) + 40)
                     {
-                        Console.WriteLine($"@{distance:0.0} v={speed:0.0} lane={lane} best={best}");
+                        var dbg = new List<PredictBlocker>(); world.CollectBlockers(dbg);
+                        Console.WriteLine($"@{distance:0.0} v={speed:0.0} lane={lane} best={best} passable={LaneOccupancy.IsPassable(dbg, speed, 12f, cfg.playerHalfLength, 3, cfg.laneChangeDuration + cfg.laneChangeSlack, new[] { lane })} bot-dur={laneDur:0.00} dir-dur={cfg.laneChangeDuration + cfg.laneChangeSlack:0.00}");
                         foreach (var q in world.Objs) if (q.Z > -400 && q.Z < 15) Console.WriteLine($"     {q.Kind} L{q.Lane} z={q.Z:0.0} v={q.Speed:0.0}");
                     }
                     if (best < 0) brakeHold = 0.35f;
@@ -246,6 +255,29 @@ namespace JeepneyRush.Tests
                 float prev = i == 0 ? 0 : world.Stations[i - 1].station.At;
                 Assert.Less(world.Stations[i].station.At - prev, FuelTank.RangeOnGas(cfg) - 100f, "stations too far apart for a full tank");
             }
+        }
+
+        [TestCase(EnvironmentKind.Provincial, 3)]
+        [TestCase(EnvironmentKind.Beach, 5)]
+        [TestCase(EnvironmentKind.Manila, 7)]
+        [TestCase(EnvironmentKind.Edsa, 9)]
+        public void TwoWayRoadsHaveOncomingTrafficInTheLeftLaneOnly(EnvironmentKind env, int seed)
+        {
+            var (hits, _, _, _, _, intrusions, world) = Simulate(seed, 3000, env);
+            CollectionAssert.IsEmpty(hits, string.Join(", ", hits));
+            CollectionAssert.IsEmpty(intrusions);
+            int oncoming = world.Oncoming.Count;
+            foreach (var (kind, lane) in world.Oncoming)
+            {
+                Assert.AreEqual(Environments.OncomingLane, lane, $"{kind} drives against traffic outside the oncoming lane");
+                Assert.IsTrue(HazardCatalog.IsMoving(kind));
+            }
+            if (Environments.TwoWay(env))
+            {
+                Assert.Greater(oncoming, 25, "two-way road without oncoming traffic");
+                foreach (var (stop, _) in world.Stops) Assert.AreEqual(2, stop.Lane, "PARA stops are on the right on a two-way road");
+            }
+            else Assert.AreEqual(0, oncoming);
         }
 
         /// <summary>Long sweep over many seeds and every route (run explicitly: JR_SWEEP=1).</summary>
