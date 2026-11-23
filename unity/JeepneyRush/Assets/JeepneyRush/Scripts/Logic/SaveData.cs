@@ -24,8 +24,12 @@ namespace JeepneyRush.Logic
         public bool soundTrip = true;
         /// <summary>Camera: false = behind the jeepney (LIKOD), true = from the driver's seat.</summary>
         public bool driverView;
-        /// <summary>0.5 (needs long swipes) .. 1.5 (very sensitive).</summary>
+        /// <summary>Steering sensitivity 0.5 .. 1.5 (tilt angle for full lock). Field name kept for old saves.</summary>
         public float swipeSensitivity = 1f;
+        /// <summary>How the jeepney is steered: 0 = hold the left/right side of the screen, 1 = tilt the phone.</summary>
+        public int steerMode;
+        /// <summary>Lane-keeping assist: with hands off, the jeepney settles into the nearest lane.</summary>
+        public bool laneAssist = true;
         public int graphicsQuality = 3; // 0 low, 1 medium, 2 high, 3 auto (adapts to the device)
         public bool tutorialDone;
         /// <summary>Shows a camera button on the HUD for taking screenshots (F12 / F11 on PC always work).</summary>
@@ -131,6 +135,7 @@ namespace JeepneyRush.Logic
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;
             if (d.graphicsQuality < 0 || d.graphicsQuality > 3) d.graphicsQuality = 3;
+            if (d.steerMode < 0 || d.steerMode > 1) d.steerMode = 0;
             d.runs = NonNeg(d.runs);
             d.totalDistance = NonNeg(d.totalDistance);
             d.totalCoins = NonNeg(d.totalCoins);

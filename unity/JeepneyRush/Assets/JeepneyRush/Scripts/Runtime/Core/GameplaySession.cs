@@ -71,6 +71,7 @@ namespace JeepneyRush
         private GameRandom _rng;
 
         private WeatherManager _weather;
+        private int _lastTurn;
         // EDSA rush hour + day/night
         private JamSchedule _jams;
         private float _jamCap = 1f, _jam, _stuckT, _complainT, _hour;
@@ -294,7 +295,13 @@ namespace JeepneyRush
             _nearMiss.Reset();
             Services.UI.SetArcade(0, 1, 0);
             _input.Sensitivity = save.swipeSensitivity;
+            _input.Mode = (SteerMode)save.steerMode;
             _player.ResetRun();
+            _player.Lanes.Assist = save.laneAssist;
+            _input.Recalibrate();
+            _lastTurn = 0;
+            if (save.runs < 3) // first runs: how to steer
+                Services.UI.Float(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? "I-TILT ANG PHONE PARA LUMIKO" : "HAWAKAN ANG KALIWA / KANAN PARA LUMIKO", UIManager.FloatKind.Info);
             _road.Layout();
             _speed = _runTime = _cleanDistance = _bestClean = 0;
             _smoothHumps = _hits = 0;
@@ -325,11 +332,6 @@ namespace JeepneyRush
             if (_dying || (state != GameState.Playing && state != GameState.Starting)) return;
             switch (a)
             {
-                case PlayerInputHandler.Action.Left:
-                case PlayerInputHandler.Action.Right:
-                    int dir = a == PlayerInputHandler.Action.Left ? -1 : 1;
-                    if (_player.MoveLane(dir)) GameEvents.RaiseLane(dir);
-                    break;
                 case PlayerInputHandler.Action.Down:
                     if (_player.Down()) GameEvents.RaiseBrake();
                     break;
@@ -628,7 +630,11 @@ namespace JeepneyRush
             RoadCurve.Distance = _score.Distance;
             _player.SlopePitch = RoadCurve.PlayerPitch;
 
-            // ---- player
+            // ---- player: analog steering (tap zones / tilt / keys)
+            _player.Lanes.Steer = _dying ? 0f : _input.Steer;
+            int turn = _player.Lanes.TurnDirection;
+            if (turn != 0 && turn != _lastTurn) GameEvents.RaiseLane(turn); // blinker click as the turn starts
+            _lastTurn = turn;
             _player.Tick(dt, _speed);
             _combo.Tick(dt);
             Services.UI.SetCombo(_combo.Count);

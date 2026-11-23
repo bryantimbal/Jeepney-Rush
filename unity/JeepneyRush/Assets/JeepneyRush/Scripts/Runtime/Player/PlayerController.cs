@@ -417,7 +417,6 @@ namespace JeepneyRush
             Body.gameObject.SetActive(true);
         }
 
-        public bool MoveLane(int dir) => Lanes.Move(dir);
         /// <summary>Speed hump / pothole: kick the suspension (0.1 = gentle, 0.4 = hard).</summary>
         public void Bump(float strength)
         {

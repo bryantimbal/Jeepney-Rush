@@ -35,7 +35,7 @@ namespace JeepneyRush.Logic
 
         /// <summary>How much traffic the route has (multiplies the vehicle patterns).</summary>
         public static float TrafficDensity(EnvironmentKind k) =>
-            k == EnvironmentKind.Mountain ? 0.35f : k == EnvironmentKind.Edsa ? 1.6f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f
+            k == EnvironmentKind.Mountain ? 0.3f : k == EnvironmentKind.Edsa ? 1.6f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f
             : k == EnvironmentKind.Fiesta ? 1.2f : 1f;
         /// <summary>How bad the traffic jams get (0 = none). EDSA is the real deal; Cebu has lighter jams.</summary>
         public static float JamIntensity(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 1f : k == EnvironmentKind.Cebu ? 0.55f : 0f;

@@ -581,7 +581,13 @@ namespace JeepneyRush
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => d().vibration = v));
-            card.Add(Segmented("Swipe sensitivity", new[] { "Low", "Normal", "High" },
+            card.Add(Segmented("Steering", new[] { "Hold sides", "Tilt phone" }, () => d().steerMode, i =>
+            {
+                d().steerMode = i;
+                if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING HOLD SIDES", FloatKind.Info);
+            }));
+            card.Add(Toggle("Lane assist", () => d().laneAssist, v => d().laneAssist = v));
+            card.Add(Segmented("Steering sensitivity", new[] { "Low", "Normal", "High" },
                 () => d().swipeSensitivity < 0.85f ? 0 : d().swipeSensitivity > 1.15f ? 2 : 1,
                 i => d().swipeSensitivity = i == 0 ? 0.7f : i == 1 ? 1f : 1.3f));
             card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High", "Auto" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
@@ -913,7 +919,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "Swipe LEFT / RIGHT to change lanes", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn) or swipe UP: the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Collect TURBO boosters · tap TURBO to use one", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "HOLD the LEFT / RIGHT side to steer (or TILT: Settings)", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn): the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Collect TURBO boosters · tap TURBO to use one", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

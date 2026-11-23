@@ -14,7 +14,7 @@ namespace JeepneyRush
     public static class InputCompat
     {
         public enum Key { Left, Right, Down, Horn, Pause, Gear, Screenshot, ScreenshotClean, Boost }
-        public enum HoldKey { Gas, Brake }
+        public enum HoldKey { Gas, Brake, Left, Right }
 
         public struct Pointer
         {
@@ -88,11 +88,47 @@ namespace JeepneyRush
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return false;
-            return k == HoldKey.Gas ? kb.upArrowKey.isPressed || kb.wKey.isPressed || kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed
-                                    : kb.spaceKey.isPressed || kb.bKey.isPressed;
+            switch (k)
+            {
+                case HoldKey.Gas: return kb.upArrowKey.isPressed || kb.wKey.isPressed || kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
+                case HoldKey.Brake: return kb.spaceKey.isPressed || kb.bKey.isPressed;
+                case HoldKey.Left: return kb.leftArrowKey.isPressed || kb.aKey.isPressed;
+                default: return kb.rightArrowKey.isPressed || kb.dKey.isPressed;
+            }
 #else
-            return k == HoldKey.Gas ? Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
-                                    : Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.B);
+            switch (k)
+            {
+                case HoldKey.Gas: return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                case HoldKey.Brake: return Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.B);
+                case HoldKey.Left: return Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A);
+                default: return Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D);
+            }
+#endif
+        }
+
+        /// <summary>True if the device has an accelerometer (phones; not PCs).</summary>
+        public static bool HasTilt
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return Accelerometer.current != null;
+#else
+                return SystemInfo.supportsAccelerometer;
+#endif
+            }
+        }
+
+        /// <summary>Sideways gravity in g (portrait: + = phone tilted to the right). 0 without a sensor.</summary>
+        public static float TiltX()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var acc = Accelerometer.current;
+            if (acc == null) return 0f;
+            if (!acc.enabled) InputSystem.EnableDevice(acc);
+            return acc.acceleration.ReadValue().x;
+#else
+            return SystemInfo.supportsAccelerometer ? Input.acceleration.x : 0f;
 #endif
         }
 

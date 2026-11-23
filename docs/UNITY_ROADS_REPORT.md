@@ -38,3 +38,27 @@ earlier migrations.
 4. Baguio: the fog thickens and clears with a warning, and the road is still readable.
 5. Fiesta Town: it unlocks at 2,200 m. Check the arch text reads correctly, the banderitas sit
    above the camera, the tanod checkpoint, frequent parade floats, and smooth frame rate.
+
+# Steering: hold the sides or tilt (replaces swiping)
+
+- **Analog steering** (`Logic/Steering.cs`): the jeepney now has a real sideways position and
+  speed. Holding steer turns the "wheel" over 0.3 s, and letting go eases the turn out, so
+  nothing snaps. At full lock one lane takes **0.6 s** (the old swipe hop took 0.42 s), and the
+  spawner plans with exactly that time, so traffic stays fair. Wet roads steer slower, as before.
+- **Settings ▸ Steering**:
+  - **Hold sides** (default): keep a finger on the left or right half of the screen. Fingers
+    that start on GAS / BRAKE / BUSINA / TURBO never steer, so you can hold GAS with one thumb
+    and steer with the other.
+  - **Tilt phone**: tilt like a steering wheel. The way the phone is held when the run starts
+    counts as straight. There's a small dead zone, and **Steering sensitivity** sets how far
+    you tilt for full lock. Without a tilt sensor the game falls back to Hold sides.
+- **Lane assist** (on by default): hands off, the jeepney settles into the nearest lane so
+  stops and gas stations line up. Turn it off for fully manual driving.
+- **PC**: hold ← / → (or A / D).
+- Swipe up (horn) and swipe down (brake) are gone. Use the BUSINA and BRAKE buttons.
+- The first 3 runs show a short hint on how to steer.
+- Projects with a saved balance asset are moved to the new 0.6 s lane time automatically
+  (GameBalance v4).
+
+Device checklist: try both modes, steer while holding GAS, check tilt calibration when holding
+the phone at an angle, and check lane assist on and off.

@@ -115,6 +115,7 @@ namespace JeepneyRush
                 music = keep.music, sfx = keep.sfx, vibration = keep.vibration,
                 swipeSensitivity = keep.swipeSensitivity, graphicsQuality = keep.graphicsQuality, tutorialDone = keep.tutorialDone,
                 screenshotButton = keep.screenshotButton, storeFrame = keep.storeFrame,
+                steerMode = keep.steerMode, laneAssist = keep.laneAssist, cameraEffects = keep.cameraEffects, driverView = keep.driverView,
             };
             Save();
         }

@@ -15,7 +15,7 @@ namespace JeepneyRush
         public BalanceConfig config = new BalanceConfig();
         [Tooltip("Balance-asset format version (older assets are upgraded on load).")]
         public int balanceVersion;
-        private const int CurrentVersion = 3;
+        private const int CurrentVersion = 4;
 
         private static GameBalance _active;
 
@@ -48,6 +48,8 @@ namespace JeepneyRush
             if (balanceVersion >= CurrentVersion) return;
             // v3: lane changes became smooth and slow (with turn signals) – 0.22 s was the old snappy value
             if (config.laneChangeDuration < 0.3f) config.laneChangeDuration = new BalanceConfig().laneChangeDuration;
+            // v4: analog steering (hold left/right or tilt) – a lane at full lock takes 0.6 s; the old swipe hop was 0.42 s
+            if (balanceVersion < 4 && config.laneChangeDuration < 0.55f) config.laneChangeDuration = new BalanceConfig().laneChangeDuration;
             balanceVersion = CurrentVersion;
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(this);
