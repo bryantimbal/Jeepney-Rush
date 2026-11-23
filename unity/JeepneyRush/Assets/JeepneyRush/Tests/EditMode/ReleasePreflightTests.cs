@@ -14,7 +14,7 @@ namespace JeepneyRush.Tests
             AdsEnabled = true, UseTestAds = false,
             AdMobAppId = "ca-app-pub-1234567890123456~1234567890",
             BannerId = "ca-app-pub-1234567890123456/1111111111", InterstitialId = "ca-app-pub-1234567890123456/2222222222", RewardedId = "ca-app-pub-1234567890123456/3333333333",
-            IapEnabled = true, IapPackageName = "ph.jeepneyrush.game",
+            IapEnabled = true, IapPackageName = "ph.jeepneyrush.game", AdMobSymbol = true, IapSymbol = true,
             SupabaseUrl = "https://abcdefgh.supabase.co", SupabaseKey = "sb_publishable_xyz",
             PrivacyPolicyUrl = "https://example.org/privacy", AccountDeletionUrl = "https://example.org/delete",
         };
@@ -88,6 +88,17 @@ namespace JeepneyRush.Tests
             f = Good(); f.ObsoleteFiles = new[] { "Assets/x.png" };
             Assert.IsEmpty(Errors(f), "obsolete files are only a warning");
             Assert.AreEqual(1, ReleasePreflight.Check(f).Count);
+        }
+
+        [Test]
+        public void MissingSdkDefineSymbolsBlockTheRelease()
+        {
+            var f = Good(); f.IapSymbol = false; f.AdMobSymbol = false;
+            var e = Errors(f);
+            Assert.That(e, Has.Some.Contains("JR_UNITY_IAP"));
+            Assert.That(e, Has.Some.Contains("JR_ADMOB"));
+            f = Good(); f.IapEnabled = false; f.IapSymbol = false; f.AdsEnabled = false; f.AdMobSymbol = false;
+            Assert.IsEmpty(Errors(f), "not needed when ads / purchases are switched off");
         }
 
         private static string Jwt(string role)

@@ -18,6 +18,8 @@ namespace JeepneyRush.Logic.Release
         public bool AdsEnabled, UseTestAds;
         public string AdMobAppId = "", BannerId = "", InterstitialId = "", RewardedId = "";
         public bool IapEnabled;
+        /// <summary>Scripting define symbols that switch on the real SDK adapters (JR_ADMOB / JR_UNITY_IAP).</summary>
+        public bool AdMobSymbol, IapSymbol;
         public string IapPackageName = "";
         public string SupabaseUrl = "", SupabaseKey = "";
         public string PrivacyPolicyUrl = "", AccountDeletionUrl = "";
@@ -89,6 +91,10 @@ namespace JeepneyRush.Logic.Release
                     else if (!AdMobUnitRx.IsMatch(id ?? "")) Err($"Monetization: {name} unit id '{id}' should look like ca-app-pub-0000000000000000/0000000000.");
                 }
             }
+            if (f.AdsEnabled && !f.AdMobSymbol)
+                Err("Monetization: JR_ADMOB is missing from Player ▸ Android ▸ Scripting Define Symbols – the build would show no ads at all.");
+            if (f.IapEnabled && !f.IapSymbol)
+                Err("Monetization: JR_UNITY_IAP is missing from Player ▸ Android ▸ Scripting Define Symbols – the shop would say the store isn't set up.");
             if (f.IapEnabled && !string.Equals(f.IapPackageName, f.ApplicationId, StringComparison.Ordinal))
                 Err($"Monetization: package name '{f.IapPackageName}' differs from the application id '{f.ApplicationId}' (purchase verification would fail). Set both, and the server secret PLAY_PACKAGE_NAME, to the same value.");
 

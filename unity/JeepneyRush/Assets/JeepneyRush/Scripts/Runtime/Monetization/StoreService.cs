@@ -74,7 +74,11 @@ namespace JeepneyRush
 #endif
             if (Application.isEditor || Debug.isDebugBuild)
                 return "TEST store is off (MonetizationConfig ▸ Simulate In Development).";
-            return "The store isn't set up in this build yet. To test, build with \"Development Build\" ticked.";
+#if JR_UNITY_IAP
+            return "The store isn't set up in this build yet.";
+#else
+            return "Google Play billing isn't in this build. Add JR_UNITY_IAP to Scripting Define Symbols (with Unity In-App Purchasing installed) and rebuild.";
+#endif
         }
 
         public void Buy(string productId, Action<bool, string> done)

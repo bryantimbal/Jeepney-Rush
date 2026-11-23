@@ -144,6 +144,8 @@ namespace JeepneyRush.EditorTools
                 InterstitialId = money != null ? money.interstitialUnitId : "",
                 RewardedId = money != null ? money.rewardedUnitId : "",
                 IapEnabled = money != null && money.iapEnabled,
+                AdMobSymbol = HasSymbol("JR_ADMOB"),
+                IapSymbol = HasSymbol("JR_UNITY_IAP"),
                 IapPackageName = money != null ? money.packageName : "",
                 SupabaseUrl = online != null ? online.supabaseUrl : "",
                 SupabaseKey = online != null ? online.anonKey : "",
@@ -165,6 +167,15 @@ namespace JeepneyRush.EditorTools
                 if (i.Severity == Severity.Error) Debug.LogError($"[Preflight {n}/{issues.Count}] {i.Message}");
                 else Debug.LogWarning($"[Preflight {n}/{issues.Count}] {i.Message}");
             }
+        }
+
+        private static bool HasSymbol(string symbol)
+        {
+#pragma warning disable 618
+            string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android) ?? "";
+#pragma warning restore 618
+            foreach (var d in defines.Split(';')) if (d.Trim() == symbol) return true;
+            return false;
         }
 
         public static string Report(System.Collections.Generic.List<Issue> issues)
