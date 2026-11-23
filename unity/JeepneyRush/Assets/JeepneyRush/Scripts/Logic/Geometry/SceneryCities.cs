@@ -393,5 +393,197 @@ namespace JeepneyRush.Logic.Geometry
             }
             return b.Data;
         }
+
+        // ------------------------------------------------------------------ Fiesta Town
+        private static readonly string[] Bunting = { "#D62828", "#FCD116", "#0038A8", "#2A9D8F", "#FFFFFF", "#F77F00", "#FF5D8F" };
+        /// <summary>Lowest point of the banderitas strung across the street (above every vehicle and the chase camera).</summary>
+        public const float BanderitasY = 8.6f;
+
+        /// <summary>
+        /// Banderitas: a sagging string of small triangular flags across the street at
+        /// <paramref name="z"/>, from one balcony line to the other.
+        /// </summary>
+        public static void Banderitas(MeshBuilder b, GameRandom rng, float z, float top)
+        {
+            float x0 = -BL + 0.3f, x1 = BL - 0.3f;
+            const int segs = 6;
+            for (int i = 0; i < segs; i++)
+            {
+                float t0 = i / (float)segs, t1 = (i + 1) / (float)segs;
+                float y0 = top - (float)Math.Sin(t0 * Math.PI) * 0.9f, y1 = top - (float)Math.Sin(t1 * Math.PI) * 0.9f;
+                float xa = x0 + (x1 - x0) * t0, xb = x0 + (x1 - x0) * t1;
+                float len = (float)Math.Sqrt((xb - xa) * (xb - xa) + (y1 - y0) * (y1 - y0));
+                b.Box("paint", "#444444", len, 0.02f, 0.02f, (xa + xb) / 2, SY + (y0 + y1) / 2, z, new Rot(0, 0, (float)Math.Atan2(y1 - y0, xb - xa)));
+            }
+            int start = rng.Int(0, Bunting.Length - 1);
+            for (int k = 0; k < 22; k++)
+            {
+                float t = (k + 0.5f) / 22f, x = x0 + (x1 - x0) * t, y = top - (float)Math.Sin(t * Math.PI) * 0.9f;
+                // a little diamond turned 45°, its top half hidden in the string reads as a pennant
+                b.Box("paint", Bunting[(start + k) % Bunting.Length], 0.34f, 0.34f, 0.015f, x, SY + y - 0.2f, z, new Rot(0, 0, (float)(Math.PI / 4)));
+            }
+        }
+
+        /// <summary>Bahay na bato: stone ground floor, overhanging painted wooden upper floor with capiz windows and a tiled roof.</summary>
+        private static void BahayNaBato(MeshBuilder b, GameRandom rng, float side, float z, float w)
+        {
+            float d = rng.Range(8f, 10f), cx = side * (BL + d / 2);
+            string stone = rng.Pick(new[] { "#B89B7A", "#A88B6C", "#C7AE8E" });
+            string wood = rng.Pick(new[] { "#E9C46A", "#F4A261", "#A8DADC", "#F1FAEE", "#E76F51", "#CDB4DB", "#90BE6D" });
+            b.Box("paint", stone, d, 3.2f, w - 0.3f, cx, SY + 1.6f, z);
+            b.Box("paint", "#5A3A22", 0.12f, 2.4f, 1.6f, side * BL - side * 0.02f, SY + 1.2f, z);                 // big wooden door
+            b.Box("paint", wood, d + 0.8f, 3.0f, w - 0.1f, cx - side * 0.4f, SY + 4.7f, z);                   // overhanging upper floor
+            for (float wz = z - w / 2 + 1.2f; wz < z + w / 2 - 0.8f; wz += 1.7f)
+            {
+                b.Box("glass", "#FFF6E0", 0.08f, 1.5f, 1.2f, side * (BL - 0.42f), SY + 4.8f, wz);                 // capiz sliding windows
+                b.Box("nightglow", "#FFE2A8", 0.09f, 1.3f, 1.0f, side * (BL - 0.43f), SY + 4.8f, wz);
+                b.Box("paint", "#6B4F35", 0.1f, 1.52f, 0.06f, side * (BL - 0.44f), SY + 4.8f, wz);                     // sliding-panel mullion
+                b.Box("paint", "#6B4F35", 0.1f, 0.4f, 1.3f, side * (BL - 0.42f), SY + 3.65f, wz);                  // ventanillas
+            }
+            b.Box("paint", "#A4442B", d + 1.6f, 0.4f, w + 0.4f, cx - side * 0.4f, SY + 6.4f, z);                // tiled roof eave
+            b.Cylinder("paint", "#8E3B24", 0f, (w + 0.4f) * 0.72f, 2.2f, 4, cx, SY + 7.7f, z, new Rot(0, (float)(Math.PI / 4), 0));
+            // fiesta bunting draped along the balcony
+            for (float bz = z - w / 2 + 0.6f; bz < z + w / 2 - 0.4f; bz += 1.2f)
+                b.Box("paint", Bunting[rng.Int(0, Bunting.Length - 1)], 0.04f, 0.3f, 0.3f, side * (BL - 0.86f), SY + 3.3f, bz, new Rot((float)(Math.PI / 4), 0, 0));
+        }
+
+        /// <summary>Plaza stall with a striped awning: lechon, kakanin, toys and balloons.</summary>
+        private static void FiestaStall(MeshBuilder b, GameRandom rng, float side, float z)
+        {
+            float x = side * (R + 2.4f);
+            string a = rng.Pick(new[] { "#D62828", "#0038A8", "#2A9D8F", "#F77F00" });
+            b.Box("paint", "#8D6E4F", 1.4f, 0.9f, 2.4f, x, SY + 0.45f, z);
+            foreach (float e in new[] { -1.1f, 1.1f }) foreach (float f in new[] { -0.6f, 0.6f }) b.Box("paint", "#6B4F35", 0.06f, 2.2f, 0.06f, x + f, SY + 1.1f, z + e);
+            for (int i = 0; i < 4; i++) b.Box("paint", i % 2 == 0 ? a : "#FFFFFF", 1.7f, 0.06f, 0.65f, x, SY + 2.25f, z - 0.98f + i * 0.65f, new Rot(0, 0, side * 0.2f));
+            if (rng.Chance(0.5))
+            {
+                // lechon on the counter
+                b.Sphere("paint", "#B5651D", 0.3f, x, SY + 1.15f, z, 8, 1f, 0.8f, 2.4f);
+                b.Box("paint", "#E63946", 0.12f, 0.12f, 0.12f, x, SY + 1.2f, z + 0.78f);
+            }
+            else for (int i = 0; i < 5; i++) b.Sphere("paint", Bunting[rng.Int(0, Bunting.Length - 1)], 0.22f, x + rng.Range(-0.4f, 0.4f), SY + 2.9f + rng.Range(0, 0.6f), z + rng.Range(-0.8f, 0.8f), 6); // balloons
+            b.Box("nightglow", "#FFE8B0", 1.2f, 0.05f, 2.0f, x, SY + 2.1f, z);
+        }
+
+        /// <summary>Baroque town church set back behind its patio, bell tower, belfry lights.</summary>
+        private static void Church(MeshBuilder b, float side, float z)
+        {
+            float x = side * (BL + 9f);
+            b.Box("paint", "#EFE3C8", 10f, 13f, 16f, x, SY + 6.5f, z);                                      // nave
+            b.Box("paint", "#E6D7B5", 1.2f, 16f, 14f, side * (BL + 3.6f), SY + 8f, z);                       // facade
+            b.Cylinder("paint", "#E6D7B5", 0f, 7.6f, 3.6f, 3, side * (BL + 3.6f), SY + 17.6f, z, new Rot((float)(Math.PI / 2), 0, (float)(Math.PI / 2))); // pediment
+            b.Box("paint", "#5A3A22", 0.2f, 4.6f, 3.2f, side * (BL + 2.95f), SY + 2.3f, z);                  // main door
+            b.Cylinder("paint", "#5A3A22", 1.6f, 1.6f, 0.2f, 12, side * (BL + 2.95f), SY + 4.6f, z, new Rot(0, 0, (float)(Math.PI / 2)));
+            b.Cylinder("glass", "#3A6EA5", 1.1f, 1.1f, 0.15f, 12, side * (BL + 2.95f), SY + 10f, z, new Rot(0, 0, (float)(Math.PI / 2))); // rose window
+            b.Cylinder("nightglow", "#FFD58A", 1.0f, 1.0f, 0.16f, 12, side * (BL + 2.9f), SY + 10f, z, new Rot(0, 0, (float)(Math.PI / 2)));
+            foreach (float e in new[] { -5.5f, -2.6f, 2.6f, 5.5f }) b.Box("paint", "#D8C69D", 0.5f, 14f, 0.6f, side * (BL + 2.95f), SY + 7f, z + e); // pilasters
+            // bell tower
+            float tz = z - 10.5f;
+            b.Box("paint", "#E6D7B5", 5f, 18f, 5f, side * (BL + 5f), SY + 9f, tz);
+            b.Box("paint", "#2B2D42", 0.1f, 2.2f, 1.6f, side * (BL + 2.45f), SY + 14.5f, tz);                  // belfry opening
+            b.Cylinder("gold", "#C9A227", 0.5f, 0.5f, 0.6f, 10, side * (BL + 2.6f), SY + 14.3f, tz);           // bell
+            b.Cylinder("paint", "#A4442B", 0f, 3.4f, 4f, 4, side * (BL + 5f), SY + 20f, tz, new Rot(0, (float)(Math.PI / 4), 0));
+            b.Box("gold", "#C9A227", 0.15f, 1.4f, 0.15f, side * (BL + 5f), SY + 22.6f, tz);
+            b.Box("gold", "#C9A227", 0.15f, 0.15f, 0.8f, side * (BL + 5f), SY + 22.8f, tz);
+            // patio with fiesta lights along the fence
+            b.Box("paint", "#CFC6B4", 6f, 0.06f, 22f, side * (BL + 0.5f + 3f) - side * 3f, SY + 0.03f, z);
+            for (float lz = z - 9; lz <= z + 9; lz += 1.5f) b.Box("glow", Bunting[(int)(lz * 3 + 100) % Bunting.Length], 0.15f, 0.15f, 0.15f, side * (BL + 0.1f), SY + 2.6f, lz);
+        }
+
+        /// <summary>"MALIGAYANG PIYESTA!" arch across the street on two bamboo-wrapped posts.</summary>
+        private static void FiestaArch(MeshBuilder b, float z)
+        {
+            float top = BanderitasY + 1.4f, hw = BL - 1.2f;
+            foreach (float s in new[] { -1f, 1f })
+            {
+                b.Cylinder("paint", "#C9A227", 0.25f, 0.28f, top + 1.2f, 8, s * (R + 1.4f), SY + (top + 1.2f) / 2, z);
+                for (float y = 0.5f; y < top; y += 1.3f) b.Cylinder("paint", Bunting[(int)(y * 5) % Bunting.Length], 0.3f, 0.3f, 0.18f, 6, s * (R + 1.4f), SY + y, z);
+            }
+            b.Box("paint", "#5A1238", hw * 2 + 0.4f, 2.4f, 0.3f, 0, SY + top, z);
+            // the painted board faces the oncoming jeepney (towards -Z)
+            float y0 = SY + top - 1.05f, y1 = SY + top + 1.05f, x0 = -hw, x1 = hw, zf = z - 0.17f;
+            b.Quad("tex:fiesta_arch", new V3(x0, y0, zf), new V3(x1, y0, zf), new V3(x1, y1, zf), new V3(x0, y1, zf), new V3(0, 0, -1), new V2(0, 0), new V2(1, 0), new V2(1, 1), new V2(0, 1));
+            b.Box("glow", "#FFE8B0", hw * 2 + 0.4f, 0.08f, 0.08f, 0, SY + top - 1.25f, z - 0.2f);
+        }
+
+        /// <summary>Perya (travelling fair): a Ferris wheel and a carousel behind the stalls.</summary>
+        private static void Perya(MeshBuilder b, GameRandom rng, float side, float z)
+        {
+            float x = side * (BL + 14f);
+            const float r = 9f, hub = 11f;
+            for (int i = 0; i < 12; i++)
+            {
+                double a = i * Math.PI / 6;
+                b.Box("paint", "#E6E8EB", 0.15f, r, 0.15f, x, SY + hub + (float)Math.Cos(a) * r / 2, z + (float)Math.Sin(a) * r / 2, new Rot((float)a, 0, 0));
+                float gy = SY + hub + (float)Math.Cos(a) * r, gz = z + (float)Math.Sin(a) * r;
+                b.Box("paint", Bunting[i % Bunting.Length], 1.2f, 1.0f, 1.0f, x, gy - 0.7f, gz);                 // gondola
+                b.Box("glow", Bunting[(i + 3) % Bunting.Length], 0.25f, 0.25f, 0.25f, x - side * 0.2f, gy, gz);    // rim lights
+            }
+            for (int i = 0; i < 24; i++)
+            {
+                double a0 = i * Math.PI / 12, a1 = (i + 1) * Math.PI / 12;
+                float y0 = (float)Math.Cos(a0) * r, z0 = (float)Math.Sin(a0) * r, y1 = (float)Math.Cos(a1) * r, z1 = (float)Math.Sin(a1) * r;
+                float len = (float)Math.Sqrt((y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0));
+                b.Box("paint", "#F2F2F2", 0.18f, 0.18f, len + 0.05f, x, SY + hub + (y0 + y1) / 2, z + (z0 + z1) / 2, new Rot((float)-Math.Atan2(y1 - y0, z1 - z0), 0, 0));
+            }
+            foreach (float e in new[] { -3.5f, 3.5f }) b.Box("paint", "#9EA1A6", 0.3f, hub + 0.5f, 0.3f, x + side * 0.6f, SY + hub / 2, z + e, new Rot(-e / 18f, 0, 0));
+            // carousel
+            float cz = z + rng.Range(-14f, -11f), cx2 = side * (BL + 5.5f);
+            b.Cylinder("paint", "#F1FAEE", 3.2f, 3.2f, 0.4f, 16, cx2, SY + 0.2f, cz);
+            b.Cylinder("paint", "#FF5D8F", 0f, 3.6f, 1.6f, 16, cx2, SY + 3.9f, cz);
+            b.Cylinder("gold", "#C9A227", 0.15f, 0.15f, 3f, 8, cx2, SY + 1.9f, cz);
+            for (int i = 0; i < 8; i++)
+            {
+                double a = i * Math.PI / 4;
+                float hx = cx2 + (float)Math.Cos(a) * 2.4f, hz = cz + (float)Math.Sin(a) * 2.4f;
+                b.Cylinder("gold", "#C9A227", 0.04f, 0.04f, 2.8f, 6, hx, SY + 1.8f, hz);
+                b.Box("paint", "#FFFFFF", 0.3f, 0.5f, 0.8f, hx, SY + 1.2f, hz, new Rot(0, (float)a, 0));
+                b.Box("glow", Bunting[i % Bunting.Length], 0.2f, 0.2f, 0.2f, cx2 + (float)Math.Cos(a) * 3.5f, SY + 3.2f, cz + (float)Math.Sin(a) * 3.5f);
+            }
+        }
+
+        /// <summary>
+        /// Fiesta Town: a crowded old town centre during its fiesta – bahay na bato with capiz
+        /// windows, banderitas strung across the street, food stalls and crowds; the special slice
+        /// has the church with the "MALIGAYANG PIYESTA" arch, the feature slice the perya.
+        /// </summary>
+        public static MeshData Fiesta(int seed, bool church, bool perya)
+        {
+            var rng = new GameRandom(seed);
+            var b = new MeshBuilder();
+            foreach (float s in new[] { -1f, 1f })
+            {
+                bool open = (church && s > 0) || (perya && s < 0);
+                if (!open)
+                {
+                    float z = -L / 2;
+                    while (z < L / 2 - 3)
+                    {
+                        float w = Math.Min(rng.Range(8f, 12f), L / 2 - z);
+                        BahayNaBato(b, rng, s, z + w / 2, w);
+                        z += w;
+                    }
+                }
+                for (int i = 0; i < rng.Int(1, 2); i++) FiestaStall(b, rng, s, rng.Range(-L / 2 + 3, L / 2 - 3));
+                Pedestrians(b, rng, s, R + 0.8f, BL - 0.6f, 3);
+                if (rng.Chance(0.5)) VendorBuilder.Random(b, rng, EnvironmentKind.Fiesta, s, SY, rng.Range(-L / 2 + 4, L / 2 - 4));
+            }
+            if (church)
+            {
+                Church(b, 1f, 2f);
+                FiestaArch(b, -L / 2 + 6f);
+                Pedestrians(b, rng, 1f, BL + 0.5f, BL + 5f, 3);
+            }
+            if (perya)
+            {
+                Perya(b, rng, -1f, 4f);
+                Pedestrians(b, rng, -1f, BL + 0.5f, BL + 8f, 4);
+            }
+            // banderitas across the street, two or three strings per slice
+            int strings = rng.Int(2, 3);
+            for (int i = 0; i < strings; i++) Banderitas(b, rng, -L / 2 + (i + 0.5f) * L / strings + rng.Range(-2f, 2f), BanderitasY + 0.9f + rng.Range(0f, 0.8f));
+            NightKit.StreetLamp(b, rng.Chance(0.5) ? -1f : 1f, R, rng.Range(-L / 2 + 6, L / 2 - 6), 6f, "#3D3D3D");
+            return b.Data;
+        }
     }
 }

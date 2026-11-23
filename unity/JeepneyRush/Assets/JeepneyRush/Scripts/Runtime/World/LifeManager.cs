@@ -38,7 +38,7 @@ namespace JeepneyRush
             _ground = new GameObject("Walkers").transform; _ground.SetParent(transform, false);
             _sky = new GameObject("Birds").transform; _sky.SetParent(transform, false);
 
-            int people = env == EnvironmentKind.Manila ? 14 : env == EnvironmentKind.Edsa ? 12 : env == EnvironmentKind.Cebu ? 12
+            int people = env == EnvironmentKind.Fiesta ? 18 : env == EnvironmentKind.Manila ? 14 : env == EnvironmentKind.Edsa ? 12 : env == EnvironmentKind.Cebu ? 12
                 : env == EnvironmentKind.Baguio ? 9 : env == EnvironmentKind.Beach ? 7 : env == EnvironmentKind.Provincial ? 6 : 4;
             for (int i = 0; i < people; i++) AddWalker(false, i);
             int dogs = env == EnvironmentKind.Edsa ? 0 : env == EnvironmentKind.Baguio ? 1 : 2;

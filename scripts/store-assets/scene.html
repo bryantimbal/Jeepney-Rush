@@ -145,6 +145,14 @@ switch (mode) {
     chase(); cam.position.set(0.4, 6.4, 10); cam.lookAt(0.8, 1.6, -16);
     break;
   }
+  case 'fiesta': { // Fiesta Town: banderitas, bahay na bato, the church arch and a parade float ahead
+    sky('#5fb8f0', '#ffe7b3', 60, 240); road(500, '#c9b79c');
+    for (let i = 0; i < 7; i++) add(i === 1 ? 'chunk_fiesta_church' : i === 3 ? 'chunk_fiesta_perya' : 'chunk_fiesta', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'fiesta', 1.6, 0);
+    traffic([['tricycle', -1.6, 16], ['motorcycle', 4.8, 22], ['ev_float', -1.6, 44], ['tricycle', 1.6, 36], ['ev_pedicab', 4.8, 52]]);
+    chase(); cam.position.set(0.6, 6.8, 10.5); cam.lookAt(0.8, 1.6, -16);
+    break;
+  }
   case 'night': { // Manila at night in the rain
     sky('#0b1430', '#1d2747', 20, 150); nightLights(); road(); for (let i = 0; i < 7; i++) add('chunk', 0, 0, -10 + i * 40);
     jeepney(q.get('liv') || 'neon', 0, 0); add('headlight_haze', 0, 0, 0);

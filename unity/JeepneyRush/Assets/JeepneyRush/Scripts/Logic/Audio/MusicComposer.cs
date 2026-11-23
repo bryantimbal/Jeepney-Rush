@@ -91,9 +91,9 @@ namespace JeepneyRush.Logic.Audio
             // Mountain Province: lower and slower, like a gong-and-guitar highland groove
             // EDSA: busier and faster; Cebu: bright and festive (Sinulog); Baguio: slow and cool
             int shift = env == EnvironmentKind.Provincial ? -2 : env == EnvironmentKind.Mountain ? -5 : env == EnvironmentKind.Edsa ? 1
-                : env == EnvironmentKind.Cebu ? 5 : env == EnvironmentKind.Baguio ? -3 : 3;
+                : env == EnvironmentKind.Cebu ? 5 : env == EnvironmentKind.Baguio ? -3 : env == EnvironmentKind.Fiesta ? 7 : 3;
             t.Bpm = env == EnvironmentKind.Provincial ? 116 : env == EnvironmentKind.Mountain ? 104 : env == EnvironmentKind.Edsa ? 146
-                : env == EnvironmentKind.Cebu ? 136 : env == EnvironmentKind.Baguio ? 108 : 140;
+                : env == EnvironmentKind.Cebu ? 136 : env == EnvironmentKind.Baguio ? 108 : env == EnvironmentKind.Fiesta ? 150 : 140; // Fiesta: marching-band tempo
             for (int i = 0; i < t.Melody.Count; i++) { var n = t.Melody[i]; t.Melody[i] = new Note(n.Step, n.Midi + shift, n.Len); }
             for (int i = 0; i < t.Bass.Count; i++) { var n = t.Bass[i]; t.Bass[i] = new Note(n.Step, n.Midi + shift, n.Len); }
             for (int i = 0; i < t.Chords.Count; i++)

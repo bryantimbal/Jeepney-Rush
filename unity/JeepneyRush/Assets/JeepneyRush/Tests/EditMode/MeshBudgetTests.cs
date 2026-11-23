@@ -32,10 +32,11 @@ namespace JeepneyRush.Tests
         {
             foreach (EnvironmentKind env in Enum.GetValues(typeof(EnvironmentKind)))
                 for (int seed = 0; seed < 40; seed++)
-                    foreach (bool special in new[] { false, true })
+                    foreach (var (special, feature) in new[] { (false, false), (true, false), (false, true) })
                     {
-                        var m = SceneryProvinces.Chunk(env, 1000 + seed * 7919, special);
-                        Assert.LessOrEqual(m.Positions.Count, ChunkVerts, $"{env} seed {seed} special {special}: {m.Positions.Count} vertices");
+                        // feature = the route's landmark slice (EDSA flyover, coastal bridge, fiesta perya)
+                        var m = SceneryProvinces.Chunk(env, 1000 + seed * 7919, special, feature);
+                        Assert.LessOrEqual(m.Positions.Count, ChunkVerts, $"{env} seed {seed} special {special} feature {feature}: {m.Positions.Count} vertices");
                         Assert.LessOrEqual(m.SubmeshKeys.Count, ChunkSubmeshes, $"{env}: {m.SubmeshKeys.Count} materials");
                     }
         }

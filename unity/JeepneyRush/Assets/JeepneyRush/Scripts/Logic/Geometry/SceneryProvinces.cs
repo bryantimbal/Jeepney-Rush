@@ -20,6 +20,7 @@ namespace JeepneyRush.Logic.Geometry
                 case EnvironmentKind.Edsa: return SceneryCities.Edsa(seed, special && !feature, feature);
                 case EnvironmentKind.Cebu: return SceneryCities.Cebu(seed, special);
                 case EnvironmentKind.Baguio: return SceneryCities.Baguio(seed, special);
+                case EnvironmentKind.Fiesta: return SceneryCities.Fiesta(seed, special, feature);
                 default: return SceneryBuilder.ManilaChunk(seed, special);
             }
         }

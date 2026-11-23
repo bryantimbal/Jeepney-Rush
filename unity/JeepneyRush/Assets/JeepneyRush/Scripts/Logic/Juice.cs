@@ -50,17 +50,18 @@ namespace JeepneyRush.Logic
     /// speed past and you get a ticket (coins deducted from the run).
     /// </summary>
     /// <summary>Who runs the checkpoints: the MMDA only in Metro Manila (Manila streets, EDSA).</summary>
-    public enum EnforcerKind { Mmda, Police, CityTraffic }
+    public enum EnforcerKind { Mmda, Police, CityTraffic, Tanod }
 
     public static class Enforcers
     {
         public static EnforcerKind For(EnvironmentKind env) =>
             env == EnvironmentKind.Manila || env == EnvironmentKind.Edsa ? EnforcerKind.Mmda
             : env == EnvironmentKind.Cebu || env == EnvironmentKind.Baguio ? EnforcerKind.CityTraffic
+            : env == EnvironmentKind.Fiesta ? EnforcerKind.Tanod // barangay tanods keep order at the fiesta
             : EnforcerKind.Police; // provincial, beach and mountain roads: police checkpoints
 
-        public static string Checkpoint(EnforcerKind k) => k == EnforcerKind.Mmda ? "MMDA CHECKPOINT" : k == EnforcerKind.Police ? "POLICE CHECKPOINT" : "TRAFFIC CHECKPOINT";
-        public static string SignTexture(EnforcerKind k) => k == EnforcerKind.Mmda ? "mmda_sign" : k == EnforcerKind.Police ? "police_sign" : "enforcer_sign";
+        public static string Checkpoint(EnforcerKind k) => k == EnforcerKind.Mmda ? "MMDA CHECKPOINT" : k == EnforcerKind.Police ? "POLICE CHECKPOINT" : k == EnforcerKind.Tanod ? "BARANGAY CHECKPOINT" : "TRAFFIC CHECKPOINT";
+        public static string SignTexture(EnforcerKind k) => k == EnforcerKind.Mmda ? "mmda_sign" : k == EnforcerKind.Police ? "police_sign" : k == EnforcerKind.Tanod ? "tanod_sign" : "enforcer_sign";
     }
 
     public static class EnforcerRules

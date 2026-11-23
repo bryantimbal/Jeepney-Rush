@@ -15,6 +15,8 @@ namespace JeepneyRush.Logic
     {
         public const float FirstAt = 260f;
         public const float SpacingMin = 170f, SpacingMax = 340f;
+        /// <summary>Crowded fiesta streets have events more often.</summary>
+        public static float SpacingScale(EnvironmentKind env) => env == EnvironmentKind.Fiesta ? 0.75f : 1f;
         /// <summary>Distance ahead at which the HUD announces an event.</summary>
         public const float WarnAt = 95f;
 
@@ -28,6 +30,9 @@ namespace JeepneyRush.Logic
                 case EnvironmentKind.Cebu:
                     return new[] { (RoadEventKind.ParadeFloat, 1.4f), (RoadEventKind.Taho, 1f), (RoadEventKind.Pedicab, 1.2f), (RoadEventKind.StrayDog, 0.8f),
                                    (RoadEventKind.Construction, 0.9f), (RoadEventKind.StalledJeepney, 0.7f) };
+                case EnvironmentKind.Fiesta: // the parade is the main event
+                    return new[] { (RoadEventKind.ParadeFloat, 2.4f), (RoadEventKind.Pedicab, 1.2f), (RoadEventKind.Taho, 1f), (RoadEventKind.StrayDog, 0.8f),
+                                   (RoadEventKind.Basketball, 0.6f), (RoadEventKind.StalledJeepney, 0.5f) };
                 case EnvironmentKind.Baguio:
                     return new[] { (RoadEventKind.Taho, 1.4f), (RoadEventKind.Construction, 1f), (RoadEventKind.StalledJeepney, 0.8f), (RoadEventKind.StrayDog, 0.8f) };
                 case EnvironmentKind.Provincial:

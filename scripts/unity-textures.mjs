@@ -218,11 +218,12 @@ const textures = await page.evaluate(() => {
       'BONTOC', 'SAGADA', 'BESAO', 'SABANGAN', 'TADIAN', 'BAUKO', 'SADANGA', 'BARLIG', 'NATONIN', 'ECHO VALLEY', 'RICE TERRACES', 'VIEWDECK',
       'MONUMENTO', 'BALINTAWAK', 'NORTH AVE', 'QUEZON AVE', 'KAMUNING', 'CUBAO', 'ORTIGAS', 'SHAW', 'GUADALUPE', 'BUENDIA', 'AYALA', 'TAFT AVE',
       'COLON', 'CARBON', 'FUENTE OSMENA', 'IT PARK', 'AYALA CEBU', 'SM CEBU', 'MANDAUE', 'MABOLO', 'LAHUG', 'TALAMBAN', 'PIER 1', 'CAPITOL',
-      'SESSION RD', 'BURNHAM PARK', 'MINES VIEW', 'CAMP JOHN HAY', 'WRIGHT PARK', 'TEACHERS CAMP', 'LA TRINIDAD', 'PUBLIC MARKET', 'CATHEDRAL', 'LOURDES GROTTO', 'BOTANICAL', 'MARCOS HWY'];
-    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 23);
+      'SESSION RD', 'BURNHAM PARK', 'MINES VIEW', 'CAMP JOHN HAY', 'WRIGHT PARK', 'TEACHERS CAMP', 'LA TRINIDAD', 'PUBLIC MARKET', 'CATHEDRAL', 'LOURDES GROTTO', 'BOTANICAL', 'MARCOS HWY',
+      'PLAZUELA', 'SIMBAHAN', 'PATIO', 'PERYAHAN', 'KUMBENTO', 'MUNISIPYO', 'COVERED COURT', 'PALENGKE', 'STA. CRUZ', 'SAN JOSE', 'BRGY. HALL', 'KAPILYA'];
+    const CW = 256, CH = 128; const [c, x] = cv(CW * 4, CH * 26);
     names.forEach((n, i) => {
       const ox = (i % 4) * CW, oy = Math.floor(i / 4) * CH;
-      x.fillStyle = i < 20 ? '#0b6e4f' : i < 32 ? '#7a4e2d' : i < 44 ? '#0077b6' : i < 56 ? '#3f3326' : i < 68 ? '#1d3fa0' : i < 80 ? '#b5651d' : '#1f5c45'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
+      x.fillStyle = i < 20 ? '#0b6e4f' : i < 32 ? '#7a4e2d' : i < 44 ? '#0077b6' : i < 56 ? '#3f3326' : i < 68 ? '#1d3fa0' : i < 80 ? '#b5651d' : i < 92 ? '#1f5c45' : '#9b1d64'; x.fillRect(ox, oy, CW, CH); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(ox + 6, oy + 6, CW - 12, CH - 12);
       x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillStyle = '#ffd100'; fit(x, 'SAKAYAN', 0, 0, CW - 30, 24, (z) => `900 ${z}px ${B}`); x.fillText('SAKAYAN', ox + CW / 2, oy + CH * 0.27);
       x.fillStyle = '#fff'; fit(x, n, 0, 0, CW - 30, 52, (z) => `${z}px ${D}`); x.fillText(n, ox + CW / 2, oy + CH * 0.65);
@@ -232,7 +233,7 @@ const textures = await page.evaluate(() => {
     names.forEach((n, i) => {
       const [c1, x1] = cv(CW, CH);
       x1.drawImage(c, (i % 4) * CW, Math.floor(i / 4) * CH, CW, CH, 0, 0, CW, CH);
-      const route = i < 20 ? 'mnl' : i < 32 ? 'prov' : i < 44 ? 'beach' : i < 56 ? 'mtn' : i < 68 ? 'edsa' : i < 80 ? 'cebu' : 'bgo';
+      const route = i < 20 ? 'mnl' : i < 32 ? 'prov' : i < 44 ? 'beach' : i < 56 ? 'mtn' : i < 68 ? 'edsa' : i < 80 ? 'cebu' : i < 92 ? 'bgo' : 'fiesta';
       const slug = ('stop_' + route + '_' + n.toLowerCase().replace(/[^a-z0-9]/g, '_')).replace(/__/g, '_').replace(/_+$/, '');
       save(slug, c1);
     });
@@ -506,6 +507,18 @@ const textures = await page.evaluate(() => {
       const houses = ['#e76f51', '#f4a261', '#e9c46a', '#2a9d8f', '#ffffff', '#d62828', '#8ecae6']; for (let i = 0; i < 16; i++) { const hx = 150 + (i % 6) * 34 + (i * 7) % 12, hy = 70 + Math.floor(i / 6) * 26 + (i % 3) * 6; x.fillStyle = houses[i % houses.length]; x.fillRect(hx, hy, 24, 18); x.fillStyle = '#5a3e36'; x.beginPath(); x.moveTo(hx - 3, hy); x.lineTo(hx + 12, hy - 9); x.lineTo(hx + 27, hy); x.fill(); }
       x.fillStyle = '#1f4d3a'; for (const [tx, th] of [[20, 80], [50, 64], [85, 90], [115, 70], [330, 76], [300, 60]]) { x.beginPath(); x.moveTo(tx - 14, 170); x.lineTo(tx, 170 - th); x.lineTo(tx + 14, 170); x.fill(); }
       x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(0, 120, w, 16); x.fillStyle = '#45474e'; x.beginPath(); x.moveTo(140, h); x.lineTo(175, 150); x.lineTo(205, 150); x.lineTo(250, h); x.fill(); });
+    icon('ui_route_fiesta', 360, 200, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#5fb8f0'); g.addColorStop(1, '#ffe7b3'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      // church facade, bahay na bato rows, banderitas, a parade float and the road
+      x.fillStyle = '#efe3c8'; x.fillRect(140, 40, 80, 110); x.beginPath(); x.moveTo(132, 44); x.lineTo(180, 10); x.lineTo(228, 44); x.fill(); x.fillStyle = '#8a5a3c'; x.fillRect(168, 105, 24, 45); x.beginPath(); x.arc(180, 105, 12, Math.PI, 0); x.fill(); x.fillStyle = '#c9a227'; x.fillRect(176, 52, 8, 22); x.fillRect(170, 58, 20, 6);
+      for (const [hx, col] of [[0, '#e9c46a'], [62, '#f4a261'], [242, '#a8dadc'], [300, '#e76f51']]) { x.fillStyle = '#6b4f35'; x.fillRect(hx, 95, 58, 60); x.fillStyle = col; x.fillRect(hx, 70, 58, 30); x.fillStyle = '#fff6e0'; for (let k = 0; k < 3; k++) x.fillRect(hx + 6 + k * 18, 76, 12, 16); x.fillStyle = '#7a2e1a'; x.fillRect(hx - 3, 64, 64, 8); }
+      const fl = ['#d62828', '#fcd116', '#0038a8', '#2a9d8f', '#ffffff', '#f77f00']; for (let row = 0; row < 3; row++) { const y0 = 18 + row * 22; x.strokeStyle = '#555'; x.lineWidth = 1; x.beginPath(); x.moveTo(0, y0); x.quadraticCurveTo(180, y0 + 18, 360, y0); x.stroke(); for (let i = 0; i < 24; i++) { const fx = i * 15 + 4, fy = y0 + Math.sin((fx / 360) * Math.PI) * 9; x.fillStyle = fl[(i + row) % fl.length]; x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx + 10, fy); x.lineTo(fx + 5, fy + 10); x.fill(); } }
+      x.fillStyle = '#45474e'; x.fillRect(0, 155, w, 45); x.fillStyle = '#fff'; for (let i = 0; i < 9; i++) x.fillRect(i * 44 + 10, 176, 22, 4);
+      x.fillStyle = '#ff5d8f'; x.fillRect(220, 132, 90, 30); x.fillStyle = '#fcd116'; x.beginPath(); x.arc(265, 128, 20, Math.PI, 0); x.fill(); x.fillStyle = '#2a9d8f'; x.fillRect(214, 158, 102, 6); x.fillStyle = '#222'; for (const wx of [232, 298]) { x.beginPath(); x.arc(wx, 166, 6, 0, Math.PI * 2); x.fill(); } });
+    // fiesta arch over the road: "MALIGAYANG PIYESTA!" on a bright painted board
+    icon('fiesta_arch', 1024, 256, (x, w, h) => { x.fillStyle = '#9b1d64'; x.fillRect(0, 0, w, h); x.fillStyle = '#fcd116'; x.fillRect(0, 0, w, 18); x.fillRect(0, h - 18, w, 18);
+      const fl = ['#d62828', '#fcd116', '#0038a8', '#2a9d8f', '#ffffff']; for (let i = 0; i < 40; i++) { x.fillStyle = fl[i % 5]; x.beginPath(); x.moveTo(i * 26, 18); x.lineTo(i * 26 + 22, 18); x.lineTo(i * 26 + 11, 40); x.fill(); }
+      x.textAlign = 'center'; x.textBaseline = 'middle'; outlined(x, 'MALIGAYANG PIYESTA!', w / 2, 128, 940, 110, '#fcd116', '#3a0a24', 10);
+      x.fillStyle = '#ffffff'; fit(x, 'BRGY. SAN ISIDRO · MABUHAY!', 0, 0, 700, 30, (z) => `800 ${z}px ${B}`); x.fillText('BRGY. SAN ISIDRO · MABUHAY!', w / 2, 205); });
     icon('light_pool', 128, 128, (x, w, h) => { const g = x.createRadialGradient(64, 64, 2, 64, 64, 63); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,0.65)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
     icon('light_beam', 128, 256, (x, w, h) => { const g = x.createLinearGradient(0, h, 0, 0); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.6, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.moveTo(52, h); x.lineTo(76, h); x.lineTo(124, 0); x.lineTo(4, 0); x.closePath(); x.fill(); x.globalCompositeOperation = 'destination-in'; const s = x.createLinearGradient(0, 0, w, 0); s.addColorStop(0, 'rgba(0,0,0,0)'); s.addColorStop(0.3, 'rgba(0,0,0,1)'); s.addColorStop(0.7, 'rgba(0,0,0,1)'); s.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = s; x.fillRect(0, 0, w, h); x.globalCompositeOperation = 'source-over'; });
     icon('ui_route_beach', 360, 200, (x, w, h) => { x.fillStyle = '#7fd6f7'; x.fillRect(0, 0, w, h); x.fillStyle = '#FFF3B0'; x.beginPath(); x.arc(290, 50, 26, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1F7EA1'; x.fillRect(0, 100, w, 60); x.fillStyle = '#4CC9F0'; x.fillRect(0, 140, w, 20); x.fillStyle = '#E9D8A6'; x.fillRect(0, 160, w, 40); x.fillStyle = '#fff'; x.fillRect(90, 120, 60, 10); x.fillStyle = '#EF476F'; x.fillRect(95, 112, 50, 10); x.fillStyle = '#8D6E4F'; x.fillRect(40, 90, 8, 80); x.fillStyle = '#40916C'; for (let i = 0; i < 6; i++) { x.save(); x.translate(44, 90); x.rotate(i * 1.05); x.fillRect(0, -4, 38, 8); x.restore(); } });
@@ -526,7 +539,7 @@ const textures = await page.evaluate(() => {
     x.fillStyle = '#FCD116'; fit(x, 'CHECKPOINT', 0, 0, 460, 64, (z) => `${z}px ${D}`); x.fillText('CHECKPOINT', 256, 186);
     save('mmda_sign', c);
     // police / city traffic enforcer checkpoint signs (MMDA only in Metro Manila)
-    for (const [name, bg, border, t1, t2, c1, c2] of [['police_sign', '#14213D', '#FFFFFF', 'POLICE', 'CHECKPOINT', '#FFFFFF', '#FCD116'], ['enforcer_sign', '#F77F00', '#1B1033', 'TRAFFIC', 'ENFORCER', '#1B1033', '#FFFFFF']]) {
+    for (const [name, bg, border, t1, t2, c1, c2] of [['police_sign', '#14213D', '#FFFFFF', 'POLICE', 'CHECKPOINT', '#FFFFFF', '#FCD116'], ['enforcer_sign', '#F77F00', '#1B1033', 'TRAFFIC', 'ENFORCER', '#1B1033', '#FFFFFF'], ['tanod_sign', '#7B1E3A', '#FCD116', 'BARANGAY', 'CHECKPOINT', '#FFFFFF', '#FCD116']]) {
       [c, x] = cv(512, 256);
       x.fillStyle = bg; x.fillRect(0, 0, 512, 256); x.strokeStyle = border; x.lineWidth = 10; x.strokeRect(8, 8, 496, 240);
       x.textAlign = 'center'; x.textBaseline = 'middle';

@@ -26,6 +26,7 @@ namespace JeepneyRush.Logic.Geometry
             {
                 case EnvironmentKind.Beach: return new[] { VendorKind.Fruit, VendorKind.Fruit, VendorKind.Sorbetes, VendorKind.Fishball, VendorKind.BananaCue };
                 case EnvironmentKind.Baguio: return new[] { VendorKind.Taho, VendorKind.Fruit, VendorKind.Balut, VendorKind.BananaCue };
+                case EnvironmentKind.Fiesta: return new[] { VendorKind.Sorbetes, VendorKind.Sorbetes, VendorKind.Fishball, VendorKind.BananaCue, VendorKind.Taho, VendorKind.Balut };
                 case EnvironmentKind.Mountain: return new[] { VendorKind.Fruit, VendorKind.Balut, VendorKind.BananaCue };
                 case EnvironmentKind.Provincial: return new[] { VendorKind.BananaCue, VendorKind.Balut, VendorKind.Fruit, VendorKind.Taho, VendorKind.Sorbetes };
                 default: return new[] { VendorKind.Fishball, VendorKind.Fishball, VendorKind.Taho, VendorKind.Sorbetes, VendorKind.Balut, VendorKind.BananaCue, VendorKind.Fruit };

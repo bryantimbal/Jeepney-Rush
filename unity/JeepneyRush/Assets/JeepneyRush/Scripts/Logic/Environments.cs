@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic
 {
-    public enum EnvironmentKind { Manila, Provincial, Beach, Mountain, Edsa, Cebu, Baguio }
+    public enum EnvironmentKind { Manila, Provincial, Beach, Mountain, Edsa, Cebu, Baguio, Fiesta }
 
     /// <summary>Route definitions: unlock rules, stop names and traffic mix per environment.</summary>
     public static class Environments
@@ -26,6 +26,7 @@ namespace JeepneyRush.Logic
             new Def { Kind = EnvironmentKind.Edsa, Name = "EDSA", Tagline = "MRT overhead, buses, malls and the worst rush-hour traffic in the country.", UnlockDistance = 1800 },
             new Def { Kind = EnvironmentKind.Cebu, Name = "Cebu City", Tagline = "Downtown Colon, IT Park towers, the sea and the mountains.", UnlockDistance = 3200 },
             new Def { Kind = EnvironmentKind.Baguio, Name = "Baguio", Tagline = "Pine trees, fog, steep hills and Session Road.", UnlockDistance = 5000 },
+            new Def { Kind = EnvironmentKind.Fiesta, Name = "Fiesta Town", Tagline = "Banderitas, parade floats, brass bands and crowded streets.", UnlockDistance = 2200 },
         };
 
         public static Def Get(EnvironmentKind k) => All[(int)k];
@@ -34,14 +35,15 @@ namespace JeepneyRush.Logic
 
         /// <summary>How much traffic the route has (multiplies the vehicle patterns).</summary>
         public static float TrafficDensity(EnvironmentKind k) =>
-            k == EnvironmentKind.Mountain ? 0.35f : k == EnvironmentKind.Edsa ? 1.6f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f : 1f;
+            k == EnvironmentKind.Mountain ? 0.35f : k == EnvironmentKind.Edsa ? 1.6f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f
+            : k == EnvironmentKind.Fiesta ? 1.2f : 1f;
         /// <summary>How bad the traffic jams get (0 = none). EDSA is the real deal; Cebu has lighter jams.</summary>
         public static float JamIntensity(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 1f : k == EnvironmentKind.Cebu ? 0.55f : 0f;
-        /// <summary>Tricycles are banned on EDSA and in Baguio.</summary>
         /// <summary>Two-way roads: the left lane (0) carries oncoming traffic (provincial and coastal highways).</summary>
         public static bool TwoWay(EnvironmentKind k) => k == EnvironmentKind.Provincial || k == EnvironmentKind.Beach;
         public const int OncomingLane = 0;
 
+        /// <summary>Tricycles are banned on EDSA and in Baguio.</summary>
         public static bool Tricycles(EnvironmentKind k) => k != EnvironmentKind.Edsa && k != EnvironmentKind.Baguio;
         /// <summary>PARA stops are this much farther apart (remote mountain barangays).</summary>
         public static float StopSpacingScale(EnvironmentKind k) => k == EnvironmentKind.Mountain ? 1.75f : 1f;
@@ -64,6 +66,7 @@ namespace JeepneyRush.Logic
                 case EnvironmentKind.Edsa: return new[] { 3.2f, 2.2f, 0f, 2.0f, 2.4f, 0.6f };    // cars, SUVs, motorbikes and lots of buses
                 case EnvironmentKind.Cebu: return new[] { 2.6f, 1.6f, 1.0f, 2.6f, 0.9f, 0.7f };  // motorbikes everywhere ("habal-habal")
                 case EnvironmentKind.Baguio: return new[] { 3.0f, 2.0f, 0f, 1.0f, 0.4f, 0.6f };  // taxis and SUVs up the hills
+                case EnvironmentKind.Fiesta: return new[] { 1.4f, 0.8f, 3.4f, 2.6f, 0.2f, 0.3f }; // town streets: tricycles and motorbikes
                 default: return new[] { 3f, 1.6f, 1.5f, 1.1f, 1f, 0.8f };
             }
         }
@@ -96,9 +99,12 @@ namespace JeepneyRush.Logic
             // Baguio (80..91)
             "SESSION RD", "BURNHAM PARK", "MINES VIEW", "CAMP JOHN HAY", "WRIGHT PARK", "TEACHERS CAMP",
             "LA TRINIDAD", "PUBLIC MARKET", "CATHEDRAL", "LOURDES GROTTO", "BOTANICAL", "MARCOS HWY",
+            // Fiesta Town (92..103) – the town fiesta: church, plaza, perya
+            "PLAZUELA", "SIMBAHAN", "PATIO", "PERYAHAN", "KUMBENTO", "MUNISIPYO",
+            "COVERED COURT", "PALENGKE", "STA. CRUZ", "SAN JOSE", "BRGY. HALL", "KAPILYA",
         };
 
-        public const int AtlasColumns = 4, AtlasRows = 23;
+        public const int AtlasColumns = 4, AtlasRows = 26;
 
         /// <summary>
         /// Each stop has its own sign picture named after the stop ("stop_sadanga"), so a sign can
@@ -109,13 +115,13 @@ namespace JeepneyRush.Logic
             index = Math.Max(0, Math.Min(All.Length - 1, index));
             var n = All[index].ToLowerInvariant();
             // the route goes in the name too: CUBAO and MONUMENTO exist on both Manila streets and EDSA (different sign colours)
-            string route = index <= ManilaTo ? "mnl" : index <= ProvincialTo ? "prov" : index <= BeachTo ? "beach" : index <= MountainTo ? "mtn" : index <= EdsaTo ? "edsa" : index <= CebuTo ? "cebu" : "bgo";
+            string route = index <= ManilaTo ? "mnl" : index <= ProvincialTo ? "prov" : index <= BeachTo ? "beach" : index <= MountainTo ? "mtn" : index <= EdsaTo ? "edsa" : index <= CebuTo ? "cebu" : index <= BaguioTo ? "bgo" : "fiesta";
             var sb = new System.Text.StringBuilder("stop_" + route + "_");
             foreach (char ch in n) sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
             return sb.ToString().Replace("__", "_").TrimEnd('_');
         }
         public const int ManilaFrom = 0, ManilaTo = 19, ProvincialFrom = 20, ProvincialTo = 31, BeachFrom = 32, BeachTo = 43, MountainFrom = 44, MountainTo = 55;
-        public const int EdsaFrom = 56, EdsaTo = 67, CebuFrom = 68, CebuTo = 79, BaguioFrom = 80, BaguioTo = 91;
+        public const int EdsaFrom = 56, EdsaTo = 67, CebuFrom = 68, CebuTo = 79, BaguioFrom = 80, BaguioTo = 91, FiestaFrom = 92, FiestaTo = 103;
 
         public static IReadOnlyList<int> ForEnvironment(EnvironmentKind k)
         {
@@ -129,6 +135,7 @@ namespace JeepneyRush.Logic
                 case EnvironmentKind.Edsa: from = EdsaFrom; to = EdsaTo; break;
                 case EnvironmentKind.Cebu: from = CebuFrom; to = CebuTo; break;
                 case EnvironmentKind.Baguio: from = BaguioFrom; to = BaguioTo; break;
+                case EnvironmentKind.Fiesta: from = FiestaFrom; to = FiestaTo; break;
                 default: from = ManilaFrom; to = ManilaTo; break;
             }
             for (int i = from; i <= to; i++) l.Add(i);

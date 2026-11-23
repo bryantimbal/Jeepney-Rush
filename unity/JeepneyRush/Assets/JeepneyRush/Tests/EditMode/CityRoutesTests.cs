@@ -10,8 +10,8 @@ namespace JeepneyRush.Tests
         [Test]
         public void NewRoutesExistWithTheirOwnStops()
         {
-            Assert.AreEqual(7, Environments.All.Length);
-            foreach (var env in new[] { EnvironmentKind.Edsa, EnvironmentKind.Cebu, EnvironmentKind.Baguio })
+            Assert.AreEqual(8, Environments.All.Length);
+            foreach (var env in new[] { EnvironmentKind.Edsa, EnvironmentKind.Cebu, EnvironmentKind.Baguio, EnvironmentKind.Fiesta })
             {
                 var stops = StopNames.ForEnvironment(env);
                 Assert.AreEqual(12, stops.Count, env.ToString());

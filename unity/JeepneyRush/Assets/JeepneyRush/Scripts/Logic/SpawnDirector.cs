@@ -296,7 +296,7 @@ namespace JeepneyRush.Logic
             if (Cursor >= _nextEventAt && rowAt > RoadEvents.FirstAt)
             {
                 // halfway between this row and the next; a failed attempt simply waits for the next gap
-                if (TryEventRow(z - gap * 0.5f, distance, speed)) _nextEventAt = Cursor + _eventRng.Range(RoadEvents.SpacingMin, RoadEvents.SpacingMax);
+                if (TryEventRow(z - gap * 0.5f, distance, speed)) _nextEventAt = Cursor + _eventRng.Range(RoadEvents.SpacingMin, RoadEvents.SpacingMax) * RoadEvents.SpacingScale(_env);
             }
             if (_twoWay) TryOncoming(z - gap * (_oncomingRng.Chance(0.5) ? 0.25f : 0.75f), distance, speed);
             PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.HumpRow);

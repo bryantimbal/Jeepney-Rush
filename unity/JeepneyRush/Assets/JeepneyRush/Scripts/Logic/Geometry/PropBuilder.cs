@@ -440,10 +440,11 @@ namespace JeepneyRush.Logic.Geometry
         {
             var b = new MeshBuilder();
             const string skin = "#A86B3C";
-            string blue = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#F77F00" : "#1F3FBF";
-            string pants = kind == EnforcerKind.CityTraffic ? "#2B2D42" : "#1B1F3B";
-            string vest = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#FFD60A" : "#C6FF00";
-            string cap = kind == EnforcerKind.Police ? "#1A2340" : "#FFFFFF";
+            // barangay tanod: dark shirt, maroon-and-yellow vest, black cap
+            string blue = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#F77F00" : kind == EnforcerKind.Tanod ? "#2B2D42" : "#1F3FBF";
+            string pants = kind == EnforcerKind.CityTraffic || kind == EnforcerKind.Tanod ? "#2B2D42" : "#1B1F3B";
+            string vest = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.CityTraffic ? "#FFD60A" : kind == EnforcerKind.Tanod ? "#7B1E3A" : "#C6FF00";
+            string cap = kind == EnforcerKind.Police ? "#1A2340" : kind == EnforcerKind.Tanod ? "#16161A" : "#FFFFFF";
             string bikeBody = kind == EnforcerKind.Police ? "#F8F9FA" : kind == EnforcerKind.CityTraffic ? "#F8F9FA" : "#F8F9FA";
             string signTex = Enforcers.SignTexture(kind);
             foreach (float s in new[] { -1f, 1f })
