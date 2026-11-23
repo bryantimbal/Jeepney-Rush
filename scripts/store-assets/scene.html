@@ -1,0 +1,193 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Store-asset scenes rendered from the game's own procedural models (models.json from
+     unity/Tools.Preview) and textures. Driven by scripts/store-assets/render.mjs. -->
+<style>
+  @font-face { font-family: 'Nunito'; font-weight: 900; src: url('/unity/JeepneyRush/Assets/JeepneyRush/Resources/Fonts/Nunito-Black.ttf'); }
+  html, body { margin: 0; overflow: hidden; background: transparent; width: 100%; height: 100%; }
+  canvas { position: absolute; left: 0; top: 0; }
+</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script></head><body>
+<canvas id="ui"></canvas>
+<script type="module">
+import * as THREE from 'three';
+const q = new URLSearchParams(location.search), mode = q.get('mode') || 'stop';
+const W = innerWidth, H = innerHeight, U = Math.min(W, H) / 540; // UI unit: 1 = one point on a 540-wide phone
+const night = q.get('night') === '1', rain = q.get('rain') === '1', hud = q.get('hud') !== '0';
+const data = await (await fetch('/unity/Tools.Preview/bin/pv/models.json')).json();
+const texDir = '/unity/JeepneyRush/Assets/JeepneyRush/Resources/Textures/';
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(W, H); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.insertBefore(r.domElement, document.body.firstChild);
+const scene = new THREE.Scene();
+const hemi = new THREE.HemisphereLight('#ffffff', '#8a7a6a', 1.5); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff1d6', 2.4); sun.position.set(-30, 40, 20); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, far: 200 }); sun.shadow.bias = -0.0004; scene.add(sun);
+const P = 32, pal = new Uint8Array(P * P * 4); data.palette.forEach((c, i) => pal.set([c[0], c[1], c[2], 255], i * 4));
+const palTex = new THREE.DataTexture(pal, P, P); palTex.magFilter = palTex.minFilter = THREE.NearestFilter; palTex.colorSpace = THREE.SRGBColorSpace; palTex.needsUpdate = true;
+const loader = new THREE.TextureLoader(), mats = {}, pending = [];
+function tex(name) { const p = new Promise(res => { const t = loader.load(texDir + name + '.png', () => res(t)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; }); pending.push(p); return p; }
+function mat(key) {
+  if (mats[key]) return mats[key];
+  if (key === 'glass') return mats[key] = new THREE.MeshStandardMaterial({ map: palTex, transparent: true, opacity: mode === 'driver' ? 0.06 : 0.85, roughness: 0.05 });
+  if (key === 'haze') return mats[key] = new THREE.MeshBasicMaterial({ map: palTex, transparent: true, opacity: night && rain ? 0.4 : 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  if (key === 'nightglow') return mats[key] = new THREE.MeshBasicMaterial({ map: palTex, transparent: true, opacity: night ? 1 : 0 });
+  if (key === 'lightpool' || key === 'beam') {
+    const m = new THREE.MeshBasicMaterial({ color: '#ffdb99', transparent: true, opacity: night ? (key === 'beam' ? 0.5 : 0.9) : 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    tex(key === 'beam' ? 'light_beam' : 'light_pool').then(t => { m.map = t; m.needsUpdate = true; }); return mats[key] = m;
+  }
+  if (key === 'bubble' || key === 'water') return mats[key] = new THREE.MeshBasicMaterial({ visible: false });
+  if (['paint', 'chrome', 'gold'].includes(key)) return mats[key] = new THREE.MeshStandardMaterial({ map: palTex, roughness: key === 'paint' ? 0.45 : 0.2, metalness: key === 'paint' ? 0.1 : 0.55 });
+  if (key === 'glow') return mats[key] = new THREE.MeshBasicMaterial({ map: palTex });
+  const ua = key.startsWith('utexa:'), u = ua || key.startsWith('utex:'), [name, tint] = key.slice(ua ? 6 : u ? 5 : 4).split('|');
+  const m = u ? new THREE.MeshBasicMaterial({ transparent: ua }) : new THREE.MeshStandardMaterial({ color: tint || '#fff', roughness: 0.6 });
+  tex(name === 'mirror_view_0' ? 'mirror_view_6' : name).then(t => { if (!name.startsWith('jeepney') && !name.startsWith('stop_') && !name.endsWith('_sign')) t.wrapS = t.wrapT = THREE.RepeatWrapping; m.map = t; m.needsUpdate = true; });
+  return mats[key] = m;
+}
+function add(name, x, y, z, yaw = 0, rx = 0, rz = 0, parent = scene) {
+  const m = data.models[name]; if (!m) { console.log('missing', name); return null; }
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(m.pos), nrm = new Float32Array(m.nrm);
+  for (let i = 2; i < pos.length; i += 3) { pos[i] = -pos[i]; nrm[i] = -nrm[i]; } // Unity +Z forward → three −Z forward
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3)); g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(m.uv), 2));
+  const idx = [], ms = []; m.sub.forEach((s, si) => { const st = idx.length; for (let i = 0; i < s.idx.length; i += 3) idx.push(s.idx[i], s.idx[i + 2], s.idx[i + 1]); g.addGroup(st, s.idx.length, si); ms.push(mat(s.key)); });
+  g.setIndex(idx);
+  const mesh = new THREE.Mesh(g, ms); mesh.position.set(x, y, -z); mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw; mesh.rotation.x = -rx; mesh.rotation.z = rz;
+  mesh.castShadow = !name.startsWith('chunk'); mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+function jeepney(liv, x, z, yaw = 0) { // body + its four wheels
+  const grp = new THREE.Group(); grp.position.set(x, 0, -z); grp.rotation.y = yaw; scene.add(grp);
+  add('jeepney_' + liv, 0, 0, 0, 0, 0, 0, grp);
+  for (const wz of [1.95, -1.75]) for (const wx of [-0.93, 0.93]) add('wheel', wx, 0.44, wz, 0, 0, 0, grp);
+  return grp;
+}
+function road(len = 500, sidewalkColor = '#b9b2a6') {
+  const m = (c, rough = 0.9) => new THREE.MeshStandardMaterial({ color: c, roughness: rough });
+  const plane = (w, l, c, x, y, z) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, l), c); p.rotation.x = -Math.PI / 2; p.position.set(x, y, z); p.receiveShadow = true; scene.add(p); return p; };
+  plane(11.2, len, m(rain ? '#2c2e33' : '#4a4c52', rain ? 0.25 : 0.9), 0, 0, -len / 2 + 40);
+  for (const s of [-1, 1]) plane(3.4, len, m(sidewalkColor), s * 7.3, 0.2, -len / 2 + 40);
+  for (let z = -40; z < len; z += 8) for (const lx of [-1.6, 1.6]) { const d = plane(0.15, 3.2, new THREE.MeshBasicMaterial({ color: night ? '#9a9a9a' : '#f2f2f2' }), lx, 0.02, -z); d.receiveShadow = false; }
+  plane(600, 600, m('#6b6d72'), 0, -0.05, -200);
+}
+function sky(top, horizon, fogNear = 60, fogFar = 230) {
+  document.documentElement.style.background = `linear-gradient(${top}, ${horizon} 55%, ${horizon})`;
+  scene.fog = new THREE.Fog(horizon, fogNear, fogFar);
+}
+function nightLights() {
+  hemi.intensity = 0.75; hemi.color.set('#8fa0d8'); hemi.groundColor.set('#3a3040'); sun.intensity = 0.5; sun.color.set('#9fb4ff');
+  // warm street-lamp pools along both curbs, and a soft fill on the jeepney from the camera side
+  for (let z = 6; z < 90; z += 20) for (const sx of [-1, 1]) { const l = new THREE.PointLight('#ffc978', 40, 22, 1.6); l.position.set(sx * 4.6, 5.6, -z - (sx > 0 ? 10 : 0)); scene.add(l); }
+  const fill = new THREE.PointLight('#c8d4ff', 30, 25, 1.5); fill.position.set(0, 6, 7); scene.add(fill);
+  // the jeepney's own headlights
+  const hl = new THREE.SpotLight('#ffe9b0', 60, 60, 0.45, 0.6, 1.2); hl.position.set(0, 1.3, -3.3); hl.target.position.set(0, 0, -30); scene.add(hl, hl.target);
+}
+const cam = new THREE.PerspectiveCamera(55, W / H, 0.05, 600);
+const chase = (fovPortrait = 58) => { cam.fov = W > H ? 40 : fovPortrait; cam.position.set(0, 6.2, 9.5); cam.lookAt(0, 1.6, -16); };
+const traffic = (list) => list.forEach(([n, x, z, yaw]) => add(n, x, 0, z, yaw || 0));
+
+// ------------------------------------------------------------------ scenes
+switch (mode) {
+  case 'icon': { // jeepney front three-quarter, transparent background
+    hemi.intensity = 1.7; sun.position.set(-20, 30, -25);
+    jeepney(q.get('liv') || 'pilipinas', 0, 0, 0);
+    cam.fov = 26; cam.position.set(-7.6, 3.6, -11.5); cam.lookAt(0.15, 1.45, -0.6);
+    break;
+  }
+  case 'hero': { // feature graphic: sunset Manila street, jeepney three-quarter on the left third
+    sky('#ff9a3c', '#ffd9a1', 50, 260); sun.color.set('#ffd0a0'); sun.position.set(-40, 18, -60); hemi.color.set('#ffe6cc');
+    road(); for (let i = 0; i < 8; i++) add('chunk', 0, 0, -50 + i * 40);
+    jeepney(q.get('liv') || 'pilipinas', -1.6, 6, 0);
+    traffic([['taxi', 1.6, 30], ['bus', 1.6, 52], ['tricycle', -1.6, 44], ['sedan', -4.8, 62]]);
+    cam.fov = 30; cam.position.set(7.6, 3.2, -3.2); cam.lookAt(-3.4, 1.9, -12);
+    break;
+  }
+  case 'stop': { // pick up passengers: chase view approaching a stop with a barker
+    sky('#6fb7f0', '#cfe8f7'); road(); for (let i = 0; i < 7; i++) add('chunk', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'pilipinas', 1.6, 0);
+    const Z = 22; add('shed', 7.4, 0.2, Z, Math.PI); add('stop_sign', 6.1, 0.2, Z - 3, 0);
+    for (let i = 0; i < 4; i++) add('person', 6.3 + (i % 2) * 0.45, 0.2, Z + (i - 1.5) * 1.1, Math.PI - 0.6);
+    const b = add('barker', 6.05, 0.2, Z - 5.5, Math.PI - 0.95); const a = add('barker_arm', 0, 0, 0, 0, 0, 0, b); a.position.set(0.29, 1.27, 0); a.rotation.set(0, 0, -0.45);
+    traffic([['sedan', -1.6, 30], ['tricycle', 1.6, 46], ['bus', -4.8, 60], ['taxi', -1.6, 70]]);
+    chase(); cam.position.set(-0.6, 6.4, 10); cam.lookAt(2.4, 1.4, -18);
+    break;
+  }
+  case 'edsa': { // EDSA rush-hour at golden hour
+    sky('#f08a4b', '#ffd2a1', 50, 240); sun.color.set('#ffc890'); sun.position.set(30, 22, -60);
+    road(); for (let i = 0; i < 7; i++) add(i % 3 === 1 ? 'chunk_edsa_station' : 'chunk_edsa', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'fiesta', 1.6, 0);
+    traffic([['bus', -1.6, 9], ['sedan', 1.6, 10], ['motorcycle', 0.1, 6], ['taxi', -1.6, 22], ['suv', 1.6, 20], ['bus', 4.8, 14], ['sedan', 4.8, 28],
+             ['bus', -1.6, 36], ['taxi', 1.6, 33], ['motorcycle', 3.2, 40], ['suv', -1.6, 50], ['bus', 1.6, 48], ['sedan', 4.8, 46], ['truck', -1.6, 64], ['taxi', 1.6, 62]]);
+    chase(); cam.position.set(1.2, 7.2, 11); cam.lookAt(0.8, 1.5, -18);
+    break;
+  }
+  case 'night': { // Manila at night in the rain
+    sky('#0b1430', '#1d2747', 20, 150); nightLights(); road(); for (let i = 0; i < 7; i++) add('chunk', 0, 0, -10 + i * 40);
+    jeepney(q.get('liv') || 'neon', 0, 0); add('headlight_haze', 0, 0, 0);
+    traffic([['taxi', 1.6, 24], ['sedan', -3.2, 34], ['motorcycle', -1.6, 18], ['bus', 3.2, 52]]);
+    [[7.2, 8, 0], [-7.0, 14, Math.PI], [6.6, 22, Math.PI], [-6.5, 28, 0]].forEach(([x, z, ry]) => { add('person', x, 0.2, z, ry); add('umbrella', x + 0.18, 1.35, z + 0.05, ry); });
+    chase(); cam.position.set(0, 5.6, 9.2); cam.lookAt(0, 1.8, -16);
+    break;
+  }
+  case 'driver': { // the driver's seat view
+    sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) add('chunk', 0, 0, -10 + i * 40);
+    const liv = q.get('liv') || 'cogeo';
+    add('cockpit_shell_' + liv, 0, 0, 0); add('cockpit_' + liv, 0, 0, 0);
+    add('steering_wheel', -0.5, 1.5, 0.9, 0, 30 * Math.PI / 180, -20 * Math.PI / 180);
+    add('dash_gauge', -0.34, 1.69, 1.0, 0, 18 * Math.PI / 180); add('dash_needle', -0.34, 1.69, 1.0, 0, 18 * Math.PI / 180, -40 * Math.PI / 180);
+    add('rosary', -0.41, 1.96, 1.13, 0, 0, 8 * Math.PI / 180);
+    traffic([['sedan', 1.6, 18], ['tricycle', -1.6, 26], ['taxi', 1.6, 40], ['bus', -1.6, 55]]);
+    const ez = 0.72; cam.position.set(-0.45, 1.93, -ez); cam.near = 0.04;
+    cam.lookAt(new THREE.Vector3(-0.45 + Math.sin(2 * Math.PI / 180) * 40, 1.93 - Math.tan(11 * Math.PI / 180) * 40, -ez - 40));
+    cam.fov = Math.min(108, 2 * Math.atan(Math.tan(42 * Math.PI / 180) / (W / H)) * 180 / Math.PI);
+    break;
+  }
+  case 'garage': { // the jeepney collection, facing the camera in a showroom
+    document.documentElement.style.background = 'radial-gradient(circle at 50% 30%, #4a33a0, #150c33 72%)';
+    hemi.intensity = 1.35; sun.position.set(-12, 30, 30);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: '#2b2060', roughness: 0.4, metalness: 0.15 }));
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const spot = new THREE.SpotLight('#fff3d6', 300, 60, 0.6, 0.5, 1.2); spot.position.set(0, 18, 6); spot.target.position.set(0, 0, -4); scene.add(spot, spot.target);
+    // yaw π: models face −Z, turn them toward the camera
+    [['cogeo', 0, -2, Math.PI + 0.35], ['fiesta', -5.2, 4.5, Math.PI + 0.55], ['neon', 5.2, 4.5, Math.PI + 0.15],
+     ['gold', -9.6, 12, Math.PI + 0.6], ['flag', 9.6, 12, Math.PI + 0.1], ['modern', -2.6, 14, Math.PI + 0.4], ['antipolo', 3.2, 16, Math.PI + 0.3]]
+      .forEach(([l, px, pz, yaw]) => jeepney(l, px, pz, yaw));
+    cam.fov = 38; cam.position.set(0, 7.5, 16); cam.lookAt(0, 1.2, -6);
+    break;
+  }
+  case 'corner': { // tricycles, vendors and the TODA terminal
+    sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) if (i !== 1) add('chunk', 0, 0, -10 + i * 40);
+    add('intersection', 0, 0, 32); jeepney(q.get('liv') || 'sanjuan', 1.6, 12);
+    traffic([['tricycle', -1.6, 22], ['sedan', 1.6, 52], ['motorcycle', -1.6, 60]]);
+    add('vendor_row', 0, 0, 22);
+    cam.fov = W > H ? 40 : 56; cam.position.set(-0.8, 5.4, 2); cam.lookAt(4.4, 1.2, -30);
+    break;
+  }
+}
+if (q.get('cam')) { const v = q.get('cam').split(',').map(Number); cam.position.set(v[0], v[1], v[2]); cam.lookAt(v[3], v[4], v[5]); if (v[6]) cam.fov = v[6]; }
+cam.aspect = W / H; cam.updateProjectionMatrix();
+if (night) { scene.traverse(o => { if (o.isMesh && Array.isArray(o.material)) o.material.forEach(m => { if (m.isMeshStandardMaterial) m.envMapIntensity = 0.3; }); }); }
+
+// ------------------------------------------------------------------ light HUD (matches the game's layout)
+const c = document.getElementById('ui'); c.width = W; c.height = H; const x = c.getContext('2d');
+await document.fonts.load(`900 20px Nunito`);
+function hudTop() {
+  x.textAlign = 'left'; x.textBaseline = 'top'; x.lineJoin = 'round';
+  const t = (s, px, py, size, col) => { x.font = `900 ${size * U}px Nunito`; x.lineWidth = size * U * 0.18; x.strokeStyle = '#1b1033'; x.strokeText(s, px * U, py * U); x.fillStyle = col; x.fillText(s, px * U, py * U); };
+  t('12,480', 22, 22, 46, '#fff'); t('1,284 m', 22, 74, 24, '#FCD116'); t('★ RATING 4.6', 22, 104, 19, '#9f9');
+}
+function controls(alpha) {
+  x.globalAlpha = alpha;
+  const btn = (bx, by, w, h, col, label) => {
+    x.fillStyle = col; x.strokeStyle = '#1b1033'; x.lineWidth = 5 * U; x.beginPath(); x.roundRect(bx * U, by, w * U, h * U, 24 * U); x.fill(); x.stroke();
+    x.fillStyle = '#1b1033'; x.font = `900 ${22 * U}px Nunito`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(label, (bx + w / 2) * U, by + h * U / 2);
+  };
+  const by = H - 140 * U;
+  btn(18, by, 140, 112, '#ff6b6b', 'BRAKE'); btn(270 - 64, by + 22 * U, 128, 80, '#FCD116', 'BUSINA'); btn(540 - 158, by, 140, 112, '#18C06A', 'GAS');
+  x.globalAlpha = 1;
+}
+if (hud && !['icon', 'hero', 'garage'].includes(mode)) { hudTop(); controls(mode === 'driver' ? 0.75 : 0.95); }
+await Promise.all(pending);
+await new Promise(res => setTimeout(res, 400));
+r.render(scene, cam);
+document.title = 'ready';
+</script></body></html>

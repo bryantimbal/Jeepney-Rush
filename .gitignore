@@ -29,3 +29,4 @@ unity/**/bin/
 unity/**/obj/
 preview/
 unity/.unity-refs/
+scripts/store-assets/.raw/
