@@ -119,6 +119,61 @@ namespace JeepneyRush
         }
 
         /// <summary>Shows "COMBO xN" while a coin streak is going.</summary>
+        // arcade combo (near misses + overtakes): "x3 · 7" chip with a draining timer bar under the score
+        private VisualElement _arcadeBox, _arcadeFill;
+        private Label _arcadeLabel;
+        private int _arcadeChain = -1, _arcadeMult = -1;
+
+        private void BuildArcade(VisualElement parent)
+        {
+            _arcadeBox = UiKit.Box("arcade");
+            _arcadeBox.style.position = Position.Absolute;
+            _arcadeBox.style.top = Length.Percent(17);
+            _arcadeBox.style.left = 0; _arcadeBox.style.right = 0;
+            _arcadeBox.style.alignItems = Align.Center;
+            _arcadeBox.pickingMode = PickingMode.Ignore;
+            var chip = UiKit.Box();
+            chip.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.85f);
+            UiKit.Border(chip.style, 4, UiKit.Yellow, 30);
+            UiKit.Pad(chip.style, 6, 26);
+            chip.style.alignItems = Align.Center;
+            _arcadeLabel = UiKit.Text("", 44, UiKit.Yellow, true, 2f);
+            chip.Add(_arcadeLabel);
+            var track = UiKit.Box();
+            track.style.width = 220; track.style.height = 10; track.style.marginTop = 4;
+            track.style.backgroundColor = new Color(1, 1, 1, 0.2f);
+            UiKit.Border(track.style, 0, Color.clear, 5);
+            _arcadeFill = UiKit.Box();
+            _arcadeFill.style.height = Length.Percent(100);
+            _arcadeFill.style.backgroundColor = UiKit.Yellow;
+            UiKit.Border(_arcadeFill.style, 0, Color.clear, 5);
+            track.Add(_arcadeFill);
+            chip.Add(track);
+            _arcadeBox.Add(chip);
+            Show(_arcadeBox, false);
+            parent.Add(_arcadeBox);
+        }
+
+        public void SetArcade(int chain, int multiplier, float remaining01)
+        {
+            if (_arcadeBox == null) return;
+            if (chain != _arcadeChain || multiplier != _arcadeMult)
+            {
+                bool up = multiplier > _arcadeMult && _arcadeMult > 0;
+                _arcadeChain = chain; _arcadeMult = multiplier;
+                Show(_arcadeBox, chain > 0);
+                if (chain > 0)
+                {
+                    _arcadeLabel.text = multiplier > 1 ? $"x{multiplier}  ·  {chain} CHAIN" : $"{chain} CHAIN";
+                    var col = multiplier >= 5 ? UiKit.Hex("#FF5AF0") : multiplier >= 4 ? UiKit.Hex("#FF8A1F") : multiplier >= 3 ? UiKit.Hex("#3EE07A") : UiKit.Yellow;
+                    _arcadeLabel.style.color = col;
+                    _arcadeFill.style.backgroundColor = col;
+                    if (up) UiKit.PopIn(_arcadeBox, 260);
+                }
+            }
+            if (chain > 0) _arcadeFill.style.width = Length.Percent(remaining01 * 100f);
+        }
+
         public void SetCombo(int combo)
         {
             if (combo == _lastCombo) return;

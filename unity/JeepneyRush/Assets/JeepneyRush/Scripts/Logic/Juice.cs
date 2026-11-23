@@ -140,6 +140,12 @@ namespace JeepneyRush.Logic
         public static readonly string[] JumpOff = { "BABABA NA KAMI DITO!", "DI NA AKO MAGBABAYAD!", "BAHALA KA SA BUHAY MO!" };
         public static readonly string[] Police = { "PULL OVER! TABI!", "HOY! HUMINTO KA!", "LISENSYA MO, BOSS!" };
 
+        // ---- horn interactions
+        public static readonly string[] HornTricycle = { "SIGE, TABI AKO!", "ETO NA, BOSS!", "DAHAN-DAHAN LANG!" };
+        public static readonly string[] HornBus = { "MAS MALAKI AKO, PRE!", "HINTAY KA LANG!" };
+        public static readonly string[] HornCallRider = { "SAKAY AKO! SAKAY!", "PARA! PARA! SASAKAY AKO!", "KUYA, HINTAY!" };
+        public static readonly string[] HornEnforcer = { "BAWAL BUMUSINA DITO, BOSS!", "ANONG BUSINA 'YAN?!", "TAHIMIK LANG, TSUPER!" };
+
         // ---- jeepney barkers ("barker" / "dispatcher") calling riders at the stops
         public static readonly string[] BarkerFill = { "ISA NA LANG, LARGA NA!", "KASYA PA SA KANAN!", "DALAWA PA SA KALIWA!", "USOG-USOG PO, KASYA PA!", "SAKAY NA, ALIS NA!", "MAY BAKANTE PA, SAKAY NA!" };
         public static readonly string[] BarkerThanks = { "SIGE, LARGA!", "O, ANDAR NA!", "SALAMAT, BOSS!", "PANG-KAPE LANG, BOSS!", "INGAT, PARE!" };

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik, NearMiss, ComboUp }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -112,6 +112,20 @@ namespace JeepneyRush.Logic.Audio
                         }
                     }
                     Synth.Noise(b, 0, 0.7f, 0.08f, 5000, 5000, 1f, highpass: true);
+                    return Synth.Normalize(b, 0.6f);
+                case Sfx.NearMiss:
+                    // whoosh of air between two vehicles + a bright "ting"
+                    b = Synth.Buffer(0.5f);
+                    Synth.Noise(b, 0, 0.32f, 0.8f, 600, 3200, 1.4f);
+                    Synth.Tone(b, Synth.Wave.Sine, 0.12f, 0.3f, 1760, 1760, 0.35f, 0.002f);
+                    Synth.Tone(b, Synth.Wave.Sine, 0.12f, 0.3f, 2637, 2637, 0.18f, 0.002f);
+                    return Synth.Normalize(b, 0.6f);
+                case Sfx.ComboUp:
+                    // rising three-note fanfare for a new multiplier step
+                    b = Synth.Buffer(0.6f);
+                    float[] up = { 784, 988, 1319 };
+                    for (int i = 0; i < up.Length; i++) Synth.Tone(b, Synth.Wave.Square, i * 0.08f, 0.22f, up[i], up[i], 0.25f, 0.002f, 6000);
+                    Synth.Tone(b, Synth.Wave.Triangle, 0.24f, 0.32f, 1568, 1568, 0.3f, 0.002f);
                     return Synth.Normalize(b, 0.6f);
                 case Sfx.CoinRush:
                     b = Synth.Buffer(0.9f);
@@ -281,37 +295,54 @@ namespace JeepneyRush.Logic.Audio
         }
 
         /// <summary>The signature jeepney horn: brassy two-tone "beep–beeep".</summary>
+        /// <summary>
+        /// Jeepney horn: the twin electric "trumpet" horns most jeepneys carry – two buzzy
+        /// diaphragm tones a major third apart (~415 / 523 Hz), each with a short pitch scoop as
+        /// the diaphragm starts, a nasal bell resonance (~1.1 and ~2.6 kHz formants) and a little
+        /// overdrive from the cheap horn relay. Played as the classic short-long "beep-beeep".
+        /// </summary>
         public static float[] Horn()
         {
-            var b = Synth.Buffer(0.75f);
-            void Blast(float st, float dur)
+            var b = Synth.Buffer(0.78f);
+            void Blast(float st, float dur, float level)
             {
                 int s0 = (int)(st * Synth.Rate), n = (int)(dur * Synth.Rate);
-                double p1 = 0, p2 = 0;
+                double p1 = 0, p2 = 0, pv = 0;
                 for (int i = 0; i < n && s0 + i < b.Length; i++)
                 {
                     float t = i / (float)Synth.Rate;
-                    float bend = Math.Min(1f, t / 0.03f) * 0.03f + 0.97f;
-                    p1 += 392 * bend / Synth.Rate;
-                    p2 += 494 * bend / Synth.Rate;
-                    float env = Math.Min(1f, t / 0.015f) * Math.Min(1f, (dur - t) / 0.04f);
-                    b[s0 + i] += (Synth.Osc(Synth.Wave.Saw, p1) + Synth.Osc(Synth.Wave.Saw, p2)) * 0.5f * env;
+                    float scoop = 0.94f + 0.06f * Math.Min(1f, t / 0.045f);           // diaphragm spinning up
+                    pv += 6.5 / Synth.Rate;
+                    float wobble = 1f + 0.004f * (float)Math.Sin(2 * Math.PI * pv);    // slight voltage sag
+                    p1 += 415.3 * scoop * wobble / Synth.Rate;
+                    p2 += 523.3 * scoop * wobble / Synth.Rate;
+                    // narrow pulses = the bright buzzy timbre of a diaphragm horn
+                    float a = Pulse(p1, 0.28) + Pulse(p2, 0.32) * 0.9f;
+                    float env = Math.Min(1f, t / 0.008f) * Math.Min(1f, (dur - t) / 0.025f);
+                    b[s0 + i] += a * env * level;
                 }
             }
-            Blast(0, 0.14f);
-            Blast(0.2f, 0.4f);
-            Synth.Drive(b, 3f);
-            // band-limit for that tinny trumpet-horn character
-            float low = 0, band = 0;
-            float fc = (float)(2 * Math.Sin(Math.PI * 900 / Synth.Rate));
-            for (int i = 0; i < b.Length; i++)
+            float Pulse(double phase, double duty) => (phase - Math.Floor(phase)) < duty ? 1f : -0.38f;
+            Blast(0f, 0.13f, 0.9f);
+            Blast(0.19f, 0.52f, 1f);
+            Synth.Drive(b, 2.2f);
+            // trumpet bell: two resonant band-passes summed, plus a gentle low cut
+            var outp = new float[b.Length];
+            foreach (var (fc, q, gain) in new[] { (1100f, 3.2f, 1f), (2600f, 4f, 0.55f), (520f, 1.6f, 0.45f) })
             {
-                low += fc * band;
-                float high = b[i] - low - band / 0.7f;
-                band += fc * high;
-                b[i] = band;
+                float low = 0, band = 0;
+                float f = (float)(2 * Math.Sin(Math.PI * fc / Synth.Rate));
+                for (int i = 0; i < b.Length; i++)
+                {
+                    low += f * band;
+                    float high = b[i] - low - band / q;
+                    band += f * high;
+                    outp[i] += band * gain;
+                }
             }
-            return Synth.Normalize(b, 0.85f);
+            float hp = 0, prev = 0;
+            for (int i = 0; i < outp.Length; i++) { hp = 0.985f * (hp + outp[i] - prev); prev = outp[i]; outp[i] = hp; }
+            return Synth.Normalize(outp, 0.85f);
         }
 
         /// <summary>

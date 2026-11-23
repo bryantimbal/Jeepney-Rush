@@ -144,6 +144,24 @@ namespace JeepneyRush
             f.T.localRotation = Quaternion.LookRotation(f.Vel.normalized);
         }
 
+        /// <summary>
+        /// Horn: dogs and chickens between <paramref name="zFrom"/> and <paramref name="zTo"/> metres
+        /// ahead scurry off. Returns how many were scared and the position of one (for a bubble).
+        /// </summary>
+        public int Scare(float zFrom, float zTo, out Vector3 where)
+        {
+            int n = 0; where = Vector3.zero;
+            foreach (var w in _walkers)
+            {
+                if (!w.Animal || w.T == null || !w.T.gameObject.activeSelf || w.Z < zFrom || w.Z > zTo) continue;
+                w.Speed = Random.Range(3.5f, 5f);
+                w.Dir = 1f;
+                w.X += Mathf.Sign(w.X) * 0.8f;
+                if (n++ == 0) where = w.T.position;
+            }
+            return n;
+        }
+
         /// <summary>Is (x, z) next to a corner tricycle terminal (with a little run-up)?</summary>
         private bool TerminalAt(float x, float z)
         {

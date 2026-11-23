@@ -50,6 +50,8 @@ namespace JeepneyRush.Logic
         public float distance;
         public int coins;
         public int gems;
+        public int near_misses;
+        public int overtakes;
         public int passengers;
         public int deliveries;
         public int power_ups;
@@ -67,7 +69,7 @@ namespace JeepneyRush.Logic
         public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
         {
             run_id = Guid.NewGuid().ToString(),
-            seed = seed, env = (int)r.Environment, duration = duration, score = r.Score, distance = r.Distance, coins = r.Coins, gems = r.Gems,
+            seed = seed, env = (int)r.Environment, duration = duration, score = r.Score, distance = r.Distance, coins = r.Coins, gems = r.Gems, near_misses = r.NearMisses, overtakes = r.Overtakes,
             passengers = r.Passengers, deliveries = r.Deliveries, power_ups = r.PowerUps, smooth_humps = r.SmoothHumps,
             wet_distance = r.WetDistance, refuels = r.Refuels, hits = r.Hits, clean_distance = r.CleanDistance,
             best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney,
@@ -94,7 +96,7 @@ namespace JeepneyRush.Logic
             if (!(r.duration >= MinDuration) || r.duration > MaxDuration) return "duration";
             if (!(r.distance >= 0) || r.distance > MaxAverageSpeed * r.duration + 50f) return "too_fast";
             if (r.env < 0 || r.env >= Environments.All.Length) return "env";
-            if (r.coins < 0 || r.gems < 0 || r.score < 0 || r.passengers < 0 || r.deliveries < 0 || r.power_ups < 0 || r.smooth_humps < 0 || r.refuels < 0 || r.hits < 0) return "negative";
+            if (r.coins < 0 || r.gems < 0 || r.near_misses < 0 || r.overtakes < 0 || r.score < 0 || r.passengers < 0 || r.deliveries < 0 || r.power_ups < 0 || r.smooth_humps < 0 || r.refuels < 0 || r.hits < 0) return "negative";
             if (r.clean_distance > r.distance + 1f || r.wet_distance > r.distance + 1f || r.clean_distance < 0 || r.wet_distance < 0) return "distance_parts";
             if (r.deliveries > r.passengers) return "deliveries";
             return null;
@@ -105,6 +107,13 @@ namespace JeepneyRush.Logic
         public static int MaxHumps(float d) => (int)(d / 150f) + 2;
         public static int MaxRefuels(float d) => (int)(d / 700f) + 1;
         public static int MaxCoins(float d, int deliveries) => (int)(d * 1.0f) + deliveries * MaxFarePerDelivery + 50;
+        /// <summary>Overtakes need traffic to pass: at most one per 6 m driven (+ slack).</summary>
+        public static int MaxOvertakes(float d) => (int)(d / 6f) + 5;
+        public static int MaxNearMisses(float d) => (int)(d / 10f) + 5;
+
+        public static int MaxScore(float d, int coins, int passengers, int deliveries, int humps, int nearMisses, int overtakes) =>
+            (int)Math.Min(int.MaxValue, MaxScore(d, coins, passengers, deliveries, humps) + ComboMeter.MaxPoints(nearMisses, overtakes));
+
         public static int MaxScore(float d, int coins, int passengers, int deliveries, int humps) =>
             (int)(d * 1.5f) + coins * 10 + passengers * 50 + deliveries * 600 + humps * 50 + (int)(150 * (d / 300f + 1)) + 1000;
 
@@ -118,7 +127,9 @@ namespace JeepneyRush.Logic
             r.refuels = Math.Min(r.refuels, MaxRefuels(r.distance));
             r.coins = Math.Min(r.coins, MaxCoins(r.distance, r.deliveries));
             r.gems = Math.Min(r.gems, RoadGems.MaxForDistance(r.distance));
-            r.score = Math.Min(r.score, MaxScore(r.distance, r.coins, r.passengers, r.deliveries, r.smooth_humps));
+            r.overtakes = Math.Min(r.overtakes, MaxOvertakes(r.distance));
+            r.near_misses = Math.Min(r.near_misses, MaxNearMisses(r.distance));
+            r.score = Math.Min(r.score, MaxScore(r.distance, r.coins, r.passengers, r.deliveries, r.smooth_humps, r.near_misses, r.overtakes));
         }
     }
 

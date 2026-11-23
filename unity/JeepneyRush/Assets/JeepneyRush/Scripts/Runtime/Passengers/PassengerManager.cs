@@ -228,6 +228,7 @@ namespace JeepneyRush
             v.Barker.gameObject.SetActive(v.HasBarker);
             v.Barker.localPosition = new Vector3(stop.Side * (SceneryBuilder.RoadHalfWidth + 0.45f), SceneryBuilder.SidewalkHeight, -5.5f);
             v.Barker.localRotation = Quaternion.Euler(0, 180 + (stop.Side < 0 ? 55 : -55), 0);
+            v.Called = false;
             v.BarkT = Random.Range(0f, 0.8f);
             v.SendOffT = 0;
             v.BarkerCalls = 0;
@@ -367,6 +368,25 @@ namespace JeepneyRush
             s.BarkerCalls++;
             int left = _route != null ? _route.Capacity - _route.Count + _route.AlightingAt(s.Stop.Id) : 1;
             Shout(s, Lines.BarkerCall(Env, s.Stop.Name, left, _lineRng));
+        }
+
+        /// <summary>
+        /// Horn: someone on the sidewalk hears the busina and joins the queue at this stop
+        /// (once per stop, only if there is room). Returns the new rider's transform, or null.
+        /// </summary>
+        public Transform CallPassenger(PassengerStopView s)
+        {
+            if (s == null || s.Done || s.Called || s.Stop.Waiting >= 6 || _route == null || _route.Count + s.Stop.Waiting >= _route.Capacity) return null;
+            s.Called = true;
+            int i = s.Stop.Waiting;
+            s.Stop.Waiting++;
+            int variant = Random.Range(0, PropBuilder.PersonVariants);
+            var p = Services.Pools.Get("person" + variant, s.transform).transform;
+            p.localPosition = new Vector3(s.Stop.Side * (SceneryBuilder.RoadHalfWidth + 0.7f + Random.value * 0.5f), SceneryBuilder.SidewalkHeight, (i - s.Stop.Waiting / 2f) * 1.1f);
+            p.localRotation = Quaternion.Euler(0, 180 + (s.Stop.Side < 0 ? 35 : -35), 0);
+            s.Waiting.Add(p);
+            s.WaitingVariants.Add(variant);
+            return p;
         }
 
         /// <summary>The jeepney drove into the PARA zone.</summary>

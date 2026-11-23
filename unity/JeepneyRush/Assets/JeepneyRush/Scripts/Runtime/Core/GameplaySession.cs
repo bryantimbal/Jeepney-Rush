@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JeepneyRush.Logic;
 using UnityEngine;
 
@@ -55,6 +56,12 @@ namespace JeepneyRush
         private PowerUpManager _powerUps;
         private EnforcerManager _enforcer;
         private readonly CoinCombo _combo = new CoinCombo();
+        // arcade combo: near misses and overtakes chain into a score multiplier
+        private readonly NearMissTracker _nearMiss = new NearMissTracker();
+        private readonly ComboMeter _arcade = new ComboMeter();
+        private readonly List<PassCandidate> _passItems = new List<PassCandidate>(64);
+        private readonly List<PassEvent> _passEvents = new List<PassEvent>(8);
+        public ComboMeter Arcade => _arcade;
         private float _enforcerBase;
         private EffectsManager _fx;
         private DifficultyManager _difficulty;
@@ -282,6 +289,9 @@ namespace JeepneyRush
             _panicT = 0; _wasPanicking = false; _endReason = null;
             Services.UI.SetRating(_rating.Display, _rating.Value, false);
             _combo.Reset();
+            _arcade.Reset();
+            _nearMiss.Reset();
+            Services.UI.SetArcade(0, 1, 0);
             _input.Sensitivity = save.swipeSensitivity;
             _player.ResetRun();
             _road.Layout();
@@ -365,10 +375,105 @@ namespace JeepneyRush
             Haptics.Pulse(10);
             if (_dying || _traffic == null || Services.Game.State != GameState.Playing) return;
             var car = _traffic.Honk(_player.Lanes.X, _speed);
-            if (car != null && _rng.Chance(0.5))
+            if (car != null && _rng.Chance(0.6))
             {
                 var t = car.transform;
-                Services.UI.Say(_rng.Chance(0.5) ? "OO NA, OO NA!" : "SANDALI LANG!", () => t.position + Vector3.up * 2.2f);
+                string line = car.Kind == HazardKind.Tricycle ? Lines.Pick(Lines.HornTricycle, _rng)
+                            : car.Kind == HazardKind.Bus ? Lines.Pick(Lines.HornBus, _rng)
+                            : (_rng.Chance(0.5) ? "OO NA, OO NA!" : "SANDALI LANG!");
+                Services.UI.Say(line, () => t.position + Vector3.up * 2.2f);
+            }
+            HornInteractions();
+        }
+
+        /// <summary>
+        /// The busina is how jeepneys talk: a honk near a stop calls one more rider over, stray
+        /// dogs and chickens scatter, and an enforcer up ahead is not amused.
+        /// </summary>
+        private void HornInteractions()
+        {
+            // a waiting stop 15–90 m ahead: someone on the sidewalk hears it and joins the queue
+            var next = _passengers.NextStop();
+            if (next != null)
+            {
+                float z = next.transform.localPosition.z;
+                if (z > 15f && z < 90f)
+                {
+                    var rider = _passengers.CallPassenger(next);
+                    if (rider != null)
+                    {
+                        Services.UI.Say(Lines.Pick(Lines.HornCallRider, _rng), () => rider.position + Vector3.up * 2.1f);
+                        Services.UI.Float("+1 PASAHERO · NARINIG ANG BUSINA", UIManager.FloatKind.Good);
+                        _score.AddScore(50);
+                        return;
+                    }
+                }
+            }
+            // animals on the curb just ahead scurry off
+            if (_life != null && _life.Scare(2f, 35f, out var where) > 0)
+            {
+                var w = where;
+                Services.UI.Say(_rng.Chance(0.5) ? "ARF! ARF!" : "PUTAK! PUTAK!", () => w + Vector3.up * 1.2f);
+                return;
+            }
+            // honking right at the enforcer
+            if (_enforcer != null && _enforcer.Active && _enforcer.Z > 5f && _enforcer.Z < 60f && _rng.Chance(0.7))
+                Services.UI.Say(Lines.Pick(Lines.HornEnforcer, _rng), () => _enforcer.HeadPosition, true);
+        }
+
+        // ---------------------------------------------------------------- arcade combo
+        private void UpdateArcade(float dt)
+        {
+            _arcade.Tick(dt);
+            _passItems.Clear();
+            var pp = _player.transform.localPosition;
+            CollectPassables(_traffic.Active, pp, true);
+            CollectPassables(_obstacles.Active, pp, false);
+            _nearMiss.Update(_cfg.playerHalfWidth, _cfg.playerHalfLength, _passItems, _passEvents);
+            bool turbo = _powerUps.State.IsActive(PowerUpKind.Turbo);
+            foreach (var e in _passEvents)
+            {
+                int before = _arcade.Multiplier;
+                int pts = _arcade.Add(e.Kind, turbo);
+                _score.AddScore(pts);
+                if (e.Kind == PassKind.NearMiss)
+                {
+                    Services.UI.Float($"MUNTIK NA! +{pts}", UIManager.FloatKind.Big);
+                    Services.Audio.Play(Logic.Audio.Sfx.NearMiss, 0.9f, Random.Range(0.95f, 1.08f));
+                    _camera.Kick(3.5f);
+                    Haptics.Pulse(12);
+                }
+                else
+                {
+                    Services.Audio.Play(Logic.Audio.Sfx.NearMiss, 0.25f, 1.35f); // soft whoosh per overtake
+                    _camera.Tilt(-Mathf.Sign(_player.Lanes.X) * 0.6f);
+                }
+                if (_arcade.Multiplier > before)
+                {
+                    Services.UI.Float($"x{_arcade.Multiplier} COMBO!", UIManager.FloatKind.Big);
+                    Services.Audio.Play(Logic.Audio.Sfx.ComboUp, 0.9f);
+                    _camera.Kick(5f);
+                    _fx.Confetti(_player.transform.position + Vector3.up * 3f, 12 + _arcade.Multiplier * 4);
+                }
+            }
+            Services.UI.SetArcade(_arcade.Chain, _arcade.Multiplier, _arcade.Remaining01);
+        }
+
+        private void CollectPassables(IReadOnlyList<Hazard> list, Vector3 player, bool traffic)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var h = list[i];
+                if (h == null || !h.gameObject.activeInHierarchy || (h.Def.Soft && !h.Solid)) continue;
+                var p = h.transform.localPosition;
+                float z = p.z - player.z;
+                if (z > 70f || z < -25f) continue;
+                _passItems.Add(new PassCandidate
+                {
+                    Id = h.GetInstanceID(), X = p.x - player.x, Z = z,
+                    HalfLength = h.Def.HalfLength, HalfWidth = h.Def.HalfWidth,
+                    Moving = traffic && h.Speed > 0.5f, Eligible = !h.Hit,
+                });
             }
         }
 
@@ -480,6 +585,7 @@ namespace JeepneyRush
             _player.Tick(dt, _speed);
             _combo.Tick(dt);
             Services.UI.SetCombo(_combo.Count);
+            if (!_dying && state == GameState.Playing) UpdateArcade(dt);
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
@@ -819,6 +925,8 @@ namespace JeepneyRush
             bool sideSwipe = _player.Lanes.Changing && Mathf.Abs(z) < h.Def.HalfLength + _cfg.playerHalfLength - 1.4f;
             if (!c.TryDamage()) return;
             _hits++;
+            if (_arcade.Chain >= 3) Services.UI.Float("COMBO BROKEN", UIManager.FloatKind.Bad);
+            _arcade.Break();
             _cleanDistance = 0;
             Rate(RatingEvent.Crash);
             SabitFall("CRASH");
@@ -918,6 +1026,7 @@ namespace JeepneyRush
                 case BoostBank.UseResult.Used:
                     pu.Activate(PowerUpKind.Turbo, _powerUps.DurationScale);
                     Services.Audio.Play(Logic.Audio.Sfx.Turbo);
+                    _camera.Kick(7f);
                     Services.UI.Float("TURBO!", UIManager.FloatKind.Big);
                     _fx.Turbo(_player.transform.position);
                     Haptics.Pulse(20);
@@ -1384,6 +1493,7 @@ namespace JeepneyRush
             var summary = new RunSummary
             {
                 Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Gems = _runGems, Passengers = route.PickedUp,
+                NearMisses = _arcade.NearMisses, Overtakes = _arcade.Overtakes,
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
             };

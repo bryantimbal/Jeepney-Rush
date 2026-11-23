@@ -91,6 +91,8 @@ namespace JeepneyRush.Logic
         public int Coins;
         /// <summary>Gems picked up on the road (premium currency, capped per run and per day).</summary>
         public int Gems;
+        /// <summary>Near misses and overtakes this run (arcade combo).</summary>
+        public int NearMisses, Overtakes;
         public int Passengers;
         public int Deliveries;
         public int PowerUps;

@@ -30,6 +30,8 @@ namespace JeepneyRush.Logic
         public bool tutorialDone;
         /// <summary>Shows a camera button on the HUD for taking screenshots (F12 / F11 on PC always work).</summary>
         public bool screenshotButton;
+        /// <summary>Camera punch / tilt on near misses and combos (motion comfort: can be switched off).</summary>
+        public bool cameraEffects = true;
         /// <summary>Letterboxes the game to 9:16 so screenshots are accepted by Google Play as they are.</summary>
         public bool storeFrame;
 

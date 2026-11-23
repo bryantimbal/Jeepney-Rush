@@ -50,6 +50,13 @@ namespace JeepneyRush
 
         public void AddShake(float amount) => _shake = Mathf.Max(_shake, amount);
 
+        private float _kick, _tilt;
+        /// <summary>Quick field-of-view punch (degrees) that eases back – near misses, combos, Turbo.</summary>
+        public void Kick(float fov) { if (Effects) _kick = Mathf.Clamp(_kick + fov, 0f, 9f); }
+        /// <summary>Short roll impulse (degrees, + = right) for overtakes and swerves.</summary>
+        public void Tilt(float deg) { if (Effects) _tilt = Mathf.Clamp(_tilt + deg, -5f, 5f); }
+        private static bool Effects => Services.Save == null || Services.Save.Data.cameraEffects;
+
         public void Snap(Vector3 playerPos)
         {
             _pos = new Vector3(playerPos.x * 0.55f, offset.y, offset.z);
@@ -92,9 +99,11 @@ namespace JeepneyRush
             }
             transform.position = _pos + shake;
             var look = new Vector3(player.x * 0.8f, lookHeight + player.y * 0.25f, lookAhead);
-            transform.rotation = Quaternion.LookRotation(look - transform.position) * Quaternion.Euler(0, 0, _roll);
+            transform.rotation = Quaternion.LookRotation(look - transform.position) * Quaternion.Euler(0, 0, _roll + _tilt);
             _fovBoost = Mathf.Lerp(_fovBoost, speed01 * 8f, 1f - Mathf.Exp(-dt * 3f));
-            _cam.fieldOfView = _baseFov + _fovBoost;
+            _kick = Mathf.Lerp(_kick, 0f, 1f - Mathf.Exp(-dt * 6f));
+            _tilt = Mathf.Lerp(_tilt, 0f, 1f - Mathf.Exp(-dt * 5f));
+            _cam.fieldOfView = _baseFov + _fovBoost + _kick;
         }
 
         /// <summary>Slow showcase orbit around the jeepney (main menu / garage).</summary>

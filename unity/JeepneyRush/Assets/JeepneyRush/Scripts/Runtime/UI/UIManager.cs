@@ -588,6 +588,7 @@ namespace JeepneyRush
             var rel = ReleaseConfig.Active;
             if (!string.IsNullOrWhiteSpace(rel.privacyPolicyUrl))
                 card.Add(UiKit.Button("PRIVACY POLICY", () => Application.OpenURL(rel.privacyPolicyUrl.Trim()), Color.white, UiKit.Ink, 36, 96));
+            card.Add(Toggle("Camera effects", () => d().cameraEffects, v => d().cameraEffects = v));
             card.Add(Toggle("Screenshot button", () => d().screenshotButton, v => { d().screenshotButton = v; RefreshScreenshotUi(); }));
             card.Add(Toggle("Store frame 9:16", () => d().storeFrame, v => { d().storeFrame = v; RefreshScreenshotUi(); }));
             card.Add(Toggle("Show FPS", () => _showDebug, v => { _showDebug = v; if (_debug != null) Show(_debug, v); }));
@@ -901,6 +902,7 @@ namespace JeepneyRush
             _pedalButtons.Add(gear);
             bottom.Add(controls);
             _hud.Add(bottom);
+            BuildArcade(_hud);
 
             _tutorial = UiKit.Box("tutorial");
             _tutorial.style.position = Position.Absolute;

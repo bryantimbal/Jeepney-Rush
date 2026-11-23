@@ -21,6 +21,8 @@ namespace JeepneyRush
         /// <summary>Barker calling riders at this stop (may be switched off for quiet stops).</summary>
         public Transform Barker, BarkerArm;
         public bool HasBarker;
+        /// <summary>The horn already called an extra rider here.</summary>
+        public bool Called;
         public float BarkT, SendOffT;
         public int BarkerCalls;
 
