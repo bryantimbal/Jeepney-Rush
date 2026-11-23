@@ -92,15 +92,7 @@ namespace JeepneyRush.EditorTools
             PlayerSettings.runInBackground = false;
             PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.Vulkan, GraphicsDeviceType.OpenGLES3 });
             if (PlayerSettings.Android.bundleVersionCode < 1) PlayerSettings.Android.bundleVersionCode = 1;
-            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + "/Art/Icon/icon-512.png");
-            if (icon != null)
-            {
-#if UNITY_2021_2_OR_NEWER
-                PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
-#else
-                PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Unknown, new[] { icon });
-#endif
-            }
+            AppIcons.Apply(); // default + Android adaptive/round/legacy icons
         }
 
         // ------------------------------------------------------------------ URP

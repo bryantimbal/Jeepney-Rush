@@ -91,6 +91,8 @@ namespace JeepneyRush.EditorTools
             PlayerSettings.Android.minSdkVersion = (AndroidSdkVersions)26;
             EditorUserBuildSettings.development = false;
             EnableSymbols();
+            string iconProblem = AppIcons.Apply();
+            if (iconProblem != null) Debug.LogWarning("[Jeepney Rush] " + iconProblem);
         }
 
         /// <summary>symbols.zip for Play Console (Unity 6 API first, older API as fallback; reflection so both compile).</summary>

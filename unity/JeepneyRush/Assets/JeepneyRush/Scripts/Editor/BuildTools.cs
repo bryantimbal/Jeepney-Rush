@@ -28,6 +28,7 @@ namespace JeepneyRush.EditorTools
         {
             if (EnabledScenes().Length == 0) ProjectSetup.CreateScenes();
             ApplySigningFromEnvironment();
+            AppIcons.Apply(); // also for development builds, so test installs show the real icon
             if (!development && !ReleaseTools.PreflightForBuild())
             {
                 if (Application.isBatchMode) EditorApplication.Exit(2);
