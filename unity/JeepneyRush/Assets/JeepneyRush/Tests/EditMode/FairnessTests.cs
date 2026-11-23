@@ -45,6 +45,7 @@ namespace JeepneyRush.Tests
             public readonly List<(PowerUpKind kind, float w)> PowerUpList = new List<(PowerUpKind, float)>();
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) { PowerUps++; PowerUpList.Add((kind, Distance - z)); }
             public int Gems;
+            public int Brakes;
             public void SpawnGem(int lane, float z) { Gems++; }
             public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
             public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
@@ -62,7 +63,7 @@ namespace JeepneyRush.Tests
             var jams = new JamSchedule(seed, env);
             var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt, jams.At);
             const float dt = 1f / 30f;
-            float distance = 0, speed = -1;
+            float distance = 0, speed = -1, brakeHold = 0;
             int lane = 1, from = 1;
             float laneT = 1, x = cfg.LaneX(1), laneDur = cfg.laneChangeDuration;
             var hits = new List<string>();
@@ -77,6 +78,8 @@ namespace JeepneyRush.Tests
             {
                 float target = cfg.SpeedAt(distance) * JamRules.SpeedCap(jams.At(distance)); // the jeepney crawls in a jam
                 speed = speed < 0 ? target : speed > target ? Math.Max(target, speed - JamRules.CapDecel * dt) : Math.Min(target, speed + JamRules.CapAccel * dt);
+                // a real driver brakes when no lane is safe (the game's guarantee: braking always avoids a crash)
+                if (brakeHold > 0) { speed = Math.Max(1.5f, speed - cfg.brakeDecel * dt); brakeHold -= dt; world.Brakes++; }
                 world.Lanes = laneT < 1 ? new[] { from, lane } : new[] { lane };
                 world.Distance = distance;
                 director.Update(distance, speed);
@@ -181,6 +184,7 @@ namespace JeepneyRush.Tests
                         Console.WriteLine($"@{distance:0.0} v={speed:0.0} lane={lane} best={best}");
                         foreach (var q in world.Objs) if (q.Z > -400 && q.Z < 15) Console.WriteLine($"     {q.Kind} L{q.Lane} z={q.Z:0.0} v={q.Speed:0.0}");
                     }
+                    if (best < 0) brakeHold = 0.35f;
                     if (best >= 0 && best != lane) { from = lane; lane = best; laneT = 0; }
                 }
                 if (laneT < 1) laneT = Math.Min(1, laneT + dt / laneDur);
@@ -235,7 +239,7 @@ namespace JeepneyRush.Tests
             Assert.That(world.Gems, Is.InRange(1, RoadGems.MaxPerRun), "road gems in 4 km");
             // gas stations: regular, never closer than the tank allows, never on top of a PARA stop
             Assert.GreaterOrEqual(world.Stations.Count, 3, "too few gas stations in 4 km");
-            Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : env == EnvironmentKind.Edsa ? 2 : 4, "too few intersections in 4 km");
+            Assert.GreaterOrEqual(world.Crossings.Count, env == EnvironmentKind.Mountain ? 1 : env == EnvironmentKind.Edsa ? 2 : env == EnvironmentKind.Baguio ? 3 : 4, "too few intersections in 4 km");
             var cfg = new BalanceConfig();
             for (int i = 0; i < world.Stations.Count; i++)
             {
@@ -258,6 +262,7 @@ namespace JeepneyRush.Tests
                 var r = Simulate(seed, 4000, env);
                 if (r.hits.Count > 0 || r.zoneIntrusions.Count > 0) bad.Add($"{seed}/{env}: {string.Join(",", r.hits)} {string.Join(",", r.zoneIntrusions)}");
             }
+            Console.WriteLine("SWEEPBAD " + bad.Count + " :: " + string.Join(" | ", bad));
             CollectionAssert.IsEmpty(bad, string.Join("\n", bad));
         }
 

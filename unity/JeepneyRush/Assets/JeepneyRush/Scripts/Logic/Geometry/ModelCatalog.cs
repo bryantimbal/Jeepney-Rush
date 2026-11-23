@@ -32,6 +32,14 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("gas_station", PropBuilder.GasStation(3.2f, 2.7f, 14f));
             yield return ("vendor_row", VendorRow());
             yield return ("gem", PropBuilder.Gem());
+            yield return ("ev_taho", EventBuilder.TahoVendor(0));
+            yield return ("ev_pedicab", EventBuilder.Pedicab(0));
+            yield return ("ev_float", EventBuilder.ParadeFloat(0));
+            yield return ("ev_carabao", EventBuilder.Carabao(0));
+            yield return ("ev_flagman", EventBuilder.Flagman());
+            yield return ("ev_stalled", EventBuilder.StalledJeepney(1));
+            yield return ("ev_dog", EventBuilder.StrayDog(0));
+            yield return ("ev_ball", EventBuilder.Basketball());
             yield return ("barker", PropBuilder.Barker(1));
             yield return ("barker_arm", PropBuilder.BarkerArm(1));
             yield return ("stop_sign", PropBuilder.StopSign(0));

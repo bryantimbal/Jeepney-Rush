@@ -9,6 +9,7 @@ namespace JeepneyRush
     {
         protected readonly List<Hazard> Items = new List<Hazard>();
         protected BalanceConfig Cfg;
+        public BalanceConfig Config => Cfg;
         protected GameRandom Rng;
         public IReadOnlyList<Hazard> Active => Items;
 

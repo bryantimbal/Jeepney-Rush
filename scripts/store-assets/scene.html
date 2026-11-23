@@ -163,6 +163,15 @@ switch (mode) {
     chase(); cam.position.set(1.4, 6.6, 10.5); cam.lookAt(1.6, 1.6, -22);
     break;
   }
+  case 'events': { // road events lineup (preview)
+    sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) add('chunk_provincial', 0, 0, -10 + i * 40);
+    jeepney('pilipinas', 0, 0);
+    add('ev_taho', 3.2, 0, 14); add('ev_pedicab', 3.2, 0, 24); add('ev_carabao', -3.2, 0, 18);
+    add('roadblock', 0, 0, 34); add('ev_flagman', 0, 0, 36.5); add('cone', 0, 0, 30); add('cone', 0, 0, 26);
+    add('ev_stalled', 3.2, 0, 44); add('ev_dog', -3.2, 0, 30); add('ev_ball', -1.6, 0, 9); add('ev_float', -3.2, 0, 56);
+    cam.fov = 50; cam.position.set(0.5, 6.5, 9); cam.lookAt(0, 1.2, -26);
+    break;
+  }
   case 'corner': { // tricycles, vendors and the TODA terminal
     sky('#6fb7f0', '#d7ecf7'); road(); for (let i = 0; i < 7; i++) if (i !== 1) add('chunk', 0, 0, -10 + i * 40);
     add('intersection', 0, 0, 32); jeepney(q.get('liv') || 'sanjuan', 1.6, 12);

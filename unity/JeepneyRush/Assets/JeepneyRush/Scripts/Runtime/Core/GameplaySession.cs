@@ -416,9 +416,55 @@ namespace JeepneyRush
                 Services.UI.Say(_rng.Chance(0.5) ? "ARF! ARF!" : "PUTAK! PUTAK!", () => w + Vector3.up * 1.2f);
                 return;
             }
+            // a carabao doesn't care about your horn
+            foreach (var o in _obstacles.Active)
+            {
+                if (o.Kind != HazardKind.Carabao || o.Hit) continue;
+                float cz = o.transform.localPosition.z;
+                if (cz < 5f || cz > 60f) continue;
+                var ot = o.transform;
+                Services.UI.Say("MOOO...", () => ot.position + Vector3.up * 2.2f);
+                Services.UI.Float("HINDI NAKIKINIG ANG KALABAW", UIManager.FloatKind.Info);
+                return;
+            }
             // honking right at the enforcer
             if (_enforcer != null && _enforcer.Active && _enforcer.Z > 5f && _enforcer.Z < 60f && _rng.Chance(0.7))
                 Services.UI.Say(Lines.Pick(Lines.HornEnforcer, _rng), () => _enforcer.HeadPosition, true);
+        }
+
+        // ---------------------------------------------------------------- road events
+        /// <summary>Announces each road event once, ~95 m ahead, with a fitting line from it.</summary>
+        private void UpdateRoadEvents()
+        {
+            WarnEvents(_traffic.Active);
+            WarnEvents(_obstacles.Active);
+        }
+
+        private void WarnEvents(IReadOnlyList<Hazard> list)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var h = list[i];
+                if (h == null || h.Warned || h.Hit) continue;
+                var ev = RoadEvents.EventOf(h.Kind);
+                if (ev == null) continue;
+                float z = h.transform.localPosition.z;
+                if (z <= 0f || z > RoadEvents.WarnAt) continue;
+                h.Warned = true;
+                Services.UI.Float(RoadEvents.Warning(ev.Value), UIManager.FloatKind.Info);
+                var t = h.transform;
+                string line = null;
+                switch (ev.Value)
+                {
+                    case RoadEventKind.Taho: line = "TAHOOOOO!"; break;
+                    case RoadEventKind.Carabao: line = "HOOO! DAHAN-DAHAN, KALABAW!"; break;
+                    case RoadEventKind.Construction: line = "DAHAN-DAHAN! ISANG LANE LANG!"; break;
+                    case RoadEventKind.StalledJeepney: line = "PATULAK NAMAN, PARE!"; break;
+                    case RoadEventKind.ParadeFloat: line = "VIVA! FIESTA NA!"; break;
+                    case RoadEventKind.Pedicab: line = "PADYAK, PADYAK!"; break;
+                }
+                if (line != null) Services.UI.Say(line, () => t.position + Vector3.up * 2.4f);
+            }
         }
 
         // ---------------------------------------------------------------- arcade combo
@@ -585,7 +631,7 @@ namespace JeepneyRush
             _player.Tick(dt, _speed);
             _combo.Tick(dt);
             Services.UI.SetCombo(_combo.Count);
-            if (!_dying && state == GameState.Playing) UpdateArcade(dt);
+            if (!_dying && state == GameState.Playing) { UpdateArcade(dt); UpdateRoadEvents(); }
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
@@ -722,6 +768,24 @@ namespace JeepneyRush
         {
             h.Hit = true;
             var pos = _player.transform.position;
+            if (h.Kind == HazardKind.StrayDog || h.Kind == HazardKind.Basketball)
+            {
+                // the dog leaps clear (never hurt); the ball bounces off down the road
+                bool dog = h.Kind == HazardKind.StrayDog;
+                float away = Mathf.Sign(h.transform.localPosition.x - _player.transform.localPosition.x);
+                if (away == 0) away = 1;
+                h.KnockVelocity = dog ? new Vector3(away * 7f, 4f, 10f) : new Vector3(away * 2f, 6f, 14f);
+                h.KnockSpin = dog ? 0f : 8f;
+                var t = h.transform;
+                Services.UI.Say(dog ? "ARF! ARF! ARF!" : "HOY! BOLA NAMIN 'YAN!", () => t.position + Vector3.up * 1.4f, dog);
+                if (dog)
+                {
+                    Services.UI.Float("MUNTIK MASAGASAAN ANG ASO!", UIManager.FloatKind.Bad);
+                    _arcade.Break();
+                    _player.Bump(0.05f);
+                }
+                return;
+            }
             if (HazardCatalog.IsMud(h.Kind))
             {
                 // thick mud: the wheels dig in and slow the jeepney, mud flies everywhere

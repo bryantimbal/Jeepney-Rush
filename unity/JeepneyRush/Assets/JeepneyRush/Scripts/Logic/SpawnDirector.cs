@@ -69,6 +69,12 @@ namespace JeepneyRush.Logic
         /// <summary>Extra TURBO booster pickups (stored, used on demand) – own schedule on the same side stream.</summary>
         public const float BoostSpacingMin = 380f, BoostSpacingMax = 650f;
         public int BoostsPlaced { get; private set; }
+        // road events: extra validated rows between normal rows, on their own random stream
+        private readonly GameRandom _eventRng;
+        private float _nextEventAt;
+        private readonly List<RoadEvents.Piece> _pieces = new List<RoadEvents.Piece>();
+        public int EventsPlaced { get; private set; }
+        public readonly List<RoadEventKind> EventLog = new List<RoadEventKind>();
         /// <summary>Gems this run may still place (per-run and daily caps; set by the session).</summary>
         public int GemBudget = RoadGems.MaxPerRun;
         public int GemsPlaced { get; private set; }
@@ -97,6 +103,8 @@ namespace JeepneyRush.Logic
             _gemRng = rng.Fork(0x6E3D5A11u);
             _nextGemAt = RoadGems.FirstAt + _gemRng.Range(0, 250);
             _nextBoostAt = 300f + _gemRng.Range(0, 200);
+            _eventRng = rng.Fork(0x3E7A1C55u);
+            _nextEventAt = RoadEvents.FirstAt + _eventRng.Range(0, 120);
             _wetness = wetness ?? (_ => 0f);
             _jam = jam ?? (_ => 0f);
             _jamAware = jam != null && Environments.JamIntensity(environment) > 0;
@@ -275,6 +283,11 @@ namespace JeepneyRush.Logic
                 foreach (var c in _cands) _sink.SpawnHazard(c.Kind, c.Lane, z + c.Dz, c.Speed, c.Solid);
             }
             else _cands.Clear();
+            if (Cursor >= _nextEventAt && rowAt > RoadEvents.FirstAt)
+            {
+                // halfway between this row and the next; a failed attempt simply waits for the next gap
+                if (TryEventRow(z - gap * 0.5f, distance, speed)) _nextEventAt = Cursor + _eventRng.Range(RoadEvents.SpacingMin, RoadEvents.SpacingMax);
+            }
             PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.HumpRow);
         }
 
@@ -483,6 +496,28 @@ namespace JeepneyRush.Logic
                 return true;
             }
             return false;
+        }
+
+        private bool TryEventRow(float z, float distance, float speed)
+        {
+            if (_rowJam > 0.15f) return false; // the jam is event enough
+            // never close a lane just before a jam: slow traffic would fill the other lanes
+            if (_jamAware) for (float w = distance - z; w <= distance - z + 500f; w += 50f) if (_jam(w) > 0.05f) return false;
+            var kind = _eventRng.Weighted(RoadEvents.For(_env));
+            RoadEvents.Build(kind, _eventRng.Int(0, _cfg.laneCount - 1), _cfg.laneCount, _pieces);
+            _cands.Clear();
+            foreach (var p in _pieces)
+            {
+                var def = HazardCatalog.Get(p.Kind);
+                float v = def.IsMoving ? Math.Max(0.8f, Math.Min(_eventRng.Range(def.MinSpeed, def.MaxSpeed), speed * 0.5f)) : 0f;
+                _cands.Add(new Candidate { Kind = p.Kind, Lane = p.Lane, Dz = p.Dz, Speed = v });
+            }
+            if (!Validate(z, distance, speed)) { _cands.Clear(); return false; }
+            foreach (var c in _cands) _sink.SpawnHazard(c.Kind, c.Lane, z + c.Dz, c.Speed, c.Solid);
+            _cands.Clear();
+            EventsPlaced++;
+            EventLog.Add(kind);
+            return true;
         }
 
         /// <summary>A gem or a TURBO booster in a clear lane (like power-ups: never behind a blocker or in a stop's lane).</summary>

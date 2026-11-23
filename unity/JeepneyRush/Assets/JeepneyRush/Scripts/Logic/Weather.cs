@@ -17,12 +17,18 @@ namespace JeepneyRush.Logic
         public const float Transition = 80f; // metres to blend between spells
         private readonly List<Spell> _spells = new List<Spell>();
         private readonly GameRandom _rng;
+        // sudden showers ("biglang ulan") are cut into long dry spells on their own stream,
+        // so the rest of the weather sequence stays the same
+        private readonly GameRandom _showerRng;
+        public const float ShowerMin = 160f, ShowerMax = 260f;
+        public int Showers { get; private set; }
         private readonly EnvironmentKind _env;
         private float _plannedTo;
 
         public WeatherSchedule(int seed, EnvironmentKind env)
         {
             _rng = new GameRandom(seed ^ 0x5EA7);
+            _showerRng = new GameRandom(seed ^ 0x51A0);
             _env = env;
             _spells.Add(new Spell { From = 0, To = _rng.Range(250, 450), Kind = WeatherKind.Clear });
             _plannedTo = _spells[0].To;
@@ -40,6 +46,17 @@ namespace JeepneyRush.Logic
                 do k = _rng.Weighted(new (WeatherKind, float)[] { (WeatherKind.Clear, 2.2f), (WeatherKind.Rain, 1.8f), (WeatherKind.Typhoon, typhoon) });
                 while (k == prev && guard++ < 5);
                 float len = k == WeatherKind.Clear ? _rng.Range(400, 800) : k == WeatherKind.Rain ? _rng.Range(450, 750) : _rng.Range(350, 550);
+                if (k == WeatherKind.Clear && len >= 600f && _plannedTo > 700f && _showerRng.Chance(0.45))
+                {
+                    // dry - short sharp shower - dry
+                    float a = len * _showerRng.Range(0.3f, 0.45f), shower = _showerRng.Range(ShowerMin, ShowerMax);
+                    _spells.Add(new Spell { From = _plannedTo, To = _plannedTo + a, Kind = WeatherKind.Clear });
+                    _spells.Add(new Spell { From = _plannedTo + a, To = _plannedTo + a + shower, Kind = WeatherKind.Rain });
+                    _spells.Add(new Spell { From = _plannedTo + a + shower, To = _plannedTo + len + shower, Kind = WeatherKind.Clear });
+                    _plannedTo += len + shower;
+                    Showers++;
+                    continue;
+                }
                 _spells.Add(new Spell { From = _plannedTo, To = _plannedTo + len, Kind = k });
                 _plannedTo += len;
             }

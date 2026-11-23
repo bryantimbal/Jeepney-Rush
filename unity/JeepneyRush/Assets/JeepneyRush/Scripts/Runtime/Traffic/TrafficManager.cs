@@ -21,7 +21,31 @@ namespace JeepneyRush
 
         protected override void Animate(Hazard h, float dt, ref Vector3 pos)
         {
+            if (h.SteppedAside)
+            {
+                // walks / pedals onto the curb and keeps going there
+                float curbX = Cfg.LaneX(Cfg.laneCount - 1) + 2.6f;
+                pos.x = Mathf.MoveTowards(pos.x, curbX, dt * 2.2f);
+                h.Body.localRotation = Quaternion.Euler(0, pos.x < curbX - 0.05f ? 25f : 0f, 0);
+                return;
+            }
             if (h.Hit) return;
+            if (h.PullOut > 0f && pos.z < 70f)
+            {
+                // tricycle pulling out of a side street onto the road, blinker wobble first
+                h.PullOut = Mathf.MoveTowards(h.PullOut, 0f, dt * 1.6f);
+                var bo = h.Body.localPosition;
+                bo.x = h.PullOut;
+                h.Body.localPosition = bo;
+                h.Body.localRotation = Quaternion.Euler(0, -h.PullOut * 9f, Mathf.Sin(h.Age * 25f) * 0.8f);
+                if (h.PullOut <= 0f) h.Body.localRotation = Quaternion.identity;
+            }
+            else if (h.PullOut > 0f)
+            {
+                var bo = h.Body.localPosition;
+                bo.x = h.PullOut;
+                h.Body.localPosition = bo;
+            }
             // suspension bob
             var b = h.Body.localPosition;
             b.y = Mathf.Abs(Mathf.Sin(h.Age * (h.Kind == HazardKind.Motorcycle ? 9f : 6f))) * 0.025f;
@@ -82,6 +106,14 @@ namespace JeepneyRush
                 if (best == null || z < best.transform.localPosition.z) best = h;
             }
             if (best == null) return null;
+            if (HazardCatalog.StepsAsideOnHorn(best.Kind))
+            {
+                // the taho vendor / pedicab steps onto the sidewalk and frees the lane
+                best.SteppedAside = true;
+                best.Hit = true;
+                best.GetComponent<BoxCollider>().enabled = false;
+                return best;
+            }
             int lane = best.Lane;
             var options = lane == 0 ? new[] { 1 } : lane == Cfg.laneCount - 1 ? new[] { lane - 1 } : (Rng.Chance(0.5) ? new[] { lane - 1, lane + 1 } : new[] { lane + 1, lane - 1 });
             foreach (int to in options)

@@ -43,7 +43,12 @@ namespace JeepneyRush
 
         public void SpawnHazard(HazardKind kind, int lane, float z, float speed, bool solid)
         {
-            if (HazardCatalog.IsMoving(kind)) _traffic.Spawn(kind, lane, -z, speed, solid);
+            if (HazardCatalog.IsMoving(kind))
+            {
+                var h = _traffic.Spawn(kind, lane, -z, speed, solid);
+                // some curb-lane tricycles pull out from a side street instead of already driving
+                if (kind == HazardKind.Tricycle && lane == _traffic.Config.laneCount - 1 && Random.value < 0.45f) h.PullOut = 2.8f;
+            }
             else _obstacles.Spawn(kind, lane, -z, speed, solid);
         }
 

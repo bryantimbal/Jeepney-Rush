@@ -21,6 +21,12 @@ namespace JeepneyRush
         public float Speed;
         public bool Solid;
         public bool Hit;
+        /// <summary>Taho vendor / pedicab that stepped onto the sidewalk after a honk (no longer blocks).</summary>
+        public bool SteppedAside;
+        /// <summary>Tricycle pulling out from the sidewalk: visual sideways offset still to cover (m).</summary>
+        public float PullOut;
+        /// <summary>The HUD already announced this road event.</summary>
+        public bool Warned;
         public float Age;
         public Vector3 KnockVelocity;
         public float KnockSpin;
@@ -60,6 +66,9 @@ namespace JeepneyRush
             Speed = speed;
             Solid = solid;
             Hit = false;
+            SteppedAside = false;
+            PullOut = 0;
+            Warned = false;
             Age = Random.value * 10f;
             KnockVelocity = Vector3.zero;
             KnockSpin = 0;

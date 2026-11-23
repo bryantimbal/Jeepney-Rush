@@ -10,6 +10,10 @@ namespace JeepneyRush.Logic
         Pothole, SpeedHump, FloodPuddle, FloodWide,
         // Mountain Province: mud (soft, slows you down) and fallen rocks (solid)
         MudPatch, Rocks,
+        // Filipino road events (appended: existing values never change)
+        TahoVendor, Pedicab, ParadeFloat,         // slow movers (honk: taho / pedicab step aside)
+        Carabao, Flagman, StalledJeepney,         // solid, stationary
+        StrayDog, Basketball,                     // soft: drive over = a scare, not a crash
     }
 
     public readonly struct HazardDef
@@ -67,6 +71,14 @@ namespace JeepneyRush.Logic
                 case HazardKind.FloodWide: return new HazardDef(FullRoadHalfWidth, 5.5f, 0.3f, true);
                 case HazardKind.MudPatch: return new HazardDef(1.35f, 3.0f, 0.3f, true);
                 case HazardKind.Rocks: return new HazardDef(1.05f, 0.95f, 1.1f, false);
+                case HazardKind.TahoVendor: return new HazardDef(0.55f, 0.9f, 1.8f, false, 0.8f, 1.2f);
+                case HazardKind.Pedicab: return new HazardDef(0.75f, 1.2f, 1.9f, false, 2.5f, 3.5f);
+                case HazardKind.ParadeFloat: return new HazardDef(1.25f, 3.6f, 3.8f, false, 1.6f, 2.4f);
+                case HazardKind.Carabao: return new HazardDef(0.85f, 1.5f, 1.7f, false);
+                case HazardKind.Flagman: return new HazardDef(0.4f, 0.4f, 1.9f, false);
+                case HazardKind.StalledJeepney: return new HazardDef(1.0f, 2.9f, 2.5f, false);
+                case HazardKind.StrayDog: return new HazardDef(0.45f, 0.6f, 0.6f, true);
+                case HazardKind.Basketball: return new HazardDef(0.25f, 0.25f, 0.5f, true);
                 default: return new HazardDef(1, 1, 1, false);
             }
         }
@@ -75,5 +87,8 @@ namespace JeepneyRush.Logic
         public static bool IsSoft(HazardKind k) => Get(k).Soft;
         public static bool IsFlood(HazardKind k) => k == HazardKind.FloodPuddle || k == HazardKind.FloodWide;
         public static bool IsMud(HazardKind k) => k == HazardKind.MudPatch;
+        /// <summary>Slow movers that a honk sends off the road (onto the sidewalk).</summary>
+        public static bool StepsAsideOnHorn(HazardKind k) => k == HazardKind.TahoVendor || k == HazardKind.Pedicab;
+        public static bool IsRoadEvent(HazardKind k) => k >= HazardKind.TahoVendor;
     }
 }
