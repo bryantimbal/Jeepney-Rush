@@ -50,11 +50,25 @@ namespace JeepneyRush
 
         public void AddShake(float amount) => _shake = Mathf.Max(_shake, amount);
 
-        private float _kick, _tilt;
-        /// <summary>Quick field-of-view punch (degrees) that eases back – near misses, combos, Turbo.</summary>
-        public void Kick(float fov) { if (Effects) _kick = Mathf.Clamp(_kick + fov, 0f, 9f); }
-        /// <summary>Short roll impulse (degrees, + = right) for overtakes and swerves.</summary>
-        public void Tilt(float deg) { if (Effects) _tilt = Mathf.Clamp(_tilt + deg, -5f, 5f); }
+        // Effects never change the view in a single frame (that read as a flicker): an impulse
+        // raises a TARGET, the actual value eases toward it (critically damped) and the target
+        // fades out, so the zoom swells in over ~0.1 s and settles back over ~0.6 s.
+        private float _kick, _kickVel, _kickTarget, _tilt, _tiltVel, _tiltTarget;
+        public const float MaxKick = 5f, MaxTilt = 2f;
+        /// <summary>Gentle field-of-view swell (degrees) for near misses, combos and Turbo.</summary>
+        public void Kick(float fov) { if (Effects) _kickTarget = Mathf.Min(MaxKick, Mathf.Max(_kickTarget, fov) + Mathf.Min(_kickTarget, fov) * 0.25f); }
+        /// <summary>Soft roll (degrees, + = right) for overtakes and swerves.</summary>
+        public void Tilt(float deg) { if (Effects) _tiltTarget = Mathf.Clamp(_tiltTarget + deg, -MaxTilt, MaxTilt); }
+
+        private void UpdateEffects(float dt)
+        {
+            if (dt <= 0) return;
+            _kick = Mathf.SmoothDamp(_kick, _kickTarget, ref _kickVel, 0.08f, Mathf.Infinity, dt);
+            _tilt = Mathf.SmoothDamp(_tilt, _tiltTarget, ref _tiltVel, 0.12f, Mathf.Infinity, dt);
+            _kickTarget *= Mathf.Exp(-dt * 4f);
+            _tiltTarget *= Mathf.Exp(-dt * 3f);
+            if (_kickTarget < 0.01f) _kickTarget = 0f;
+        }
         private static bool Effects => Services.Save == null || Services.Save.Data.cameraEffects;
 
         public void Snap(Vector3 playerPos)
@@ -69,6 +83,7 @@ namespace JeepneyRush
         public void Follow(Vector3 player, float lateralVelocity, float speed01, float dt)
         {
             if (_cam.pixelWidth != _lastW || _cam.pixelHeight != _lastH) UpdateFov();
+            UpdateEffects(dt);
             if (DriverView && DriverAnchor != null)
             {
                 _cam.nearClipPlane = 0.04f;
@@ -101,8 +116,6 @@ namespace JeepneyRush
             var look = new Vector3(player.x * 0.8f, lookHeight + player.y * 0.25f, lookAhead);
             transform.rotation = Quaternion.LookRotation(look - transform.position) * Quaternion.Euler(0, 0, _roll + _tilt);
             _fovBoost = Mathf.Lerp(_fovBoost, speed01 * 8f, 1f - Mathf.Exp(-dt * 3f));
-            _kick = Mathf.Lerp(_kick, 0f, 1f - Mathf.Exp(-dt * 6f));
-            _tilt = Mathf.Lerp(_tilt, 0f, 1f - Mathf.Exp(-dt * 5f));
             _cam.fieldOfView = _baseFov + _fovBoost + _kick;
         }
 

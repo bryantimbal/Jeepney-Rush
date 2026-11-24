@@ -581,10 +581,13 @@ namespace JeepneyRush
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => d().vibration = v));
-            card.Add(Segmented("Steering", new[] { "Hold sides", "Tilt phone" }, () => d().steerMode, i =>
+            card.Add(Segmented("Steering", new[] { "Buttons", "Tilt phone" }, () => d().steerMode, i =>
             {
                 d().steerMode = i;
-                if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING HOLD SIDES", FloatKind.Info);
+                if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING BUTTONS", FloatKind.Info);
+                ApplyControlLayout(i == 1 && InputCompat.HasTilt ? Logic.SteerMode.Tilt : Logic.SteerMode.Tap);
+                var session = Services.Game.Session;
+                if (session != null) session.Input.Mode = (Logic.SteerMode)i;
             }));
             card.Add(Toggle("Lane assist", () => d().laneAssist, v => d().laneAssist = v));
             card.Add(Segmented("Steering sensitivity", new[] { "Low", "Normal", "High" },
@@ -834,35 +837,25 @@ namespace JeepneyRush
             bottom.style.justifyContent = Justify.SpaceBetween;
             bottom.style.alignItems = Align.FlexEnd;
             UiKit.Pad(bottom.style, 26, 30);
-            var speedCol = UiKit.Box();
+            _ctlLeft = UiKit.Box("ctlLeft");
+            _ctlLeft.style.alignItems = Align.FlexStart;
+            _speedBox = UiKit.Box("speedBox");
             _speed = UiKit.Text("0", 72, Color.white, true, 3f);
             _speed.style.unityTextAlign = TextAnchor.MiddleLeft;
-            speedCol.Add(_speed);
+            _speedBox.Add(_speed);
             var kmh = UiKit.Text("km/h", 26, Color.white, false, 1.5f);
             kmh.style.unityTextAlign = TextAnchor.MiddleLeft;
-            speedCol.Add(kmh);
+            _speedBox.Add(kmh);
             _debug = UiKit.Text("", 22, UiKit.Hex("#7CFC7C"), false, 1f);
             _debug.style.unityTextAlign = TextAnchor.MiddleLeft;
             Show(_debug, false);
-            speedCol.Add(_debug);
-            bottom.Add(speedCol);
-            // ---- thumb controls: BRAKE (left) · BUSINA (centre, either thumb) · GAS (right, gear D/R above it)
-            VisualElement Pedal(VisualElement b, string color, float size)
-            {
-                b.style.width = b.style.height = size;
-                b.style.backgroundColor = UiKit.Hex(color);
-                UiKit.Border(b.style, 8, UiKit.Ink, size * 0.24f);
-                b.style.borderBottomWidth = 20;
-                return b;
-            }
+            _speedBox.Add(_debug);
+            bottom.Add(_ctlLeft);
             // TURBO: fires a stored booster (shown once one has been collected)
             _boostBtn = HoldButton("TURBO", "ui_pu_Turbo", UiKit.Hex("#FF8A00"), v => { if (v) Services.Game.Session?.UseBoost(); });
             _boostBtn.name = "turbo";
-            _boostBtn.style.width = _boostBtn.style.height = 170;
-            UiKit.Border(_boostBtn.style, 7, UiKit.Ink, 50);
-            _boostBtn.style.borderBottomWidth = 16;
-            _boostBtn.style.marginTop = 12;
             _boostCount = UiKit.Text("x1", 34, Color.white, true, 2f);
+            _boostCount.name = "count";
             _boostCount.style.position = Position.Absolute;
             _boostCount.style.right = -14;
             _boostCount.style.top = -16;
@@ -872,41 +865,39 @@ namespace JeepneyRush
             _boostCount.pickingMode = PickingMode.Ignore;
             _boostBtn.Add(_boostCount);
             Show(_boostBtn, false);
-            speedCol.Add(_boostBtn);
             _pedalButtons.Add(_boostBtn);
-            var brake = Pedal(HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF3B3B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; }), "#FF3B3B", 245);
-            brake.style.marginTop = 16;
-            speedCol.Add(brake);
-            _pedalButtons.Add(brake);
+            _brakeBtn = HoldButton("BRAKE", "ui_brake", UiKit.Hex("#FF3B3B"), v => { var s = Services.Game.Session; if (s != null) s.Input.BrakeButton = v; });
+            _pedalButtons.Add(_brakeBtn);
+            // BUSINA: honks the instant it is pressed
+            _hornBtn = HoldButton("BUSINA", "ui_horn", UiKit.Hex("#FFD000"), v => { if (v) Services.Game.Session?.Honk(); });
+            _hornBtn.name = "horn";
+            _pedalButtons.Add(_hornBtn);
+            _gasBtn = HoldButton("GAS", "ui_gas", UiKit.Hex("#22D065"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; });
+            _pedalButtons.Add(_gasBtn);
+            BuildGearButton();
+            _pedalButtons.Add(_gearBtn);
+            // steering buttons (Buttons mode): left thumb steers, right thumb drives
+            _steerLeftBtn = HoldButton("LEFT", "ui_steer_left", UiKit.Hex("#4A5568"), v => { var s = Services.Game.Session; if (s != null) s.Input.SteerLeftButton = v; });
+            _steerRightBtn = HoldButton("RIGHT", "ui_steer_right", UiKit.Hex("#4A5568"), v => { var s = Services.Game.Session; if (s != null) s.Input.SteerRightButton = v; });
+            foreach (var sb in new[] { _steerLeftBtn, _steerRightBtn }) { var l = sb.Q<Label>(); if (l != null) l.style.color = Color.white; _pedalButtons.Add(sb); }
 
             // centred on the screen regardless of the side columns' widths (the strip itself ignores touches)
-            var centre = UiKit.Box("hornCol");
-            centre.pickingMode = PickingMode.Ignore;
-            centre.style.position = Position.Absolute;
-            centre.style.left = centre.style.right = 0;
-            centre.style.bottom = 52;
-            centre.style.alignItems = Align.Center;
-            // BUSINA: honks the instant it is pressed, reachable with either thumb
-            var horn = HoldButton("BUSINA", "ui_horn", UiKit.Hex("#FFD000"), v => { if (v) Services.Game.Session?.Honk(); });
-            horn.name = "horn";
-            horn.style.width = horn.style.height = 200;
-            UiKit.Border(horn.style, 8, UiKit.Ink, 100);
-            horn.style.borderBottomWidth = 20;
-            centre.Add(horn);
-            _pedalButtons.Add(horn);
-            bottom.Add(centre);
+            _hornCentre = UiKit.Box("hornCol");
+            _hornCentre.pickingMode = PickingMode.Ignore;
+            _hornCentre.style.position = Position.Absolute;
+            _hornCentre.style.left = _hornCentre.style.right = 0;
+            _hornCentre.style.bottom = 52;
+            _hornCentre.style.alignItems = Align.Center;
+            bottom.Add(_hornCentre);
 
-            var controls = UiKit.Box();
-            controls.style.alignItems = Align.FlexEnd;
-            var gear = BuildGearButton();
-            gear.style.alignSelf = Align.FlexEnd;
-            gear.style.marginBottom = 16;
-            controls.Add(gear);
-            var gas = Pedal(HoldButton("GAS", "ui_gas", UiKit.Hex("#22D065"), v => { var s = Services.Game.Session; if (s != null) s.Input.GasButton = v; }), "#22D065", 245);
-            controls.Add(gas);
-            _pedalButtons.Add(gas);
-            _pedalButtons.Add(gear);
-            bottom.Add(controls);
+            _ctlRight = UiKit.Box("ctlRight");
+            _ctlRight.style.alignItems = Align.FlexEnd;
+            _ctlTopRow = UiKit.Box("ctlTopRow");
+            _ctlTopRow.style.flexDirection = FlexDirection.Row;
+            _ctlTopRow.style.alignItems = Align.FlexEnd;
+            _ctlTopRow.style.justifyContent = Justify.FlexEnd;
+            bottom.Add(_ctlRight);
+            ApplyControlLayout(Services.Save != null && Services.Save.Data.steerMode == 1 && InputCompat.HasTilt ? Logic.SteerMode.Tilt : Logic.SteerMode.Tap);
             _hud.Add(bottom);
             BuildArcade(_hud);
 
@@ -919,7 +910,7 @@ namespace JeepneyRush
             tc.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.88f);
             UiKit.Border(tc.style, 5, UiKit.Yellow, 34);
             UiKit.Pad(tc.style, 26, 36);
-            foreach (var line in new[] { "HOLD the LEFT / RIGHT side to steer (or TILT: Settings)", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn): the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Collect TURBO boosters · tap TURBO to use one", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
+            foreach (var line in new[] { "Hold LEFT / RIGHT to steer (or TILT: Settings)", "Hold GAS to speed up · hold BRAKE to slow down", "BRAKE before speed HUMPS · STOP at RED lights", "BUSINA (horn): the car ahead moves over", "GEAR D/R: stop, tap R, hold GAS to back up", "Collect TURBO boosters · tap TURBO to use one", "Rain = slippery road · avoid floods (BAHA)", "Watch the GAS gauge · stop at GAS STATIONS to refuel", "PARA zone: hold BRAKE to a FULL STOP to load passengers", "GREEN arrow: stop there to drop them off for fares" })
             {
                 var l = UiKit.Text(line, 36, Color.white, false);
                 l.style.marginBottom = 8;

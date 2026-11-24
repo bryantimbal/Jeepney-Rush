@@ -41,7 +41,10 @@ namespace JeepneyRush.Logic
             public bool Solid;
         }
 
-        private struct Reservation { public int Lane; public float From, To; }
+        private enum ZoneKind { Crossing, Stop, Station }
+        private struct Reservation { public int Lane; public float From, To; public ZoneKind Kind; }
+        /// <summary>A gas station never stands in front of (or right after) a PARA stop on either side of the road.</summary>
+        public const float StationStopGap = 60f;
 
         private readonly BalanceConfig _cfg;
         private readonly GameRandom _rng;
@@ -178,6 +181,12 @@ namespace JeepneyRush.Logic
             return false;
         }
 
+        private bool NearKind(ZoneKind kind, float from, float to)
+        {
+            foreach (var r in _reservations) if (r.Kind == kind && from < r.To && to > r.From) return true;
+            return false;
+        }
+
         private bool OverlapsAny(float from, float to)
         {
             for (int l = 0; l < _cfg.laneCount; l++) if (Overlaps(l, from, to)) return true;
@@ -195,7 +204,7 @@ namespace JeepneyRush.Logic
                 var x = new Intersection { Id = ++_crossingIds, At = at, Phase = _rng.Range(0, 30f) };
                 _pendingCrossings.Add(x);
                 for (int l = 0; l < _cfg.laneCount; l++)
-                    _reservations.Add(new Reservation { Lane = l, From = at - TrafficLightRules.StopLineOffset - 22, To = at + TrafficLightRules.HalfBox + 6 });
+                    _reservations.Add(new Reservation { Lane = l, From = at - TrafficLightRules.StopLineOffset - 22, To = at + TrafficLightRules.HalfBox + 6, Kind = ZoneKind.Crossing });
                 _nextCrossingAt = at + _rng.Range(_cfg.intersectionSpacingMin, _cfg.intersectionSpacingMax) * Environments.IntersectionSpacingScale(_env);
             }
         }
@@ -206,11 +215,11 @@ namespace JeepneyRush.Logic
             int lane = _cfg.laneCount - 1;
             float half = _cfg.stationZoneLength / 2;
             int guard = 0;
-            while (Overlaps(lane, at - half - 30, at + half + 12) && guard++ < 20) at += 40f;
+            while ((Overlaps(lane, at - half - 30, at + half + 12) || NearKind(ZoneKind.Stop, at - half - StationStopGap, at + half + StationStopGap)) && guard++ < 20) at += 40f;
             NextStationAt = at;
             var st = new GasStation { Id = ++_stationIds, At = at, Lane = lane };
             _pendingStations.Add(st);
-            _reservations.Add(new Reservation { Lane = lane, From = at - half - 22, To = at + half + 6 });
+            _reservations.Add(new Reservation { Lane = lane, From = at - half - 22, To = at + half + 6, Kind = ZoneKind.Station });
         }
 
         private void PlanStops()
@@ -221,10 +230,11 @@ namespace JeepneyRush.Logic
                 if (Environments.TwoWay(_env)) side = 1; // the left lane is oncoming traffic: stops are on the right
                 int lane = side < 0 ? 0 : _cfg.laneCount - 1;
                 int g = 0;
-                while (Overlaps(lane, _nextStopAt - _cfg.stopZoneLength / 2 - 30, _nextStopAt + _cfg.stopZoneLength / 2 + 12) && g++ < 20) _nextStopAt += 40f;
+                while ((Overlaps(lane, _nextStopAt - _cfg.stopZoneLength / 2 - 30, _nextStopAt + _cfg.stopZoneLength / 2 + 12)
+                        || NearKind(ZoneKind.Station, _nextStopAt - _cfg.stopZoneLength / 2 - StationStopGap, _nextStopAt + _cfg.stopZoneLength / 2 + StationStopGap)) && g++ < 20) _nextStopAt += 40f;
                 var stop = _route.Plan(_nextStopAt, side, lane, _rng.Int(1, 4));
                 _pendingStops.Add(stop);
-                _reservations.Add(new Reservation { Lane = lane, From = stop.At - _cfg.stopZoneLength / 2 - 22, To = stop.At + _cfg.stopZoneLength / 2 + 6 });
+                _reservations.Add(new Reservation { Lane = lane, From = stop.At - _cfg.stopZoneLength / 2 - 22, To = stop.At + _cfg.stopZoneLength / 2 + 6, Kind = ZoneKind.Stop });
                 _nextStopAt += _rng.Range(_cfg.stopSpacingMin, _cfg.stopSpacingMax) * Environments.StopSpacingScale(_env);
             }
         }

@@ -28,8 +28,35 @@ namespace JeepneyRush.Tests
             for (int seed = 1; seed <= 30; seed++)
             {
                 var w = new WeatherSchedule(seed, EnvironmentKind.Beach);
-                for (float d = 0; d < 900; d += 10) Assert.AreNotEqual(WeatherKind.Typhoon, w.KindAt(d));
+                for (float d = 0; d < WeatherSchedule.TyphoonFrom; d += 10) Assert.AreNotEqual(WeatherKind.Typhoon, w.KindAt(d));
             }
+        }
+
+        [Test]
+        public void MostlyFairWeatherButRainStillComes()
+        {
+            float wetSum = 0; int runs = 0, typhoons = 0, typhoonRuns = 0;
+            foreach (EnvironmentKind env in Enum.GetValues(typeof(EnvironmentKind)))
+                for (int seed = 1; seed <= 12; seed++)
+                {
+                    var w = new WeatherSchedule(seed, env);
+                    wetSum += w.WetShare(8000); runs++;
+                    bool t = false;
+                    float dry = 0, longestDry = 0;
+                    for (float d = 0; d < 8000; d += 10)
+                    {
+                        var k = w.KindAt(d);
+                        if (k == WeatherKind.Typhoon) { typhoons++; t = true; }
+                        dry = k == WeatherKind.Clear ? dry + 10 : 0;
+                        longestDry = Math.Max(longestDry, dry);
+                    }
+                    if (t) typhoonRuns++;
+                    Assert.LessOrEqual(longestDry, WeatherSchedule.MaxDryStretch + 1200f, $"{env} seed {seed}: dry for {longestDry:0} m");
+                }
+            float share = wetSum / runs;
+            Assert.That(share, Is.InRange(0.12f, 0.35f), $"wet share {share:P0}: rain should be occasional");
+            Assert.Greater(typhoonRuns, 0, "typhoons still happen sometimes");
+            Assert.Less(typhoonRuns, runs / 2, "typhoons are rare");
         }
 
         [Test]

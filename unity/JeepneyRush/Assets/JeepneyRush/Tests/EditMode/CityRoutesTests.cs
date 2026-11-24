@@ -66,18 +66,46 @@ namespace JeepneyRush.Tests
         }
 
         [Test]
+        public void DaytimeLastsAtLeastAsLongAsTheNight()
+        {
+            // in real driving time, over the first 10 minutes and over whole days
+            foreach (float span in new[] { 300f, 600f, (float)DayNight.CycleSeconds * 3 })
+            {
+                float day = 0, night = 0;
+                for (float t = 0; t < span; t += 0.5f) { float n = DayNight.Night(DayNight.HourAt(t)); day += 1 - n; night += n; }
+                Assert.GreaterOrEqual(day, night, $"first {span:0} s: day {day * 0.5f:0} s vs night {night * 0.5f:0} s");
+            }
+            float firstNight = 0;
+            for (float t = 0; t < 600; t += 0.5f) if (DayNight.Night(DayNight.HourAt(t)) > 0.99f) { firstNight = t; break; }
+            Assert.That(firstNight, Is.InRange(1f, 300f), "night still comes during a normal run");
+        }
+
+        [Test]
         public void ClockGoesThroughSunsetNightAndDawn()
         {
             Assert.AreEqual(DayNight.StartHour, DayNight.HourAt(0), 1e-4);
             Assert.AreEqual(0f, DayNight.Night(DayNight.HourAt(0)));
             float sunsetSecs = (DayNight.NightFrom - DayNight.StartHour) * DayNight.SecondsPerHour;
             Assert.AreEqual(1f, DayNight.Night(DayNight.HourAt(sunsetSecs + 1)));
-            Assert.Less(sunsetSecs, 60f, "night falls within the first minute of a run");
+            Assert.That(sunsetSecs, Is.InRange(90f, 200f), "a run starts in daylight; night comes after a couple of minutes");
             Assert.Greater(DayNight.Dusk(18.1f), 0.9f);
             Assert.AreEqual(0f, DayNight.Dusk(13f));
-            // wraps past midnight, dawn, then day again
-            float dawn = (24 - DayNight.StartHour + 6.6f) * DayNight.SecondsPerHour;
+            // wraps past midnight (night hours pass faster), dawn, then day again
+            float midnight = sunsetSecs + (24 - DayNight.NightFrom) * DayNight.NightSecondsPerHour;
+            Assert.AreEqual(0f, DayNight.HourAt(midnight) % 24f, 0.01f);
+            float dawn = midnight + DayNight.DawnFrom * DayNight.NightSecondsPerHour + (6.6f - DayNight.DawnFrom) * DayNight.SecondsPerHour;
+            Assert.AreEqual(6.6f, DayNight.HourAt(dawn), 0.01f);
             Assert.AreEqual(0f, DayNight.Night(DayNight.HourAt(dawn)));
+            Assert.AreEqual(DayNight.StartHour, DayNight.HourAt((float)DayNight.CycleSeconds), 0.01f, "a full day later it's the same time again");
+            // the clock only moves forward, smoothly
+            float prev = DayNight.HourAt(0);
+            for (float t = 0.5f; t < 2000; t += 0.5f)
+            {
+                float hh = DayNight.HourAt(t), d = hh - prev;
+                if (d < 0) d += 24;
+                Assert.That(d, Is.InRange(0f, 0.051f), $"clock jump at {t} s");
+                prev = hh;
+            }
             Assert.AreEqual("6:45 PM", DayNight.Clock(18.76f));
             Assert.AreEqual("12:00 AM", DayNight.Clock(0.01f));
             for (float h = 0; h < 24; h += 0.25f)

@@ -296,12 +296,13 @@ namespace JeepneyRush
             Services.UI.SetArcade(0, 1, 0);
             _input.Sensitivity = save.swipeSensitivity;
             _input.Mode = (SteerMode)save.steerMode;
+            Services.UI.ApplyControlLayout(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? SteerMode.Tilt : SteerMode.Tap);
             _player.ResetRun();
             _player.Lanes.Assist = save.laneAssist;
             _input.Recalibrate();
             _lastTurn = 0;
             if (save.runs < 3) // first runs: how to steer
-                Services.UI.Float(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? "I-TILT ANG PHONE PARA LUMIKO" : "HAWAKAN ANG KALIWA / KANAN PARA LUMIKO", UIManager.FloatKind.Info);
+                Services.UI.Float(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? "I-TILT ANG PHONE PARA LUMIKO" : "PINDUTIN ANG LEFT / RIGHT PARA LUMIKO", UIManager.FloatKind.Info);
             _road.Layout();
             _speed = _runTime = _cleanDistance = _bestClean = 0;
             _smoothHumps = _hits = 0;
@@ -489,19 +490,19 @@ namespace JeepneyRush
                 {
                     Services.UI.Float($"MUNTIK NA! +{pts}", UIManager.FloatKind.Big);
                     Services.Audio.Play(Logic.Audio.Sfx.NearMiss, 0.9f, Random.Range(0.95f, 1.08f));
-                    _camera.Kick(3.5f);
+                    _camera.Kick(2.5f);
                     Haptics.Pulse(12);
                 }
                 else
                 {
                     Services.Audio.Play(Logic.Audio.Sfx.NearMiss, 0.25f, 1.35f); // soft whoosh per overtake
-                    _camera.Tilt(-Mathf.Sign(_player.Lanes.X) * 0.6f);
+                    _camera.Tilt(-Mathf.Sign(_player.Lanes.X) * 0.35f);
                 }
                 if (_arcade.Multiplier > before)
                 {
                     Services.UI.Float($"x{_arcade.Multiplier} COMBO!", UIManager.FloatKind.Big);
                     Services.Audio.Play(Logic.Audio.Sfx.ComboUp, 0.9f);
-                    _camera.Kick(5f);
+                    _camera.Kick(3.5f);
                     _fx.Confetti(_player.transform.position + Vector3.up * 3f, 12 + _arcade.Multiplier * 4);
                 }
             }
@@ -1097,7 +1098,7 @@ namespace JeepneyRush
                 case BoostBank.UseResult.Used:
                     pu.Activate(PowerUpKind.Turbo, _powerUps.DurationScale);
                     Services.Audio.Play(Logic.Audio.Sfx.Turbo);
-                    _camera.Kick(7f);
+                    _camera.Kick(5f);
                     Services.UI.Float("TURBO!", UIManager.FloatKind.Big);
                     _fx.Turbo(_player.transform.position);
                     Haptics.Pulse(20);

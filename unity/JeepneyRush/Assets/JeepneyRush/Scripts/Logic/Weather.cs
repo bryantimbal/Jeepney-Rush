@@ -30,36 +30,53 @@ namespace JeepneyRush.Logic
             _rng = new GameRandom(seed ^ 0x5EA7);
             _showerRng = new GameRandom(seed ^ 0x51A0);
             _env = env;
-            _spells.Add(new Spell { From = 0, To = _rng.Range(250, 450), Kind = WeatherKind.Clear });
+            _spells.Add(new Spell { From = 0, To = _rng.Range(400, 700), Kind = WeatherKind.Clear });
             _plannedTo = _spells[0].To;
         }
+
+        /// <summary>Typhoons never come before this distance.</summary>
+        public const float TyphoonFrom = 1500f;
+        /// <summary>Rain is rarer now, but a run never stays dry longer than this (metres): weather still happens.</summary>
+        public const float MaxDryStretch = 2200f;
+        private float _dryFrom;
 
         private void PlanUntil(float distance)
         {
             while (_plannedTo < distance + 400)
             {
                 var prev = _spells[_spells.Count - 1].Kind;
-                // typhoons are likelier by the sea, and never right after the start
-                float typhoon = _plannedTo < 900 ? 0 : _env == EnvironmentKind.Beach ? 1.3f : _env == EnvironmentKind.Mountain ? 1.0f : 0.8f;
+                // mostly fair weather: long dry spells, shorter rain, typhoons rare (likelier by the sea)
+                float typhoon = _plannedTo < TyphoonFrom ? 0 : _env == EnvironmentKind.Beach ? 0.5f : _env == EnvironmentKind.Mountain ? 0.4f : 0.3f;
                 WeatherKind k;
                 int guard = 0;
-                do k = _rng.Weighted(new (WeatherKind, float)[] { (WeatherKind.Clear, 2.2f), (WeatherKind.Rain, 1.8f), (WeatherKind.Typhoon, typhoon) });
-                while (k == prev && guard++ < 5);
-                float len = k == WeatherKind.Clear ? _rng.Range(400, 800) : k == WeatherKind.Rain ? _rng.Range(450, 750) : _rng.Range(350, 550);
-                if (k == WeatherKind.Clear && len >= 600f && _plannedTo > 700f && _showerRng.Chance(0.45))
+                do k = _rng.Weighted(new (WeatherKind, float)[] { (WeatherKind.Clear, 3.2f), (WeatherKind.Rain, 1.1f), (WeatherKind.Typhoon, typhoon) });
+                while (k == prev && k != WeatherKind.Clear && guard++ < 5); // dry spells may follow each other; storms don't
+                if (k == WeatherKind.Clear && _plannedTo - _dryFrom > MaxDryStretch - 800f) k = WeatherKind.Rain; // it's been dry long enough
+                float len = k == WeatherKind.Clear ? _rng.Range(700, 1200) : k == WeatherKind.Rain ? _rng.Range(350, 600) : _rng.Range(300, 450);
+                if (k == WeatherKind.Clear && len >= 900f && _plannedTo > 700f && _showerRng.Chance(0.3))
                 {
                     // dry - short sharp shower - dry
                     float a = len * _showerRng.Range(0.3f, 0.45f), shower = _showerRng.Range(ShowerMin, ShowerMax);
                     _spells.Add(new Spell { From = _plannedTo, To = _plannedTo + a, Kind = WeatherKind.Clear });
                     _spells.Add(new Spell { From = _plannedTo + a, To = _plannedTo + a + shower, Kind = WeatherKind.Rain });
                     _spells.Add(new Spell { From = _plannedTo + a + shower, To = _plannedTo + len + shower, Kind = WeatherKind.Clear });
+                    _dryFrom = _plannedTo + a + shower;
                     _plannedTo += len + shower;
                     Showers++;
                     continue;
                 }
                 _spells.Add(new Spell { From = _plannedTo, To = _plannedTo + len, Kind = k });
+                if (k != WeatherKind.Clear) _dryFrom = _plannedTo + len;
                 _plannedTo += len;
             }
+        }
+
+        /// <summary>Share of the first <paramref name="metres"/> that is wet (rain or typhoon).</summary>
+        public float WetShare(float metres)
+        {
+            int wet = 0, n = 0;
+            for (float d = 0; d < metres; d += 10f, n++) if (KindAt(d) != WeatherKind.Clear) wet++;
+            return n == 0 ? 0 : wet / (float)n;
         }
 
         private static float Strength(WeatherKind k) => k == WeatherKind.Clear ? 0 : k == WeatherKind.Rain ? 0.6f : 1f;

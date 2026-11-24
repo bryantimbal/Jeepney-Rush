@@ -430,6 +430,79 @@ namespace JeepneyRush
 
         private readonly System.Collections.Generic.List<VisualElement> _pedalButtons = new System.Collections.Generic.List<VisualElement>();
 
+        private VisualElement _ctlLeft, _ctlRight, _ctlTopRow, _hornCentre, _speedBox;
+        private VisualElement _brakeBtn, _gasBtn, _hornBtn, _steerLeftBtn, _steerRightBtn;
+        public Logic.SteerMode ControlLayout { get; private set; } = (Logic.SteerMode)(-1);
+
+        private static void Shape(VisualElement b, float w, float h, float radius, float lip)
+        {
+            b.style.width = w;
+            b.style.height = h;
+            // icon and label scale with the button so short buttons (TURBO, BUSINA) never overflow
+            float s = Mathf.Min(w, h);
+            var icon = b.Q<Image>();
+            if (icon != null) icon.style.width = icon.style.height = Mathf.Clamp(s * 0.42f, 48f, 96f);
+            var label = b.Q<Label>();
+            if (label != null && label.name != "count") label.style.fontSize = Mathf.Clamp(s * 0.19f, 24f, 40f);
+            UiKit.Border(b.style, 7, UiKit.Ink, radius);
+            b.style.borderBottomWidth = lip;
+            b.style.marginTop = b.style.marginBottom = b.style.marginLeft = b.style.marginRight = 0;
+        }
+
+        /// <summary>
+        /// Thumb controls for the steering mode.
+        /// BUTTONS: left thumb steers (LEFT above RIGHT), right thumb drives (GAS above BRAKE),
+        /// TURBO · BUSINA · GEAR in a row above the right-hand pedals.
+        /// TILT: BRAKE (left) · BUSINA (centre) · GAS (right, gear above it).
+        /// </summary>
+        public void ApplyControlLayout(Logic.SteerMode mode)
+        {
+            if (_ctlLeft == null || mode == ControlLayout) return;
+            ControlLayout = mode;
+            _ctlLeft.Clear(); _ctlRight.Clear(); _ctlTopRow.Clear(); _hornCentre.Clear();
+            _ctlLeft.Add(_speedBox);
+            _gearBtn.style.alignSelf = Align.FlexEnd;
+            if (mode == Logic.SteerMode.Tap)
+            {
+                const float w = 300, h = 186, gap = 16;
+                _steerLeftBtn.style.backgroundColor = UiKit.Hex("#4A5568");
+                foreach (var b in new[] { _steerLeftBtn, _steerRightBtn, _gasBtn, _brakeBtn }) Shape(b, w, h, 44, 16);
+                _steerLeftBtn.style.marginTop = 10;
+                _steerRightBtn.style.marginTop = gap;
+                _brakeBtn.style.marginTop = gap;
+                _ctlLeft.Add(_steerLeftBtn);
+                _ctlLeft.Add(_steerRightBtn);
+                Shape(_boostBtn, 140, 140, 40, 14);
+                Shape(_hornBtn, 140, 140, 70, 14);
+                _boostBtn.style.marginRight = 12;
+                _hornBtn.style.marginRight = 12;
+                _gearBtn.style.marginTop = 0;
+                _ctlTopRow.style.marginBottom = gap;
+                _ctlTopRow.Add(_boostBtn);
+                _ctlTopRow.Add(_hornBtn);
+                _ctlTopRow.Add(_gearBtn);
+                _ctlRight.Add(_ctlTopRow);
+                _ctlRight.Add(_gasBtn);
+                _ctlRight.Add(_brakeBtn);
+            }
+            else
+            {
+                Shape(_boostBtn, 170, 170, 50, 16);
+                _boostBtn.style.marginTop = 12;
+                Shape(_brakeBtn, 245, 245, 245 * 0.24f, 20);
+                _brakeBtn.style.marginTop = 16;
+                _ctlLeft.Add(_boostBtn);
+                _ctlLeft.Add(_brakeBtn);
+                Shape(_hornBtn, 200, 200, 100, 20);
+                _hornCentre.Add(_hornBtn);
+                Shape(_gasBtn, 245, 245, 245 * 0.24f, 20);
+                _gearBtn.style.marginTop = 14;
+                _gearBtn.style.marginBottom = 16;
+                _ctlRight.Add(_gearBtn);
+                _ctlRight.Add(_gasBtn);
+            }
+        }
+
         /// <summary>In-game clock under the weather ("🌙 9:15 PM" style, text only).</summary>
         public void SetClock(string text, bool night)
         {

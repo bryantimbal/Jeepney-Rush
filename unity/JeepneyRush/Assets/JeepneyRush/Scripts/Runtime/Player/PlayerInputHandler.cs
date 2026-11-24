@@ -8,9 +8,9 @@ namespace JeepneyRush
     /// <summary>
     /// Analog steering plus the GAS / BRAKE hold buttons and keyboard controls.
     /// Steering (Settings ▸ Steering):
-    ///  • TAP  – hold a finger on the left or right half of the screen; the jeepney turns
-    ///           smoothly for as long as you hold (touches that start on a HUD button never steer)
-    ///  • TILT – tilt the phone like a steering wheel (calibrated to how you hold it at the start)
+    ///  • BUTTONS – hold the LEFT / RIGHT buttons (left thumb); the jeepney turns smoothly for as
+    ///              long as you hold, GAS / BRAKE are under the right thumb
+    ///  • TILT    – tilt the phone like a steering wheel (calibrated to how you hold it at the start)
     /// On PC: hold ← / → (or A / D).
     /// </summary>
     public sealed class PlayerInputHandler : MonoBehaviour
@@ -28,15 +28,13 @@ namespace JeepneyRush
 
         /// <summary>Set by the HUD hold buttons.</summary>
         public bool GasButton { get; set; }
+        /// <summary>Set by the HUD LEFT / RIGHT steering buttons (Buttons mode).</summary>
+        public bool SteerLeftButton { get; set; }
+        public bool SteerRightButton { get; set; }
         public bool BrakeButton { get; set; }
         public bool GasHeld => InputEnabled && (GasButton || InputCompat.KeyHeld(InputCompat.HoldKey.Gas));
         public bool BrakeHeld => InputEnabled && (BrakeButton || InputCompat.KeyHeld(InputCompat.HoldKey.Brake));
 
-        private struct Track { public bool Blocked; public bool Left; public bool Seen; }
-        private readonly Dictionary<int, Track> _tracks = new Dictionary<int, Track>();
-        private readonly List<InputCompat.Pointer> _pointers = new List<InputCompat.Pointer>();
-        private readonly List<int> _stale = new List<int>();
-        private readonly List<int> _keys = new List<int>();
         private readonly TiltSteer _tilt = new TiltSteer();
 
         /// <summary>Run start: the way the phone is held now counts as "straight ahead".</summary>
@@ -46,8 +44,7 @@ namespace JeepneyRush
         {
             if (!InputEnabled)
             {
-                _tracks.Clear();
-                GasButton = BrakeButton = false;
+                GasButton = BrakeButton = SteerLeftButton = SteerRightButton = false;
                 Steer = 0;
                 return;
             }
@@ -57,29 +54,10 @@ namespace JeepneyRush
             if (InputCompat.KeyPressed(InputCompat.Key.Gear)) Fire(Action.Gear);
             if (InputCompat.KeyPressed(InputCompat.Key.Boost)) Fire(Action.Boost);
 
-            // ---- touches: which side of the screen is held (only fingers that didn't start on a button)
-            InputCompat.GetPointers(_pointers);
-            _keys.Clear(); _keys.AddRange(_tracks.Keys);
-            foreach (var k in _keys) { var t = _tracks[k]; t.Seen = false; _tracks[k] = t; }
-            bool left = false, right = false;
-            foreach (var p in _pointers)
-            {
-                if (!_tracks.TryGetValue(p.Id, out var t))
-                    t = new Track { Blocked = Services.UI != null && Services.UI.IsOverInteractive(p.Position) };
-                t.Seen = true;
-                t.Left = p.Position.x < Screen.width * 0.5f; // the finger may slide across the middle: follow it
-                _tracks[p.Id] = t;
-                if (t.Blocked) continue;
-                if (t.Left) left = true; else right = true;
-            }
-            _stale.Clear();
-            foreach (var kv in _tracks) if (!kv.Value.Seen) _stale.Add(kv.Key);
-            foreach (var k in _stale) _tracks.Remove(k);
-
             float dt = Time.unscaledDeltaTime;
             float steer = 0f;
             if (Mode == SteerMode.Tilt && InputCompat.HasTilt) steer = _tilt.Input(InputCompat.TiltX(), Sensitivity, dt);
-            else steer = TapSteer.Input(left, right);
+            else steer = TapSteer.Input(SteerLeftButton, SteerRightButton);
             // keyboard always works (PC, and phones with a keyboard)
             bool kl = InputCompat.KeyHeld(InputCompat.HoldKey.Left), kr = InputCompat.KeyHeld(InputCompat.HoldKey.Right);
             if (kl != kr) steer = kl ? -1f : 1f;

@@ -62,3 +62,23 @@ earlier migrations.
 
 Device checklist: try both modes, steer while holding GAS, check tilt calibration when holding
 the phone at an angle, and check lane assist on and off.
+
+# Update: controls, stations, day/night, weather, camera
+
+- **Buttons steering** (replaces hold-the-screen-sides): left thumb holds **LEFT** / **RIGHT**
+  (stacked), right thumb holds **GAS** / **BRAKE** (stacked), with **TURBO · BUSINA · GEAR**
+  in a row above them. **Tilt** keeps the old layout (BRAKE · BUSINA · GAS). The HUD switches
+  as soon as the setting changes.
+- **Gas stations** are never within 60 m of a PARA stop on either side of the road (tested on
+  all 8 routes).
+- **Day/night**: runs start at 11:00 AM. Night hours pass twice as fast as day hours, so
+  daylight always gets at least as much driving time as night (tested over 5 min, 10 min and
+  whole days). Night still comes during a normal run, about 2½ minutes in.
+- **Weather**: mostly fair. About 24% of the road is wet (typhoons about 3%); before, dry and
+  wet spells alternated. It's never dry for more than about 2.2 km, so rain still comes, and
+  typhoons never come in the first 1.5 km.
+- **Camera effects**: the near-miss, combo and Turbo zooms used to jump in a single frame
+  (that was the flicker). They now swell in over about 0.1 s and settle over about 0.6 s,
+  never stack past 5°, and the overtake roll is a gentle lean.
+- **Unity 6000.6 fix**: `GetInstanceID()` is an error there. Hazards now carry their own serial
+  number, and a test scans the scripts for APIs that newer Unity versions removed.

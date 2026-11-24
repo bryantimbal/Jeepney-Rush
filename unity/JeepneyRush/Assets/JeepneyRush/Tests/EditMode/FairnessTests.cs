@@ -280,6 +280,25 @@ namespace JeepneyRush.Tests
             else Assert.AreEqual(0, oncoming);
         }
 
+        [Test]
+        public void GasStationsAreNeverInFrontOfAPassengerStop()
+        {
+            var cfg = new BalanceConfig();
+            foreach (EnvironmentKind env in Enum.GetValues(typeof(EnvironmentKind)))
+                for (int seed = 11; seed <= 13; seed++)
+                {
+                    var (_, _, _, _, _, _, world) = Simulate(seed, 4000, env);
+                    Assert.Greater(world.Stations.Count, 2);
+                    foreach (var (st, _) in world.Stations)
+                        foreach (var (stop, _) in world.Stops)
+                        {
+                            float gap = Math.Abs(st.At - stop.At) - cfg.stationZoneLength / 2 - cfg.stopZoneLength / 2;
+                            Assert.Greater(gap, SpawnDirector.StationStopGap - cfg.stopZoneLength / 2 - 1f,
+                                $"{env} seed {seed}: gas station {st.Id} at {st.At:0} m is {gap:0} m from PARA stop at {stop.At:0} m");
+                        }
+                }
+        }
+
         /// <summary>Long sweep over many seeds and every route (run explicitly: JR_SWEEP=1).</summary>
         [Test]
         public void SweepManySeeds()
