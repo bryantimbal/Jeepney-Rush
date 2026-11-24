@@ -21,6 +21,9 @@ namespace JeepneyRush
         public float Speed;
         public bool Solid;
         public bool Hit;
+        /// <summary>Unique per spawn (pooled objects get a new one each time) – used to track near misses / overtakes.</summary>
+        public int Serial { get; private set; }
+        private static int _serials;
         /// <summary>Taho vendor / pedicab that stepped onto the sidewalk after a honk (no longer blocks).</summary>
         public bool SteppedAside;
         /// <summary>Tricycle pulling out from the sidewalk: visual sideways offset still to cover (m).</summary>
@@ -59,6 +62,7 @@ namespace JeepneyRush
 
         public void ResetState(int lane, float speed, bool solid)
         {
+            Serial = ++_serials;
             Lane = lane;
             TargetLane = -1;
             LaneT = 0;

@@ -69,8 +69,8 @@ namespace JeepneyRush
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void StartFromAnyScene()
         {
-            if (FindFirstObjectByType<Bootstrap>() != null) return;
-            if (FindFirstObjectByType<GameplaySession>() != null || FindFirstObjectByType<MainMenuController>() != null)
+            if (FindAnyObjectByType<Bootstrap>() != null) return;
+            if (FindAnyObjectByType<GameplaySession>() != null || FindAnyObjectByType<MainMenuController>() != null)
             {
                 StartServices(); // started without the splash: still bring up online, ads and store
                 return;

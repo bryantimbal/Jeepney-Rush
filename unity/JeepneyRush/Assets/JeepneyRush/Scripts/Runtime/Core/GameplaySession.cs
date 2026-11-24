@@ -519,7 +519,7 @@ namespace JeepneyRush
                 if (z > 70f || z < -25f) continue;
                 _passItems.Add(new PassCandidate
                 {
-                    Id = h.GetInstanceID(), X = p.x - player.x, Z = z,
+                    Id = h.Serial, X = p.x - player.x, Z = z,
                     HalfLength = h.Def.HalfLength, HalfWidth = h.Def.HalfWidth,
                     Moving = traffic && h.Speed > 0.5f, Eligible = !h.Hit,
                 });
