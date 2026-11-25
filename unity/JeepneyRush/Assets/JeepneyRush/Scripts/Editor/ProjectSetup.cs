@@ -64,12 +64,16 @@ namespace JeepneyRush.EditorTools
             if (string.IsNullOrEmpty(PlayerSettings.bundleVersion) || PlayerSettings.bundleVersion == "0.1") PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.allowedAutorotateToPortrait = true;
-            // the game shows its own Ninja Tech startup screen: match its navy so the hand-over is seamless
+            // startup: Unity's "Made with Unity" splash (the engine always shows it before any game code
+            // runs), then the game's own Ninja Tech developer screen – same navy, so it flows as one intro
             try
             {
+                PlayerSettings.SplashScreen.show = true;
+                PlayerSettings.SplashScreen.showUnityLogo = true;
+                PlayerSettings.SplashScreen.unityLogoStyle = PlayerSettings.SplashScreen.UnityLogoStyle.LightOnDark;
+                PlayerSettings.SplashScreen.animationMode = PlayerSettings.SplashScreen.AnimationMode.Dolly;
                 PlayerSettings.SplashScreen.backgroundColor = new Color32(10, 24, 63, 255);
-                PlayerSettings.SplashScreen.showUnityLogo = false; // allowed on Unity 6 (all plans); ignored where not
-                PlayerSettings.SplashScreen.show = false;
+                PlayerSettings.SplashScreen.overlayOpacity = 0f;
             }
             catch (Exception e) { Debug.Log("[Jeepney Rush] Unity splash settings left as they are: " + e.Message); }
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;

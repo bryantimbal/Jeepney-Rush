@@ -190,7 +190,7 @@ namespace JeepneyRush
             _dev.style.justifyContent = Justify.Center;
             // size from the texture's own aspect ratio, so the logo can never be stretched
             var logoTex = UiKit.Tex("ninjatech_logo");
-            const float logoW = 560f; // a little smaller and better balanced on every screen
+            const float logoW = 460f; // compact, centred and balanced on every screen (aspect from the texture)
             _devLogo = UiKit.Icon("ninjatech_logo", logoW);
             _devLogo.style.height = logoTex != null && logoTex.width > 0 ? logoW * logoTex.height / logoTex.width : logoW * 1024f / 902f;
             _dev.Add(_devLogo);

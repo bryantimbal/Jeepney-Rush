@@ -82,6 +82,7 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("chunk_baguio", SceneryCities.Baguio(7000, false));
             yield return ("chunk_baguio_lake", SceneryCities.Baguio(7001, true));
             yield return ("chunk_fiesta", SceneryCities.Fiesta(8000, false, false));
+            yield return ("garage", GarageBuilder.Build());
             yield return ("chunk_fiesta_church", SceneryCities.Fiesta(8001, true, false));
             yield return ("chunk_fiesta_perya", SceneryCities.Fiesta(8002, false, true));
             yield return ("mud_patch", VehicleBuilder.MudPatch(1));

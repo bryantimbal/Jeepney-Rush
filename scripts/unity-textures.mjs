@@ -472,6 +472,15 @@ const textures = await page.evaluate(() => {
     icon('ui_pu_PassengerBonus', 128, 128, (x) => { disc(x, '#DDFBEA'); x.fillStyle = '#2A9D8F'; x.beginPath(); x.arc(56, 44, 16, 0, Math.PI * 2); x.fill(); x.beginPath(); x.roundRect(32, 64, 48, 40, 14); x.fill(); x.fillStyle = '#18C06A'; x.fillRect(86, 46, 12, 36); x.fillRect(74, 58, 36, 12); });
     icon('ui_pu_RepairKit', 128, 128, (x) => { disc(x, '#FFE0DE'); x.fillStyle = '#D62828'; x.strokeStyle = '#1b1033'; x.lineWidth = 6; x.beginPath(); x.roundRect(26, 38, 76, 56, 10); x.fill(); x.stroke(); x.fillStyle = '#fff'; x.fillRect(56, 46, 16, 40); x.fillRect(44, 58, 40, 16); });
     icon('ui_gas', 128, 128, (x) => { x.fillStyle = '#1b1033'; x.beginPath(); x.moveTo(64, 14); x.lineTo(104, 64); x.lineTo(80, 64); x.lineTo(80, 112); x.lineTo(48, 112); x.lineTo(48, 64); x.lineTo(24, 64); x.closePath(); x.fill(); });
+    // garage: tarpaulin sign and a no-smoking sign
+    icon('garage_tarp', 1024, 256, (x, w, h) => { const g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#0038a8'); g.addColorStop(1, '#0b5ed7'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.fillStyle = '#fcd116'; x.fillRect(0, 0, w, 14); x.fillRect(0, h - 14, w, 14); x.fillStyle = '#ce1126'; x.fillRect(0, 14, w, 8); x.fillRect(0, h - 22, w, 8);
+      x.textAlign = 'center'; x.textBaseline = 'middle'; outlined(x, 'TALYER NI MANG KANOR', w / 2, 98, 960, 92, '#fcd116', '#1b1033', 10);
+      x.fillStyle = '#ffffff'; fit(x, 'KAHA · MAKINA · PINTURA · VULCANIZING · CHROME', 0, 0, 900, 40, (z) => `800 ${z}px ${B}`); x.fillText('KAHA · MAKINA · PINTURA · VULCANIZING · CHROME', w / 2, 178);
+      x.fillStyle = 'rgba(255,255,255,0.8)'; fit(x, 'JEEPNEY SPECIALIST · BUKAS ARAW-ARAW', 0, 0, 640, 26, (z) => `700 ${z}px ${B}`); x.fillText('JEEPNEY SPECIALIST · BUKAS ARAW-ARAW', w / 2, 216); });
+    icon('garage_nosmoking', 256, 128, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.strokeStyle = '#d62828'; x.lineWidth = 8; x.strokeRect(4, 4, w - 8, h - 8);
+      x.beginPath(); x.arc(52, 64, 34, 0, Math.PI * 2); x.stroke(); x.fillStyle = '#333'; x.fillRect(30, 60, 40, 9); x.beginPath(); x.moveTo(28, 40); x.lineTo(76, 88); x.stroke();
+      x.fillStyle = '#d62828'; x.textAlign = 'center'; x.textBaseline = 'middle'; fit(x, 'BAWAL', 0, 0, 150, 34, (z) => `900 ${z}px ${B}`); x.fillText('BAWAL', 170, 46); fit(x, 'MANIGARILYO', 0, 0, 150, 22, (z) => `900 ${z}px ${B}`); x.fillText('MANIGARILYO', 170, 84); });
     // on-screen steering wheel: chunky jeepney wheel – wrapped rim, three chrome spokes, a sun-and-stars
     // horn pad, and a yellow marker at the top so the rotation is always readable
     icon('ui_wheel', 512, 512, (x, w, h) => {

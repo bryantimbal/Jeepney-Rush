@@ -5,8 +5,9 @@ using UnityEngine;
 namespace JeepneyRush
 {
     /// <summary>
-    /// Main menu scene: the selected jeepney idles on a Manila street (wheels turning,
-    /// diesel puffs) while the camera orbits it. The garage swaps the livery live.
+    /// Main menu scene: the selected jeepney idles on the selected route (wheels turning,
+    /// diesel puffs) while the camera orbits it. The garage is a Filipino talyer where the
+    /// chosen jeepney stands parked (not spinning) and swaps livery live.
     /// </summary>
     public sealed class MainMenuController : MonoBehaviour
     {
@@ -17,19 +18,56 @@ namespace JeepneyRush
         private GameObject _body;
         private Transform[] _wheels;
         private string _livery;
-        private float _t, _swapT = 1f, _yaw;
+        private float _t, _swapT = 1f;
         private bool _garage;
         private Camera _cam;
 
+        private Transform _garageRoot;
+        private static readonly Vector3 StreetSpot = new Vector3(-1.6f, 0, 0);
+        /// <summary>The talyer stands well away from the menu street (out of sight of the road).</summary>
+        private static readonly Vector3 GarageSpot = new Vector3(0, 0, -600f);
+        /// <summary>Parked at a three-quarter angle toward the garage door (and the camera).</summary>
+        public const float GarageYaw = 152f;
+
         /// <summary>
-        /// Garage showroom: the jeepney spins on a turntable in the upper part of the screen
-        /// (above the garage card) and pops in whenever another model is selected.
+        /// Garage: the jeepney is parked inside a Filipino talyer (hollow-block walls, GI sheets,
+        /// tyres, tools, Santo Niño altar), standing still in the upper part of the screen above the
+        /// garage card, and pops in whenever another model is selected.
         /// </summary>
         public void SetGarageMode(bool on)
         {
             _garage = on;
-            _yaw = 0;
-            _jeepRoot.localRotation = Quaternion.identity;
+            if (_garageRoot == null) BuildGarage();
+            _garageRoot.gameObject.SetActive(on);
+            _jeepRoot.localPosition = on ? GarageSpot : StreetSpot;
+            _jeepRoot.localRotation = on ? Quaternion.Euler(0, GarageYaw, 0) : Quaternion.identity;
+            if (on && _camera != null)
+            {
+                // cut straight into the garage (no long glide across the map)
+                var focus = _jeepRoot.position;
+                _camera.transform.position = focus + GarageCam;
+                _camera.transform.rotation = Quaternion.LookRotation(focus + GarageLook - _camera.transform.position);
+            }
+        }
+
+        private static readonly Vector3 GarageCam = new Vector3(0, 3.4f, -12.5f), GarageLook = new Vector3(0, -2.9f, 0);
+
+        private void BuildGarage()
+        {
+            _garageRoot = ModelLibrary.Instantiate(ModelLibrary.Get("garage", GarageBuilder.Build), "Garage", transform, castShadows: false).transform;
+            _garageRoot.localPosition = GarageSpot;
+            // warm fluorescent / bulb light inside the workshop
+            foreach (var p in new[] { new Vector3(-2.6f, 4.3f, -1.5f), new Vector3(2.6f, 4.3f, 3.5f), new Vector3(0, 4.6f, 6.5f) })
+            {
+                var lg = new GameObject("GarageLight").AddComponent<Light>();
+                lg.transform.SetParent(_garageRoot, false);
+                lg.transform.localPosition = p;
+                lg.type = LightType.Point;
+                lg.range = 9f;
+                lg.intensity = 1.6f;
+                lg.color = p.z > 5f ? new Color(1f, 0.85f, 0.6f) : new Color(0.92f, 0.97f, 1f);
+                lg.shadows = LightShadows.None;
+            }
         }
 
         private void Awake()
@@ -97,9 +135,10 @@ namespace JeepneyRush
             _t += dt;
             const float cruise = 5f;
             _road.Scroll(cruise * dt);
-            foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_t * cruise / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg, 0, 0);
-            _body.transform.localPosition = new Vector3(0, Mathf.Sin(_t * 9f) * 0.008f, 0);
-            _fx.Tick(dt, _jeepRoot.position, cruise, 0);
+            // parked in the garage: wheels still, only the idling engine shakes the body a little
+            if (!_garage) foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_t * cruise / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg, 0, 0);
+            _body.transform.localPosition = new Vector3(0, Mathf.Sin(_t * (_garage ? 14f : 9f)) * (_garage ? 0.005f : 0.008f), 0);
+            _fx.Tick(dt, _jeepRoot.position, _garage ? 0f : cruise, 0);
             // pop-in when a new model is shown (ease-out-back)
             if (_swapT < 1f)
             {
@@ -110,13 +149,12 @@ namespace JeepneyRush
             }
             if (_garage)
             {
-                _yaw += dt * 28f;
-                _jeepRoot.localRotation = Quaternion.Euler(0, _yaw + 150f, 0);
                 if (_cam == null) _cam = _camera.GetComponent<Camera>();
                 var focus = _jeepRoot.position;
-                _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + new Vector3(0, 3.4f, -12.5f), 1f - Mathf.Exp(-dt * 4f));
+                // a fixed shot from the garage door; the jeepney stands still (no turntable)
+                _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + GarageCam, 1f - Mathf.Exp(-dt * 4f));
                 // aim below the jeepney so it sits in the upper part of the screen, above the garage card
-                _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + new Vector3(0, -2.9f, 0) - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
+                _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + GarageLook - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
                 _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, 62f, 1f - Mathf.Exp(-dt * 4f));
             }
             else _camera.Orbit(_jeepRoot.position, _t);
