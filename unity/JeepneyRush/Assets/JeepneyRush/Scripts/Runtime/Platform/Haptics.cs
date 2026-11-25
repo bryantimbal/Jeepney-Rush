@@ -60,14 +60,10 @@ namespace JeepneyRush
                 }
                 catch (System.Exception e)
                 {
-                    // e.g. SecurityException when the VIBRATE permission is missing: say so once, then fall back
+                    // e.g. SecurityException if the VIBRATE permission were missing: say so once
                     if (!_warned) { _warned = true; Debug.LogWarning("[Haptics] vibrate failed: " + e.Message); }
                 }
             }
-#endif
-#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            // fallback (and it makes Unity add the VIBRATE permission on its own): a standard buzz for strong events
-            if (ms >= 60) Handheld.Vibrate();
 #endif
         }
     }
