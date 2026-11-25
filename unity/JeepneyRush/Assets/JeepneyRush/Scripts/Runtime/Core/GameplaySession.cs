@@ -72,6 +72,31 @@ namespace JeepneyRush
 
         private WeatherManager _weather;
         private int _lastTurn;
+        // ---- the driver's voice (speech bubbles): one line at a time, warnings first
+        // its own random stream: flavour must never shift the (shared, seeded) road layout
+        private readonly DriverTalk _talk = new DriverTalk(new GameRandom(System.Environment.TickCount));
+        private readonly List<(DriverMoment m, float at)> _pendingTalk = new List<(DriverMoment, float)>();
+        public string GameOverLine { get; private set; }
+
+        /// <summary>The driver says something now (or after <paramref name="delay"/> seconds) – skipped if he is busy with something more important.</summary>
+        private void DriverSay(DriverMoment m, float delay = 0f)
+        {
+            if (delay > 0f) { _pendingTalk.Add((m, _runTime + delay)); return; }
+            string line = _talk.TrySay(m, _runTime);
+            if (line != null && Services.UI != null)
+                Services.UI.Say(line, () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)), false, DriverTalk.LineTime);
+        }
+
+        private void UpdateDriverTalk()
+        {
+            for (int i = _pendingTalk.Count - 1; i >= 0; i--)
+            {
+                if (_runTime < _pendingTalk[i].at) continue;
+                var m = _pendingTalk[i].m;
+                _pendingTalk.RemoveAt(i);
+                if (!_dying) DriverSay(m);
+            }
+        }
         private BalanceConfig _plannedCfg;
         // EDSA rush hour + day/night
         private JamSchedule _jams;
@@ -175,7 +200,7 @@ namespace JeepneyRush
             {
                 if (_dying) return;
                 Services.UI.CoinFly(pos);
-                if (_rng.Chance(0.4)) Services.UI.Say(_rng.Chance(0.5) ? "SALAMAT!" : "BAYAD NATANGGAP!", () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)));
+                if (Random.value < 0.45f) DriverSay(DriverMoment.FareReceived);
             };
             _powerUps = GetOrAdd<PowerUpManager>(Child("PowerUpManager"));
             _powerUps.Init(_cfg, _player.transform);
@@ -304,7 +329,7 @@ namespace JeepneyRush
             if (!string.IsNullOrEmpty(TrialJeepney)) Services.UI.Float("TRIAL RUN: " + JeepneyCatalog.Get(TrialJeepney).DisplayName.ToUpperInvariant(), UIManager.FloatKind.Info);
             _player.Configure(_cfg);
             _passengers.Init(_cfg, _player.Body);
-            var route = new PassengerRoute(_cfg, _rng, StopNames.ForEnvironment(_env));
+            var route = new PassengerRoute(_cfg, new GameRandom(_seed ^ 0x51F0), StopNames.ForEnvironment(_env)); // own seeded stream (see the spawner below)
             route.AllowSabit(Sabit.ExtraFor(_env)); // provincial roads: riders may hang on the back
             _passengers.Env = _env;
             _passengers.ResetRun(route);
@@ -316,7 +341,10 @@ namespace JeepneyRush
             // the spawner plans with the lane-change time the player's steering settings really give
             _plannedCfg = _cfg.Clone();
             _plannedCfg.laneChangeDuration = SteeringModel.PlannedLaneTime(_cfg, _player.Lanes.Prefs);
-            _director = new SpawnDirector(_plannedCfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
+            // the spawner draws from its OWN seeded stream: flavour lines, horn reactions and weaving use
+            // _rng at moments that depend on how you drive, which used to shift the road layout
+            // (the daily challenge must be the same road for everyone)
+            _director = new SpawnDirector(_plannedCfg, new GameRandom(_seed ^ 0x2D1E), _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
             // events are placed ~10 s ahead: they must fit the time of day now AND when the jeepney gets there
             _director.IsNight = () => DayNight.IsNightFor(_runTime) || DayNight.IsNightFor(_runTime + EventLookaheadSeconds);
             // road gems: a few per run, capped per day (the server applies the same caps)
@@ -334,6 +362,8 @@ namespace JeepneyRush
             _panicT = 0; _wasPanicking = false; _endReason = null;
             Services.UI.SetRating(_rating.Display, _rating.Value, false);
             _combo.Reset();
+            _talk.Reset();
+            _pendingTalk.Clear();
             _arcade.Reset();
             _nearMiss.Reset();
             Services.UI.SetArcade(0, 1, 0);
@@ -536,6 +566,7 @@ namespace JeepneyRush
                 if (e.Kind == PassKind.NearMiss)
                 {
                     Services.UI.Float($"MUNTIK NA! +{pts}", UIManager.FloatKind.Big);
+                    if (Random.value < 0.35f) DriverSay(DriverMoment.NearMiss);
                     Services.Audio.Play(Logic.Audio.Sfx.NearMiss, 0.9f, Random.Range(0.95f, 1.08f));
                     _camera.Kick(2.5f);
                     Haptics.Pulse(12);
@@ -687,7 +718,7 @@ namespace JeepneyRush
             _player.Tick(dt, _speed);
             _combo.Tick(dt);
             Services.UI.SetCombo(_combo.Count);
-            if (!_dying && state == GameState.Playing) { UpdateArcade(dt); UpdateRoadEvents(); }
+            if (!_dying && state == GameState.Playing) { UpdateArcade(dt); UpdateRoadEvents(); UpdateDriverTalk(); }
 
             // ---- distance, score (gas = bonus score), spawning
             float dz = _speed * dt;
@@ -892,6 +923,7 @@ namespace JeepneyRush
             Haptics.Pulse(30);
             _fx.Dust(pos + new Vector3(0, 0.1f, -1.5f));
             Services.UI.Float(isHump ? "HUMP! ARAY!" : "LUBAK! ARAY!", UIManager.FloatKind.Bad);
+            if (!isHump && _passengers.Route.Count > 0) DriverSay(DriverMoment.Pothole);
             if (_passengers.Route.Count > 0) Rate(RatingEvent.HumpFast);
             var route = _passengers.Route;
             SabitFall(isHump ? "HUMP" : "LUBAK");
@@ -1442,8 +1474,17 @@ namespace JeepneyRush
                 if (r.Alighted == 0) Services.UI.Float($"+{r.Boarded} SAKAY!", UIManager.FloatKind.Good);
                 Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RandomRiderHead);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
+                // the driver welcomes them, asks for the fare, then announces the departure
+                DriverSay(DriverMoment.Boarding, 0.5f);
+                DriverSay(DriverMoment.AskFare, 2.4f);
+                if (!r.Full) DriverSay(DriverMoment.PickupDone, 4.4f);
             }
-            if (r.Full) Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);
+            if (r.Full)
+            {
+                Services.UI.Float("PUNO NA!", UIManager.FloatKind.Info);
+                if (r.LeftBehind > 0) DriverSay(DriverMoment.VehicleFull, 0.3f);
+                else DriverSay(DriverMoment.Depart, 4.4f);
+            }
             GameEvents.RaisePassengers(r);
             return r;
         }
@@ -1640,6 +1681,7 @@ namespace JeepneyRush
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);
+            GameOverLine = _talk.Pick(DriverMoment.GameOver);
             Services.UI.ShowGameOver(result);
         }
 

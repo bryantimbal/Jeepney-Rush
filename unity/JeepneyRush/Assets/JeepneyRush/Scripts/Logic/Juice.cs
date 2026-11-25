@@ -110,7 +110,7 @@ namespace JeepneyRush.Logic
             var names = StopNames.ForEnvironment(env);
             return $"ISANG {StopNames.All[names[rng.Int(0, names.Count - 1)]]} PO!";
         }
-        public static readonly string[] Alight = { "PARA PO!", "SALAMAT PO!", "DITO NA LANG PO!" };
+        public static readonly string[] Alight = { "PARA PO!", "SA TABI LANG PO!", "DITO NA LANG PO, SALAMAT!", "PARA PO, SA KANTO LANG!" };
         public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };
         public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!" };
 

@@ -1138,8 +1138,10 @@ namespace JeepneyRush
             _goBest.text = $"Best score {r.BestScore:N0} · best distance {Mathf.FloorToInt(r.BestDistance):N0} m";
             var sess = Services.Game.Session;
             string reason = sess != null ? sess.LastEndReason : null;
-            _goReason.text = reason ?? "";
-            Show(_goReason, !string.IsNullOrEmpty(reason));
+            // the driver's sign-off ("AY, PAHINGA MUNA TAYO!") after the reason, if any
+            string signOff = sess != null ? sess.GameOverLine : null;
+            _goReason.text = string.IsNullOrEmpty(reason) ? signOff ?? "" : string.IsNullOrEmpty(signOff) ? reason : $"{reason}\n“{signOff}”";
+            Show(_goReason, !string.IsNullOrEmpty(_goReason.text));
             string rating = sess != null ? sess.LastRating : null;
             _goRating.text = string.IsNullOrEmpty(rating) ? "" : $"Driver rating: {rating} / 5";
             Show(_goRating, !string.IsNullOrEmpty(rating));
