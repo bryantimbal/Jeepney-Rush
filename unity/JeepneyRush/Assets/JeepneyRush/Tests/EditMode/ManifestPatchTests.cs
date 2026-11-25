@@ -19,5 +19,18 @@ namespace JeepneyRush.Tests
             StringAssert.Contains("android:glEsVersion=\"0x00030000\" />", r);
             Assert.AreEqual(r, ManifestPatch.MakeFeaturesOptional(r), "idempotent");
         }
+
+        [Test]
+        public void VibratePermissionIsAddedOnce()
+        {
+            string xml = "<?xml version=\"1.0\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"x\">\n  <application />\n</manifest>";
+            string r = ManifestPatch.EnsurePermissions(xml);
+            StringAssert.Contains("<uses-permission android:name=\"android.permission.VIBRATE\" />", r);
+            Assert.AreEqual(r, ManifestPatch.EnsurePermissions(r), "idempotent");
+            Assert.Less(r.IndexOf("android.permission.VIBRATE"), r.IndexOf("<application"), "declared before the application element");
+            // already declared (e.g. by Unity): left alone
+            string had = xml.Replace("<application />", "<uses-permission android:name=\"android.permission.VIBRATE\"/>\n  <application />");
+            Assert.AreEqual(had, ManifestPatch.EnsurePermissions(had));
+        }
     }
 }

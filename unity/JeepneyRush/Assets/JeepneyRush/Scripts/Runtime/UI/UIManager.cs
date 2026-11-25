@@ -596,7 +596,7 @@ namespace JeepneyRush
             card.Add(Toggle("Music", () => d().music, v => { d().music = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
-            card.Add(Toggle("Vibration", () => d().vibration, v => d().vibration = v));
+            card.Add(Toggle("Vibration", () => d().vibration, v => { d().vibration = v; if (v) Haptics.Pulse(80); })); // a test buzz when switched on
             card.Add(UiKit.Button("CONTROLS & STEERING", OpenControls, UiKit.Yellow, UiKit.Ink, 40, 110));
             card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High", "Auto" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
             var rel = ReleaseConfig.Active;

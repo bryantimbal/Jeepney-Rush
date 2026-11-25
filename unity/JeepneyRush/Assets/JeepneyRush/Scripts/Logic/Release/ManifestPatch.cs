@@ -15,6 +15,23 @@ namespace JeepneyRush.Logic.Release
             "android.hardware.touchscreen.multitouch.distinct",
         };
 
+        /// <summary>Permissions the game needs that Unity can't detect on its own (vibration goes through JNI).</summary>
+        public static readonly string[] RequiredPermissions = { "android.permission.VIBRATE" };
+
+        /// <summary>Adds the uses-permission entries that are missing (idempotent).</summary>
+        public static string EnsurePermissions(string xml)
+        {
+            foreach (var perm in RequiredPermissions)
+            {
+                if (Regex.IsMatch(xml, "<uses-permission\\b[^>]*android:name\\s*=\\s*\"" + Regex.Escape(perm) + "\"")) continue;
+                var open = Regex.Match(xml, "<manifest\\b[^>]*>", RegexOptions.Singleline);
+                if (!open.Success) continue;
+                int at = open.Index + open.Length;
+                xml = xml.Substring(0, at) + "\n  <uses-permission android:name=\"" + perm + "\" />" + xml.Substring(at);
+            }
+            return xml;
+        }
+
         /// <summary>Sets android:required="false" on those uses-feature entries (adds it when missing).</summary>
         public static string MakeFeaturesOptional(string xml)
         {

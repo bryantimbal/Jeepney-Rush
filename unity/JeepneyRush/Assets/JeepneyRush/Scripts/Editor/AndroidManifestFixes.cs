@@ -27,10 +27,13 @@ namespace JeepneyRush.EditorTools
                 if (!File.Exists(manifest)) continue;
                 string xml = File.ReadAllText(manifest);
                 string fixedXml = JeepneyRush.Logic.Release.ManifestPatch.MakeFeaturesOptional(xml);
+                // vibration is done through JNI, so Unity doesn't add VIBRATE by itself: without it
+                // Android silently refuses every vibration
+                fixedXml = JeepneyRush.Logic.Release.ManifestPatch.EnsurePermissions(fixedXml); // the manifest merger keeps one copy
                 if (fixedXml != xml)
                 {
                     File.WriteAllText(manifest, fixedXml);
-                    Debug.Log("[Jeepney Rush] Marked hardware features optional in " + manifest);
+                    Debug.Log("[Jeepney Rush] Manifest fixed (optional features, VIBRATE permission): " + manifest);
                 }
             }
         }
