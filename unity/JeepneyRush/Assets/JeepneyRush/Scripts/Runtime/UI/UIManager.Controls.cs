@@ -207,12 +207,13 @@ namespace JeepneyRush
                 else ApplyControlLayout(GameplaySession.EffectiveSteerMode(d()));
             }
             c.Add(Heading("STEERING"));
+            // the mode selector has its own colours (blue / green) so it stands apart from the settings below it
             c.Add(Segmented("Steering mode", new[] { "Buttons", "Tilt", "Wheel" }, () => d().steerMode, i =>
             {
                 d().steerMode = i;
                 if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING BUTTONS", FloatKind.Info);
                 Apply();
-            }));
+            }, UiKit.Hex("#22D065"), UiKit.Hex("#DCE6F5"), UiKit.Ink, UiKit.Hex("#2F4A7A"), 112));
             c.Add(Segmented("Steering sensitivity", new[] { "Low", "Medium", "High" },
                 () => d().swipeSensitivity < 0.85f ? 0 : d().swipeSensitivity > 1.15f ? 2 : 1,
                 i => { d().swipeSensitivity = i == 0 ? 0.7f : i == 1 ? 1f : 1.3f; Apply(); }));

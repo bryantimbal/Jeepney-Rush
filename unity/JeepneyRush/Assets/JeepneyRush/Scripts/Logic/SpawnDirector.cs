@@ -76,6 +76,9 @@ namespace JeepneyRush.Logic
         private readonly GameRandom _eventRng;
         /// <summary>Side stream for the extra oncoming traffic on two-way roads (keeps the main sequence unchanged).</summary>
         private readonly GameRandom _oncomingRng;
+        /// <summary>Side stream for the extra city traffic (Manila streets, EDSA).</summary>
+        private readonly GameRandom _cityRng;
+        public int ExtraTrafficPlaced { get; private set; }
         public int OncomingPlaced { get; private set; }
         /// <summary>True if it is (or is about to be) night where events are being placed. Null = daytime.</summary>
         public Func<bool> IsNight;
@@ -115,6 +118,7 @@ namespace JeepneyRush.Logic
             _nextBoostAt = 300f + _gemRng.Range(0, 200);
             _eventRng = rng.Fork(0x3E7A1C55u);
             _oncomingRng = rng.Fork(0x0C0A1B2Du);
+            _cityRng = rng.Fork(0x7AF1C0DEu);
             _nextEventAt = RoadEvents.FirstAt + _eventRng.Range(0, 120);
             _wetness = wetness ?? (_ => 0f);
             _jam = jam ?? (_ => 0f);
@@ -285,7 +289,7 @@ namespace JeepneyRush.Logic
                 for (float w = distance; w <= rowAt + 700f; w += 25f)
                     _trafficRef = Math.Min(_trafficRef, _cfg.SpeedAt(w) * JamRules.SpeedCap(_jam(w)));
             float gap = Math.Max(speed * _cfg.minReactionTime + _cfg.playerHalfLength * 2,
-                (_cfg.maxRowGap + (_cfg.minRowGap - _cfg.maxRowGap) * d) * _rng.Range(0.85f, 1.2f) * JamRules.RowGapScale(_rowJam));
+                (_cfg.maxRowGap + (_cfg.minRowGap - _cfg.maxRowGap) * d) * _rng.Range(0.85f, 1.2f) * JamRules.RowGapScale(_rowJam) * Environments.RowGapScale(_env));
             Cursor += gap;
 
             bool placed = false;
@@ -311,11 +315,36 @@ namespace JeepneyRush.Logic
                 if (TryEventRow(z - gap * 0.5f, distance, speed)) _nextEventAt = Cursor + _eventRng.Range(RoadEvents.SpacingMin, RoadEvents.SpacingMax) * RoadEvents.SpacingScale(_env);
             }
             if (_twoWay) TryOncoming(z - gap * (_oncomingRng.Chance(0.5) ? 0.25f : 0.75f), distance, speed);
+            if (_extraChance > 0 && _rowJam < 0.15f) TryExtraTraffic(z - gap * (_cityRng.Chance(0.5) ? 0.3f : 0.7f), distance, speed);
             PlaceCoins(z, distance, speed, gap, placed && lastPattern == Pattern.HumpRow);
         }
 
         private static readonly HazardKind[] OncomingKinds =
             { HazardKind.Motorcycle, HazardKind.Motorcycle, HazardKind.Sedan, HazardKind.Truck, HazardKind.Bus, HazardKind.Tricycle, HazardKind.Suv };
+
+        private float _extraChance => Environments.ExtraTrafficChance(_env);
+
+        /// <summary>Busy city road: one more vehicle between two rows (same direction), only if the road stays passable.</summary>
+        private void TryExtraTraffic(float z, float distance, float speed)
+        {
+            if (!_cityRng.Chance(_extraChance)) return;
+            var k = _cityRng.Weighted(new (HazardKind, float)[]
+            {
+                (HazardKind.Sedan, _traffic[0]), (HazardKind.Suv, _traffic[1]), (HazardKind.Tricycle, _traffic[2]), (HazardKind.Motorcycle, _traffic[3]),
+                (HazardKind.Bus, _traffic[4]), (HazardKind.Truck, _traffic[5] * 0.6f),
+            });
+            var def = HazardCatalog.Get(k);
+            float v = Math.Max(1.5f, Math.Min(_cityRng.Range(def.MinSpeed, def.MaxSpeed), (_jamAware ? _trafficRef : speed) * 0.55f));
+            int lane = _cityRng.Int(0, _cfg.laneCount - 1);
+            _cands.Clear();
+            _cands.Add(new Candidate { Kind = k, Lane = lane, Speed = v });
+            if (Validate(z, distance, speed))
+            {
+                _sink.SpawnHazard(k, lane, z, v, false);
+                ExtraTrafficPlaced++;
+            }
+            _cands.Clear();
+        }
 
         /// <summary>Two-way road: an oncoming vehicle in the left lane between two rows, only if it stays fair.</summary>
         private void TryOncoming(float z, float distance, float speed)

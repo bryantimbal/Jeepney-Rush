@@ -18,7 +18,9 @@ namespace JeepneyRush
         private GameObject _body;
         private Transform[] _wheels;
         private string _livery;
-        private float _t, _swapT = 1f;
+        private float _t, _swapT = 1f, _spin;
+        /// <summary>Turntable speed in the garage (degrees per second): slow enough to admire every side.</summary>
+        public const float GarageSpinSpeed = 24f;
         private bool _garage;
         private Camera _cam;
 
@@ -30,8 +32,8 @@ namespace JeepneyRush
         public const float GarageYaw = 152f;
 
         /// <summary>
-        /// Garage: the jeepney is parked inside a Filipino talyer (hollow-block walls, GI sheets,
-        /// tyres, tools, Santo Niño altar), standing still in the upper part of the screen above the
+        /// Garage: the jeepney turns slowly on a turntable inside a Filipino talyer (hollow-block walls,
+        /// GI sheets, tyres, tools, Santo Niño altar), in the upper part of the screen above the
         /// garage card, and pops in whenever another model is selected.
         /// </summary>
         public void SetGarageMode(bool on)
@@ -39,6 +41,7 @@ namespace JeepneyRush
             _garage = on;
             if (_garageRoot == null) BuildGarage();
             _garageRoot.gameObject.SetActive(on);
+            _spin = 0;
             _jeepRoot.localPosition = on ? GarageSpot : StreetSpot;
             _jeepRoot.localRotation = on ? Quaternion.Euler(0, GarageYaw, 0) : Quaternion.identity;
             if (on && _camera != null)
@@ -135,7 +138,7 @@ namespace JeepneyRush
             _t += dt;
             const float cruise = 5f;
             _road.Scroll(cruise * dt);
-            // parked in the garage: wheels still, only the idling engine shakes the body a little
+            // in the garage: wheels still, only the idling engine shakes the body a little
             if (!_garage) foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_t * cruise / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg, 0, 0);
             _body.transform.localPosition = new Vector3(0, Mathf.Sin(_t * (_garage ? 14f : 9f)) * (_garage ? 0.005f : 0.008f), 0);
             _fx.Tick(dt, _jeepRoot.position, _garage ? 0f : cruise, 0);
@@ -149,9 +152,12 @@ namespace JeepneyRush
             }
             if (_garage)
             {
+                // the jeepney turns slowly on the talyer's turntable so every side of the design shows
+                _spin += dt * GarageSpinSpeed;
+                _jeepRoot.localRotation = Quaternion.Euler(0, GarageYaw + _spin, 0);
                 if (_cam == null) _cam = _camera.GetComponent<Camera>();
                 var focus = _jeepRoot.position;
-                // a fixed shot from the garage door; the jeepney stands still (no turntable)
+                // a fixed shot from the garage door
                 _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + GarageCam, 1f - Mathf.Exp(-dt * 4f));
                 // aim below the jeepney so it sits in the upper part of the screen, above the garage card
                 _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + GarageLook - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));

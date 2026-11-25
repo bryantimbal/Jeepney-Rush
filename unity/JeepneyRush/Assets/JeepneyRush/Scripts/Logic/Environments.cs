@@ -35,8 +35,12 @@ namespace JeepneyRush.Logic
 
         /// <summary>How much traffic the route has (multiplies the vehicle patterns).</summary>
         public static float TrafficDensity(EnvironmentKind k) =>
-            k == EnvironmentKind.Mountain ? 0.3f : k == EnvironmentKind.Edsa ? 1.6f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f
-            : k == EnvironmentKind.Fiesta ? 1.2f : 1f;
+            k == EnvironmentKind.Mountain ? 0.3f : k == EnvironmentKind.Edsa ? 1.9f : k == EnvironmentKind.Cebu ? 1.15f : k == EnvironmentKind.Baguio ? 0.8f
+            : k == EnvironmentKind.Fiesta ? 1.2f : k == EnvironmentKind.Manila ? 1.3f : 1f;
+        /// <summary>Chance of an extra vehicle between two rows (busy city roads: Manila streets, EDSA).</summary>
+        public static float ExtraTrafficChance(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 0.6f : k == EnvironmentKind.Manila ? 0.55f : 0f;
+        /// <summary>Rows come closer together on the busiest city roads (never below the reaction-time gap).</summary>
+        public static float RowGapScale(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 0.8f : k == EnvironmentKind.Manila ? 0.85f : 1f;
         /// <summary>How bad the traffic jams get (0 = none). EDSA is the real deal; Cebu has lighter jams.</summary>
         public static float JamIntensity(EnvironmentKind k) => k == EnvironmentKind.Edsa ? 1f : k == EnvironmentKind.Cebu ? 0.55f : 0f;
         /// <summary>Two-way roads: the left lane (0) carries oncoming traffic (provincial and coastal highways).</summary>

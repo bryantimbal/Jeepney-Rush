@@ -451,6 +451,8 @@ namespace JeepneyRush
         }
 
         private float _yaw;
+        /// <summary>Front wheel angle (degrees) at full steering lock.</summary>
+        public const float MaxFrontWheelAngle = 28f;
 
         public void Tick(float dt, float speed)
         {
@@ -478,7 +480,7 @@ namespace JeepneyRush
             float fishtail = _slip * Mathf.Clamp(Lanes.VelocityX, -12f, 12f) * 0.55f;
             // patok sound trip: the whole body thumps with the bass
             float bass = _soundSystem && Services.Audio != null ? Services.Audio.SoundTripPulse * 0.035f : 0f;
-            Body.localPosition = new Vector3(0, shake + bass + Mathf.Max(-0.05f, _bumpY), 0);
+            float bodyY = shake + bass + Mathf.Max(-0.05f, _bumpY);
             UpdateDisco();
             UpdateHeadlights();
             UpdateCockpit(dt);
@@ -486,10 +488,26 @@ namespace JeepneyRush
             // heading = the real direction of travel (sideways speed vs forward speed), smoothed
             float targetYaw = Mathf.Clamp(Lanes.Heading(speed) * Mathf.Rad2Deg, -14f, 14f);
             _yaw = Mathf.Lerp(_yaw, targetYaw, 1f - Mathf.Exp(-dt * 10f));
-            Body.localRotation = Quaternion.Euler(_pitch, _yaw + fishtail, _lean);
+            // like a real car the jeepney turns about its REAR axle: the rear wheels follow, the nose
+            // swings into the turn and the FRONT wheels steer (by the real steering input)
+            float yaw = _yaw + fishtail;
+            var turn = Quaternion.Euler(0, yaw, 0);
+            var pivot = new Vector3(0, 0, JeepneyBuilder.RearAxleZ);
+            Body.localRotation = turn * Quaternion.Euler(_pitch, 0, _lean);
+            Body.localPosition = pivot - turn * pivot + new Vector3(0, bodyY, 0);
             UpdateSignals(dt);
             _wheelSpin += speed * dt / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg;
-            foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_wheelSpin, 0, 0);
+            float steerDeg = Mathf.Clamp(Lanes.Wheel * MaxFrontWheelAngle, -MaxFrontWheelAngle, MaxFrontWheelAngle);
+            var wp = JeepneyBuilder.WheelPositions;
+            for (int i = 0; i < _wheels.Length && i < wp.Length; i++)
+            {
+                var w = _wheels[i];
+                if (w == null) continue;
+                var p0 = new Vector3(wp[i].X, wp[i].Y, wp[i].Z);
+                w.localPosition = pivot + turn * (p0 - pivot);
+                bool front = wp[i].Z > 0f;
+                w.localRotation = turn * Quaternion.Euler(0, front ? steerDeg : 0f, 0) * Quaternion.Euler(_wheelSpin, 0, 0);
+            }
             // invulnerability blink
             // gentle blink: mostly visible, short off-beats at 5 Hz (avoids a strobe/flicker look)
             bool visible = !Collisions.Invulnerable || (Collisions.InvulnerableTime * 5f) % 1f > 0.3f;

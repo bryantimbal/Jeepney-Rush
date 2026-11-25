@@ -102,5 +102,25 @@ namespace JeepneyRush.Tests
             Assert.IsTrue(DayNight.IsNightFor(400f) || DayNight.IsNightFor(200f), "night comes during a run");
             Assert.IsFalse(DayNight.IsNightFor(0f), "runs start in daylight");
         }
+
+        [Test]
+        public void ManilaAndEdsaHaveDenserTraffic()
+        {
+            int Extra(EnvironmentKind env)
+            {
+                var sink = new CountingSink();
+                var cfg = new BalanceConfig();
+                var rng = new GameRandom(9);
+                var d = new SpawnDirector(cfg, rng, sink, new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env)), env);
+                for (float dist = 0; dist < 3000; dist += 5f) d.Update(dist, cfg.SpeedAt(dist));
+                return d.ExtraTrafficPlaced;
+            }
+            Assert.Greater(Extra(EnvironmentKind.Manila), 20, "extra city traffic on Manila streets");
+            Assert.Greater(Extra(EnvironmentKind.Edsa), 20, "extra city traffic on EDSA");
+            Assert.AreEqual(0, Extra(EnvironmentKind.Baguio));
+            Assert.AreEqual(0, Extra(EnvironmentKind.Mountain));
+            Assert.Less(Environments.RowGapScale(EnvironmentKind.Edsa), 1f);
+            Assert.Less(Environments.RowGapScale(EnvironmentKind.Manila), 1f);
+        }
     }
 }

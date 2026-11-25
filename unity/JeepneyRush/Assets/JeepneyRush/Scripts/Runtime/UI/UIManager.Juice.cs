@@ -459,8 +459,9 @@ namespace JeepneyRush
         /// <summary>Driver view hides the HUD speedometer (the one on the dashboard takes over).</summary>
         public void SetViewMode(bool driver)
         {
-            // DRIVER view = analog gauge only; LIKOD view = compact digital readout only
-            if (_speedo != null) _speedo.style.display = driver ? DisplayStyle.Flex : DisplayStyle.None;
+            // DRIVER view: the cockpit's own dashboard gauge shows the speed – no HUD speedometer at all.
+            // LIKOD view: the compact digital readout under the hearts and fuel.
+            if (_speedo != null) _speedo.style.display = DisplayStyle.None;
             if (_speedPill != null) _speedPill.style.display = driver ? DisplayStyle.None : DisplayStyle.Flex;
             _driverView = driver;
             if (_viewBtn != null) _viewBtn.text = driver ? "VIEW: DRIVER" : "VIEW: LIKOD";

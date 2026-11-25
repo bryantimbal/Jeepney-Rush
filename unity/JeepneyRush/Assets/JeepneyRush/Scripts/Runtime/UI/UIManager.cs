@@ -551,8 +551,12 @@ namespace JeepneyRush
 
         private readonly List<System.Action> _segments = new List<System.Action>();
 
-        private VisualElement Segmented(string title, string[] options, System.Func<int> get, System.Action<int> set)
+        /// <param name="on">selected colour (default yellow)</param><param name="off">unselected colour (default white)</param>
+        /// <param name="onText">text colour when selected (default ink)</param><param name="offText">text colour when not selected</param>
+        private VisualElement Segmented(string title, string[] options, System.Func<int> get, System.Action<int> set,
+            Color? on = null, Color? off = null, Color? onText = null, Color? offText = null, float height = 96)
         {
+            Color cOn = on ?? UiKit.Yellow, cOff = off ?? Color.white, tOn = onText ?? UiKit.Ink, tOff = offText ?? UiKit.Ink;
             var wrap = UiKit.Box();
             wrap.style.marginBottom = 14;
             var t = UiKit.Text(title.ToUpperInvariant(), 30, UiKit.Grey, false);
@@ -565,14 +569,22 @@ namespace JeepneyRush
             for (int i = 0; i < options.Length; i++)
             {
                 int idx = i;
-                var b = UiKit.Button(options[i], () => { set(idx); Services.Save.Save(); SyncToggles(); }, Color.white, UiKit.Ink, 36, 96);
+                var b = UiKit.Button(options[i], () => { set(idx); Services.Save.Save(); SyncToggles(); }, cOff, tOff, 36, height);
                 b.style.flexGrow = 1;
                 b.style.marginRight = i < options.Length - 1 ? 10 : 0;
                 b.style.marginTop = b.style.marginBottom = 0;
                 buttons.Add(b);
                 row.Add(b);
             }
-            _segments.Add(() => { for (int i = 0; i < buttons.Count; i++) buttons[i].style.backgroundColor = i == get() ? UiKit.Yellow : Color.white; });
+            _segments.Add(() =>
+            {
+                for (int i = 0; i < buttons.Count; i++)
+                {
+                    bool sel = i == get();
+                    buttons[i].style.backgroundColor = sel ? cOn : cOff;
+                    buttons[i].style.color = sel ? tOn : tOff;
+                }
+            });
             wrap.Add(row);
             return wrap;
         }

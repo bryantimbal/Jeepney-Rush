@@ -23,10 +23,13 @@ namespace JeepneyRush.Logic.Geometry
             // ---- floor: concrete slab, oil stains, painted bay lines, a drain grate
             b.Box("paint", "#8C8A84", HalfWidth * 2 + 8, 0.1f, depth + 10, 0, -0.05f, cz - 3);
             for (int i = 0; i < 7; i++)
-                b.Cylinder("paint", i % 2 == 0 ? "#4A4844" : "#5C5A55", rng.Range(0.4f, 1.1f), rng.Range(0.4f, 1.1f), 0.012f, 12, rng.Range(-2.5f, 2.5f), 0.006f, rng.Range(-3f, 3f));
-            foreach (float x in new[] { -2.4f, 2.4f }) b.Box("paint", "#F2C200", 0.14f, 0.012f, 9f, x, 0.008f, 0.3f);
-            b.Box("paint", "#3A3A3A", 0.6f, 0.014f, 3.2f, 3.6f, 0.008f, -1.5f);
-            for (float z = -2.9f; z < 0f; z += 0.25f) b.Box("paint", "#222222", 0.62f, 0.016f, 0.05f, 3.6f, 0.01f, z);
+                b.Cylinder("paint", i % 2 == 0 ? "#4A4844" : "#5C5A55", rng.Range(0.4f, 0.9f), rng.Range(0.4f, 0.9f), 0.012f, 12, (i % 2 == 0 ? -1 : 1) * rng.Range(4.8f, 6.2f), 0.006f, rng.Range(-4.5f, 2f));
+            foreach (float x in new[] { -4.7f, 4.7f }) b.Box("paint", "#F2C200", 0.14f, 0.012f, 9f, x, 0.008f, 0.3f);
+            // steel turntable plate the jeepney turns on (checker plate with a yellow safety ring)
+            b.Cylinder("paint", "#6E7378", 4.3f, 4.4f, 0.06f, 32, 0, 0.03f, 0.1f);
+            b.Cylinder("paint", "#F2C200", 4.45f, 4.45f, 0.04f, 32, 0, 0.015f, 0.1f);
+            b.Box("paint", "#3A3A3A", 0.6f, 0.014f, 3.2f, 5.2f, 0.008f, -1.5f);
+            for (float z = -2.9f; z < 0f; z += 0.25f) b.Box("paint", "#222222", 0.62f, 0.016f, 0.05f, 5.2f, 0.01f, z);
 
             // ---- back wall: hollow blocks, teal below / cream above, block lines
             b.Box("paint", "#3E8E89", HalfWidth * 2, 1.4f, 0.3f, 0, 0.7f, Back);
