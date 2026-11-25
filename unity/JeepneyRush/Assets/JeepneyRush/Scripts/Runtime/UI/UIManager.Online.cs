@@ -218,6 +218,7 @@ namespace JeepneyRush
             {
                 body.Add(Note("Sign in to save your progress in the cloud and appear on the rankings."));
                 var email = AddField(body, "Email");
+                if (string.IsNullOrEmpty(email.value)) email.value = SupabaseClient.RememberedEmail; // re-signing in after a lost login
                 var pass = AddField(body, "Password", true);
                 body.Add(SmallButton("SIGN IN", () => o.SignIn(email.value, pass.value, (ok, msg) => { Toast(ok ? "Welcome back!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
                 body.Add(SmallButton("CREATE ACCOUNT", () => o.CreateEmailAccount(email.value, pass.value, (ok, msg) => { Toast(ok ? "Account created!" : msg); RefreshAccount(); }), Color.white, UiKit.Ink));

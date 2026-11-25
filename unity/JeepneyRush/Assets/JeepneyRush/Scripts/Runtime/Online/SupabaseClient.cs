@@ -47,6 +47,7 @@ namespace JeepneyRush
                 expires_at = r.expires_at > 0 ? r.expires_at : now + Math.Max(60, r.expires_in),
                 user_id = r.user?.id, email = r.user?.email, is_anonymous = r.user == null || r.user.is_anonymous || string.IsNullOrEmpty(r.user.email),
             };
+            if (!_session.is_anonymous && !string.IsNullOrEmpty(_session.email)) PlayerPrefs.SetString(EmailKey, _session.email);
             PlayerPrefs.SetString(PrefKey, JsonUtility.ToJson(_session));
             PlayerPrefs.Save();
         }
@@ -128,11 +129,39 @@ namespace JeepneyRush
         public IEnumerator SignIn(string email, string password, Action<string> done) =>
             Auth("/auth/v1/token?grant_type=password", JsonUtility.ToJson(new EmailPassword { email = email, password = password }), false, done);
 
+        // Single-flight refresh: Supabase rotates the refresh token on every use, and reusing an
+        // already-rotated token can make the server revoke the whole login. So only ONE refresh
+        // may be in flight; anyone else who needs a fresh token waits for that one's result.
+        private bool _refreshing;
+        private string _refreshResult;
+        private int _refreshGen;
+
         public IEnumerator Refresh(Action<string> done)
         {
             if (!HasSession) { done("no_session"); yield break; }
-            yield return Auth("/auth/v1/token?grant_type=refresh_token", JsonUtility.ToJson(new RefreshBody { refresh_token = _session.refresh_token }), false, done);
+            if (_refreshing)
+            {
+                int gen = _refreshGen;
+                while (_refreshing && gen == _refreshGen) yield return null;
+                done(_refreshResult);
+                yield break;
+            }
+            _refreshing = true;
+            string err = null;
+            yield return Auth("/auth/v1/token?grant_type=refresh_token", JsonUtility.ToJson(new RefreshBody { refresh_token = _session.refresh_token }), false, e => err = e);
+            _refreshResult = err;
+            _refreshGen++;
+            _refreshing = false;
+            done(err);
         }
+
+        /// <summary>Email of the last signed-in (non-guest) account, kept so a lost login can be re-entered quickly.</summary>
+        public static string RememberedEmail
+        {
+            get => PlayerPrefs.GetString(EmailKey, "");
+            set { PlayerPrefs.SetString(EmailKey, value ?? ""); PlayerPrefs.Save(); }
+        }
+        private const string EmailKey = "jr_last_email";
 
         /// <summary>Turns the current guest into an email account (keeps all progress).</summary>
         public IEnumerator LinkEmail(string email, string password, Action<string> done)

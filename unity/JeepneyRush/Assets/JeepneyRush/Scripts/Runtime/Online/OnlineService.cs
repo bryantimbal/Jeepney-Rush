@@ -98,7 +98,21 @@ namespace JeepneyRush
                 // created and the player's progress would appear to vanish.
                 bool revoked = err != null && (err.Contains("Invalid Refresh Token") || err.Contains("refresh_token_not_found") || err.Contains("invalid_grant") || err.Contains("User from sub claim in JWT does not exist"));
                 if (err != null && !revoked) { _connecting = false; SetState(OnlineState.Offline, err); yield break; }
-                if (revoked) { Debug.LogWarning("[Online] saved login is no longer valid: " + err); _client.ClearSession(); }
+                if (revoked)
+                {
+                    Debug.LogWarning("[Online] saved login is no longer valid: " + err);
+                    bool wasEmail = !_client.IsAnonymous;
+                    _client.ClearSession();
+                    if (wasEmail)
+                    {
+                        // an email account must never silently turn into a new guest: ask to sign in again
+                        save.signedOut = true;
+                        Services.Save.Save();
+                        _connecting = false;
+                        SetState(OnlineState.SignedOut, "session_expired");
+                        yield break;
+                    }
+                }
             }
             if (!_client.HasSession)
             {
@@ -241,6 +255,7 @@ namespace JeepneyRush
         {
             if (string.IsNullOrEmpty(err)) return null;
             if (err == "offline") return "Walang internet. Try again later.";
+            if (err == "session_expired") return "Your login expired. Please sign in again.";
             if (err == "confirm_email") return "Check your email to confirm the account, then sign in.";
             if (err.Contains("Invalid login")) return "Wrong email or password.";
             if (err.Contains("already") && err.Contains("registered")) return "That email already has an account – sign in instead.";
