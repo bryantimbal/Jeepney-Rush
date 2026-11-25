@@ -33,6 +33,7 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("vendor_row", VendorRow());
             yield return ("gem", PropBuilder.Gem());
             yield return ("ev_taho", EventBuilder.TahoVendor(0));
+            yield return ("ev_balut", EventBuilder.BalutVendor(0));
             yield return ("ev_pedicab", EventBuilder.Pedicab(0));
             yield return ("ev_float", EventBuilder.ParadeFloat(0));
             yield return ("ev_carabao", EventBuilder.Carabao(0));

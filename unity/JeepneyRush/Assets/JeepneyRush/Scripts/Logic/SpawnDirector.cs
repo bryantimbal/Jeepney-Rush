@@ -77,6 +77,8 @@ namespace JeepneyRush.Logic
         /// <summary>Side stream for the extra oncoming traffic on two-way roads (keeps the main sequence unchanged).</summary>
         private readonly GameRandom _oncomingRng;
         public int OncomingPlaced { get; private set; }
+        /// <summary>True if it is (or is about to be) night where events are being placed. Null = daytime.</summary>
+        public Func<bool> IsNight;
         public const float OncomingChance = 0.6f;
         private float _nextEventAt;
         private readonly List<RoadEvents.Piece> _pieces = new List<RoadEvents.Piece>();
@@ -554,7 +556,9 @@ namespace JeepneyRush.Logic
             if (_rowJam > 0.15f) return false; // the jam is event enough
             // never close a lane just before a jam: slow traffic would fill the other lanes
             if (_jamAware) for (float w = distance - z; w <= distance - z + 500f; w += 50f) if (_jam(w) > 0.05f) return false;
-            var kind = _eventRng.Weighted(RoadEvents.For(_env));
+            // the time of day when the jeepney gets there decides which events fit (no taho at night)
+            bool night = IsNight != null && IsNight();
+            var kind = _eventRng.Weighted(RoadEvents.For(_env, night));
             RoadEvents.Build(kind, _eventRng.Int(0, _cfg.laneCount - 1), _cfg.laneCount, _pieces);
             _cands.Clear();
             foreach (var p in _pieces)

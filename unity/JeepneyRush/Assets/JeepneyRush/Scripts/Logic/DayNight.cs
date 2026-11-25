@@ -50,6 +50,10 @@ namespace JeepneyRush.Logic
             return 0f;
         }
 
+        /// <summary>Dark enough that daytime-only road events (taho, carabao) are out, night ones (balut) in.</summary>
+        public const float NightEventsFrom = 0.35f;
+        public static bool IsNightFor(float runSeconds) => Night(HourAt(runSeconds)) >= NightEventsFrom;
+
         /// <summary>Golden-hour glow (orange sky) peaking at sunset and sunrise, 0 otherwise.</summary>
         public static float Dusk(float hour)
         {

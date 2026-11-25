@@ -72,5 +72,35 @@ namespace JeepneyRush.Tests
             public void SpawnStation(GasStation station, float z) { }
             public void SpawnIntersection(Intersection intersection, float z) { }
         }
+
+        [Test]
+        public void TahoAndCarabaoOnlyInDaylightBalutOnlyAtNight()
+        {
+            foreach (EnvironmentKind env in System.Enum.GetValues(typeof(EnvironmentKind)))
+            {
+                var night = new List<RoadEventKind>(); foreach (var (k, _) in RoadEvents.For(env, true)) night.Add(k);
+                var day = new List<RoadEventKind>(); foreach (var (k, _) in RoadEvents.For(env, false)) day.Add(k);
+                CollectionAssert.DoesNotContain(night, RoadEventKind.Taho, env.ToString());
+                CollectionAssert.DoesNotContain(night, RoadEventKind.Carabao, env.ToString());
+                CollectionAssert.DoesNotContain(day, RoadEventKind.Balut, env.ToString());
+                Assert.IsNotEmpty(night, $"{env}: some events still happen at night");
+                if (day.Contains(RoadEventKind.Taho)) CollectionAssert.Contains(night, RoadEventKind.Balut, $"{env}: the balut vendor replaces the taho at night");
+            }
+            // the generator respects it: a whole night-time run never places taho or carabao
+            foreach (EnvironmentKind env in new[] { EnvironmentKind.Provincial, EnvironmentKind.Manila, EnvironmentKind.Fiesta })
+            {
+                var sink = new CountingSink();
+                var cfg = new BalanceConfig();
+                var rng = new GameRandom(5);
+                var d = new SpawnDirector(cfg, rng, sink, new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env)), env) { IsNight = () => true };
+                for (float dist = 0; dist < 5000; dist += 5f) d.Update(dist, cfg.SpeedAt(dist));
+                Assert.Greater(d.EventsPlaced, 3);
+                CollectionAssert.DoesNotContain(d.EventLog, RoadEventKind.Taho);
+                CollectionAssert.DoesNotContain(d.EventLog, RoadEventKind.Carabao);
+                Assert.Contains(RoadEventKind.Balut, d.EventLog, $"{env}: balut vendors at night");
+            }
+            Assert.IsTrue(DayNight.IsNightFor(400f) || DayNight.IsNightFor(200f), "night comes during a run");
+            Assert.IsFalse(DayNight.IsNightFor(0f), "runs start in daylight");
+        }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic
 {
-    public enum RoadEventKind { Taho, Pedicab, Carabao, Construction, StalledJeepney, StrayDog, Basketball, ParadeFloat }
+    public enum RoadEventKind { Taho, Pedicab, Carabao, Construction, StalledJeepney, StrayDog, Basketball, ParadeFloat, Balut }
 
     /// <summary>
     /// Filipino road events: occasional extra rows between the normal traffic rows. Each event is
@@ -20,7 +20,31 @@ namespace JeepneyRush.Logic
         /// <summary>Distance ahead at which the HUD announces an event.</summary>
         public const float WarnAt = 95f;
 
-        /// <summary>Which events happen on a route, and how often (weights).</summary>
+        /// <summary>Events that only make sense in daylight (the magtataho sells in the morning, carabaos are back in the barn at night).</summary>
+        public static bool DaytimeOnly(RoadEventKind e) => e == RoadEventKind.Taho || e == RoadEventKind.Carabao;
+        /// <summary>Events that only happen after dark ("Baluuut! Penoy!").</summary>
+        public static bool NightOnly(RoadEventKind e) => e == RoadEventKind.Balut;
+
+        /// <summary>
+        /// The route's events for the time of day. At night the daytime-only events drop out and the
+        /// balut vendor takes the taho vendor's place (same weight), so events stay as frequent.
+        /// </summary>
+        public static (RoadEventKind, float)[] For(EnvironmentKind env, bool night)
+        {
+            var all = For(env);
+            var list = new List<(RoadEventKind, float)>(all.Length + 1);
+            float taho = 0;
+            foreach (var (k, w) in all)
+            {
+                if (k == RoadEventKind.Taho) taho = w;
+                if (night ? DaytimeOnly(k) : NightOnly(k)) continue;
+                list.Add((k, w));
+            }
+            if (night && env != EnvironmentKind.Edsa && env != EnvironmentKind.Mountain) list.Add((RoadEventKind.Balut, taho > 0 ? taho : 0.9f));
+            return list.ToArray();
+        }
+
+        /// <summary>Which events happen on a route in daylight, and how often (weights).</summary>
         public static (RoadEventKind, float)[] For(EnvironmentKind env)
         {
             switch (env)
@@ -59,6 +83,7 @@ namespace JeepneyRush.Logic
             switch (e)
             {
                 case RoadEventKind.Taho: output.Add(new Piece { Kind = HazardKind.TahoVendor, Lane = curb }); break;
+                case RoadEventKind.Balut: output.Add(new Piece { Kind = HazardKind.BalutVendor, Lane = curb }); break;
                 case RoadEventKind.Pedicab: output.Add(new Piece { Kind = HazardKind.Pedicab, Lane = curb }); break;
                 case RoadEventKind.Carabao: output.Add(new Piece { Kind = HazardKind.Carabao, Lane = lane }); break;
                 case RoadEventKind.StalledJeepney: output.Add(new Piece { Kind = HazardKind.StalledJeepney, Lane = curb }); break;
@@ -86,6 +111,7 @@ namespace JeepneyRush.Logic
                 case RoadEventKind.StalledJeepney: return "TIRIK NA JEEP SA GILID!";
                 case RoadEventKind.StrayDog: return "ASO SA KALSADA!";
                 case RoadEventKind.Basketball: return "BOLA! MAY NAGLALARO NG BASKETBALL";
+                case RoadEventKind.Balut: return "BALUUUT! PENOY! MAY MAGBABALUT SA GILID";
                 default: return "FIESTA! MAY PARADA SA UNAHAN";
             }
         }
@@ -96,6 +122,7 @@ namespace JeepneyRush.Logic
             switch (k)
             {
                 case HazardKind.TahoVendor: return RoadEventKind.Taho;
+                case HazardKind.BalutVendor: return RoadEventKind.Balut;
                 case HazardKind.Pedicab: return RoadEventKind.Pedicab;
                 case HazardKind.Carabao: return RoadEventKind.Carabao;
                 case HazardKind.Flagman: return RoadEventKind.Construction;

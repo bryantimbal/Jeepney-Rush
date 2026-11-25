@@ -20,6 +20,8 @@ namespace JeepneyRush
         }
 
         public void SetRandom(GameRandom rng) => Rng = rng;
+        /// <summary>The jeepney's sideways position (set every frame by the session).</summary>
+        public float PlayerX;
 
         public Hazard Spawn(HazardKind kind, int lane, float unityZ, float speed, bool solid)
         {
@@ -37,6 +39,20 @@ namespace JeepneyRush
             if (kind == HazardKind.Pothole) h.Body.localRotation = Quaternion.Euler(0, Rng.Range(0, 180), 0);
             Items.Add(h);
             return h;
+        }
+
+        /// <summary>Removes (back to the pool) every hazard matching <paramref name="match"/>. Returns how many.</summary>
+        public int RemoveWhere(System.Predicate<Hazard> match)
+        {
+            int n = 0;
+            for (int i = Items.Count - 1; i >= 0; i--)
+            {
+                if (!match(Items[i])) continue;
+                Services.Pools.Release(Items[i].gameObject);
+                Items.RemoveAt(i);
+                n++;
+            }
+            return n;
         }
 
         public void Clear()
@@ -62,9 +78,11 @@ namespace JeepneyRush
                 var h = Items[i];
                 h.Age += dt;
                 var p = h.transform.localPosition;
-                // traffic behind the jeepney never drives into it (it waits when the jeepney stops)
+                // traffic directly behind the jeepney never drives into it (it waits when the jeepney
+                // stops); vehicles in the other lanes keep their own speed and drive past
                 // (parked cars and road works stay put – the reversing sensor stops the jeepney before them)
-                float vs = p.z < 0 && h.Speed > 0 ? Mathf.Min(h.Speed, playerSpeed) : h.Speed;
+                bool behind = p.z < 0 && FollowRules.BlockedBehind(p.x, h.Def.HalfWidth, PlayerX, Cfg.playerHalfWidth);
+                float vs = FollowRules.EffectiveSpeed(h.Speed, p.z, playerSpeed, behind);
                 p.z -= (playerSpeed - vs) * dt;
                 if (h.KnockVelocity != Vector3.zero || h.KnockSpin != 0)
                 {

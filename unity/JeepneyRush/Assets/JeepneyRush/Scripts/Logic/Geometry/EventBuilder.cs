@@ -30,6 +30,20 @@ namespace JeepneyRush.Logic.Geometry
             return b.Data;
         }
 
+        /// <summary>Night balut vendor: a woven basket wrapped in cloth on the hip and a small lamp ("Baluuut!").</summary>
+        public static MeshData BalutVendor(int v)
+        {
+            var b = new MeshBuilder();
+            Person(b, v + 3, 0, 0, 0);
+            b.Cylinder("paint", "#9C6B3C", 0.32f, 0.26f, 0.38f, 10, 0.38f, 0.95f, 0.05f);      // woven basket (bayong)
+            b.Cylinder("paint", "#F1E3C6", 0.33f, 0.33f, 0.06f, 10, 0.38f, 1.16f, 0.05f);      // cloth keeping the eggs warm
+            for (int i = 0; i < 3; i++) b.Sphere("paint", "#F2EBDD", 0.07f, 0.3f + i * 0.08f, 1.22f, 0.05f, 6);
+            b.Box("paint", "#2B2B2B", 0.02f, 0.4f, 0.02f, 0.52f, 1.45f, 0.05f);                 // lamp handle
+            b.Cylinder("glow", "#FFC24A", 0.07f, 0.07f, 0.14f, 8, 0.52f, 1.22f, 0.05f);          // little kerosene lamp
+            b.Cylinder("paint", "#2D3A4A", 0.13f, 0.13f, 0.1f, 10, 0, 1.75f, 0);                 // cap
+            return b.Data;
+        }
+
         /// <summary>Pedicab: bicycle with a covered sidecar (rider pedalling, a passenger inside).</summary>
         public static MeshData Pedicab(int v)
         {

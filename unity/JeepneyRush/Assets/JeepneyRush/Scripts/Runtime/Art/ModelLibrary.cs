@@ -109,6 +109,7 @@ namespace JeepneyRush
                 case HazardKind.ParkedSedan: return VehicleBuilder.CarColors.Length;
                 case HazardKind.ParkedJeepney: return JeepColors.Length;
                 case HazardKind.TahoVendor: return 3;
+                case HazardKind.BalutVendor: return 3;
                 case HazardKind.Pedicab: return 5;
                 case HazardKind.ParadeFloat: return 3;
                 case HazardKind.Carabao: return 2;
@@ -155,6 +156,7 @@ namespace JeepneyRush
                 case HazardKind.FloodPuddle: return Get("flood" + v, () => VehicleBuilder.Flood(1.35f, 3.2f, 10 + v));
                 case HazardKind.FloodWide: return Get("floodw" + v, () => VehicleBuilder.Flood(5.3f, 5.5f, 20 + v));
                 case HazardKind.TahoVendor: return Get("ev_taho" + v, () => EventBuilder.TahoVendor(v));
+                case HazardKind.BalutVendor: return Get("ev_balut" + v, () => EventBuilder.BalutVendor(v));
                 case HazardKind.Pedicab: return Get("ev_pedicab" + v, () => EventBuilder.Pedicab(v));
                 case HazardKind.ParadeFloat: return Get("ev_float" + v, () => EventBuilder.ParadeFloat(v));
                 case HazardKind.Carabao: return Get("ev_carabao" + v, () => EventBuilder.Carabao(v));

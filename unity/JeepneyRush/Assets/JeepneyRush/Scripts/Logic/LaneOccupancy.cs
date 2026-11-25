@@ -34,6 +34,25 @@ namespace JeepneyRush.Logic
     /// z = 0 and the world moves toward +z, so an object with forward speed s
     /// approaches at (playerSpeed - s).
     /// </summary>
+    /// <summary>
+    /// How traffic behind the jeepney behaves: only a vehicle directly behind it (overlapping
+    /// sideways) slows down to wait; vehicles in other lanes keep their own speed and pass.
+    /// (Before, everything behind waited – so stopping at a PARA stop froze every lane.)
+    /// </summary>
+    public static class FollowRules
+    {
+        /// <summary>Extra sideways clearance (m) for "directly behind".</summary>
+        public const float SideMargin = 0.25f;
+
+        public static bool BlockedBehind(float vehicleX, float vehicleHalfWidth, float playerX, float playerHalfWidth) =>
+            Math.Abs(vehicleX - playerX) < vehicleHalfWidth + playerHalfWidth + SideMargin;
+
+        /// <summary>Speed a vehicle actually drives at (m/s) given where it is relative to the jeepney.</summary>
+        /// <param name="z">vehicle position relative to the jeepney (negative = behind)</param>
+        public static float EffectiveSpeed(float speed, float z, float playerSpeed, bool directlyBehind) =>
+            z < 0 && speed > 0 && directlyBehind ? Math.Min(speed, playerSpeed) : speed;
+    }
+
     public static class LaneOccupancy
     {
         public const float Pad = 0.14f;

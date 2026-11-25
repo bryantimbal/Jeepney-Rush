@@ -276,6 +276,8 @@ namespace JeepneyRush
             _weather.ResetRun(seed, _env);
             _jams = new JamSchedule(seed, _env);
             _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
+            // events are placed ~10 s ahead: they must fit the time of day now AND when the jeepney gets there
+            _director.IsNight = () => DayNight.IsNightFor(_runTime) || DayNight.IsNightFor(_runTime + EventLookaheadSeconds);
             // road gems: a few per run, capped per day (the server applies the same caps)
             var sd = Services.Save.Data;
             int gemsToday = sd.roadGemsDay == PhilippineTime.DayKey ? sd.roadGemsToday : 0;
@@ -438,10 +440,18 @@ namespace JeepneyRush
 
         // ---------------------------------------------------------------- road events
         /// <summary>Announces each road event once, ~95 m ahead, with a fitting line from it.</summary>
+        private const float EventLookaheadSeconds = 12f;
+
         private void UpdateRoadEvents()
         {
             WarnEvents(_traffic.Active);
             WarnEvents(_obstacles.Active);
+            // night fell after a daytime event was already placed far ahead: it quietly leaves before you see it
+            if (DayNight.IsNightFor(_runTime))
+            {
+                _traffic.RemoveWhere(h => !h.Hit && !h.Warned && h.transform.localPosition.z > 45f && RoadEvents.EventOf(h.Kind) is RoadEventKind e && RoadEvents.DaytimeOnly(e));
+                _obstacles.RemoveWhere(h => !h.Hit && !h.Warned && h.transform.localPosition.z > 45f && RoadEvents.EventOf(h.Kind) is RoadEventKind e && RoadEvents.DaytimeOnly(e));
+            }
         }
 
         private void WarnEvents(IReadOnlyList<Hazard> list)
@@ -673,6 +683,7 @@ namespace JeepneyRush
             _coins.MagnetRadius = pu.IsActive(PowerUpKind.Magnet) ? _cfg.magnetRadius : 0f;
             _coins.MagnetTarget = _player.transform.position;
             _road.Scroll(dz);
+            _traffic.PlayerX = _obstacles.PlayerX = _player.Lanes.X;
             _traffic.Tick(dt, _speed);
             _obstacles.Tick(dt, _speed);
             _coins.Tick(dt, _speed);

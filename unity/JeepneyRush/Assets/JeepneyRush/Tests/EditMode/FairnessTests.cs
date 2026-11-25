@@ -88,7 +88,8 @@ namespace JeepneyRush.Tests
                 // like the game (GameplaySession → LevelSpawner.SetPlayerLanes): the director plans from the player's real lane(s)
                 world.Lanes = laneT < 1 && from != lane ? new[] { lane, from } : new[] { lane };
                 director.Update(distance, speed);
-                foreach (var o in world.Objs) o.Z += (speed - (o.Z > 0 && o.Speed > 0 ? Math.Min(o.Speed, speed) : o.Speed)) * dt; // like the game: traffic behind waits
+                // like the game (FollowRules): only traffic directly behind the jeepney waits, other lanes drive on
+                foreach (var o in world.Objs) o.Z += (speed - (o.Z > 0 && o.Speed > 0 && FollowRules.BlockedBehind(cfg.LaneX(o.Lane), HazardCatalog.Get(o.Kind).HalfWidth, x, cfg.playerHalfWidth) ? Math.Min(o.Speed, speed) : o.Speed)) * dt;
                 world.Objs.RemoveAll(o => o.Z > cfg.despawnBehind + 6);
                 for (int i = 0; i < world.Stops.Count; i++)
                 {

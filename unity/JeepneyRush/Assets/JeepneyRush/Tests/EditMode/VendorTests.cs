@@ -76,7 +76,10 @@ namespace JeepneyRush.Tests
         [Test]
         public void RouteVendorsFitTheRoute()
         {
-            CollectionAssert.Contains(VendorBuilder.KindsFor(EnvironmentKind.Baguio), VendorKind.Taho);
+            CollectionAssert.Contains(VendorBuilder.KindsFor(EnvironmentKind.Baguio), VendorKind.Fruit);
+            // the magtataho is a daytime road event, never a sidewalk prop (props stay put at night)
+            foreach (EnvironmentKind env in System.Enum.GetValues(typeof(EnvironmentKind)))
+                CollectionAssert.DoesNotContain(VendorBuilder.KindsFor(env), VendorKind.Taho);
             CollectionAssert.Contains(VendorBuilder.KindsFor(EnvironmentKind.Beach), VendorKind.Fruit);
             CollectionAssert.Contains(VendorBuilder.KindsFor(EnvironmentKind.Manila), VendorKind.Fishball);
             Assert.IsTrue(VendorBuilder.KindsFor(EnvironmentKind.Mountain).All(k => k != VendorKind.Sorbetes));
