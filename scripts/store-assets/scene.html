@@ -232,22 +232,29 @@ function controls(alpha) {
     x.fillStyle = col; x.strokeStyle = '#1b1033'; x.lineWidth = 5 * U; x.beginPath(); x.roundRect(bx * U, by, w * U, h * U, 24 * U); x.fill(); x.stroke();
     x.fillStyle = '#1b1033'; x.font = `900 ${22 * U}px Nunito`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(label, (bx + w / 2) * U, by + h * U / 2);
   };
-  if (q.get('ctl') === 'buttons') { // Buttons steering: left thumb LEFT/RIGHT, right thumb GAS/BRAKE, TURBO/BUSINA/GEAR above
-    const w = 150, h = 93, gap = 8, x0 = 15, x1 = 540 - 15 - w, yB = H - (15 + h) * U, yT = yB - (h + gap) * U;
+  if (q.get('ctl') === 'buttons' || q.get('ctl') === 'wheel') { // Buttons / Wheel steering (Settings ▸ Controls)
+    const w = 150, h = 90, gap = 8, x0 = 15, x1 = 540 - 15 - w, yB = H - (15 + h) * U, yT = yB - (h + gap) * U;
     const arrow = (cx, cy, dir) => { x.strokeStyle = '#fff'; x.lineWidth = 7 * U; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(cx - 20 * U * dir, cy); x.lineTo(cx + 20 * U * dir, cy); x.moveTo(cx + 4 * U * dir, cy - 16 * U); x.lineTo(cx + 20 * U * dir, cy); x.lineTo(cx + 4 * U * dir, cy + 16 * U); x.stroke(); };
-    const sbtn = (bx, by, col, label, dir) => { btn(bx, by, w, h, col, ''); if (dir) { arrow((bx + w / 2) * U, by + 30 * U, dir); x.fillStyle = '#fff'; } else x.fillStyle = '#1b1033'; x.font = `900 ${21 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + w / 2) * U, by + (dir ? 68 : 50) * U); };
-    sbtn(x0, yT, '#4A5568', 'LEFT', -1); sbtn(x0, yB, '#4A5568', 'RIGHT', 1);
+    const sbtn = (bx, by, col, label, dir) => { btn(bx, by, w, h, col, ''); if (dir) { arrow((bx + w / 2) * U, by + 30 * U, dir); x.fillStyle = '#fff'; } else x.fillStyle = '#1b1033'; x.font = `900 ${21 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + w / 2) * U, by + (dir ? 66 : 50) * U); };
+    const small = (bx, by, col, label, round) => { x.fillStyle = col; x.strokeStyle = '#1b1033'; x.lineWidth = 4 * U; x.beginPath(); x.roundRect(bx * U, by, 70 * U, 70 * U, (round ? 35 : 20) * U); x.fill(); x.stroke(); x.fillStyle = '#1b1033'; x.font = `900 ${13 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + 35) * U, by + 52 * U); };
+    // right thumb: BUSINA above GAS above BRAKE
     sbtn(x1, yT, '#22D065', 'GAS'); sbtn(x1, yB, '#FF3B3B', 'BRAKE');
-    const yr = yT - (70 + gap) * U;
-    const small = (bx, col, label) => { x.fillStyle = col; x.strokeStyle = '#1b1033'; x.lineWidth = 4 * U; x.beginPath(); x.roundRect(bx * U, yr, 70 * U, 70 * U, (label === 'BUSINA' ? 35 : 20) * U); x.fill(); x.stroke(); x.fillStyle = '#1b1033'; x.font = `900 ${13 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + 35) * U, yr + 52 * U); };
-    small(x1 + 4, '#FF8A00', 'TURBO'); small(x1 + 80, '#FFD000', 'BUSINA');
-    x.fillStyle = '#fff'; x.font = `900 ${34 * U}px Nunito`; x.textAlign = 'left'; x.fillText('58', x0 * U, yT - 40 * U); x.font = `700 ${13 * U}px Nunito`; x.fillText('km/h', x0 * U, yT - 16 * U);
+    small(x1 + w - 70, yT - (70 + gap) * U, '#FFD000', 'BUSINA', true);
+    if (q.get('ctl') === 'wheel') {
+      const ws = 180, wy = H - (15 + ws) * U;
+      x.save(); x.globalAlpha = alpha * 0.9; x.translate((x0 + ws / 2) * U, wy + ws * U / 2); x.rotate(-0.45); x.drawImage(wheelImg, -ws * U / 2, -ws * U / 2, ws * U, ws * U); x.restore(); x.globalAlpha = alpha;
+      small(x0, wy - (70 + gap) * U, '#FF8A00', 'TURBO');
+    } else {
+      sbtn(x0, yT, '#4A5568', 'LEFT', -1); sbtn(x0, yB, '#4A5568', 'RIGHT', 1);
+      small(x0, yT - (70 + gap) * U, '#FF8A00', 'TURBO');
+    }
     x.globalAlpha = 1; return;
   }
   const by = H - 140 * U;
   btn(18, by, 140, 112, '#ff6b6b', 'BRAKE'); btn(270 - 64, by + 22 * U, 128, 80, '#FCD116', 'BUSINA'); btn(540 - 158, by, 140, 112, '#18C06A', 'GAS');
   x.globalAlpha = 1;
 }
+const wheelImg = new Image(); wheelImg.src = '/unity/JeepneyRush/Assets/JeepneyRush/Resources/Textures/ui_wheel.png'; await new Promise(r => { wheelImg.onload = r; wheelImg.onerror = r; });
 if (hud && !['icon', 'hero', 'garage'].includes(mode)) { hudTop(); controls(mode === 'driver' ? 0.75 : 0.95); }
 await Promise.all(pending);
 await new Promise(res => setTimeout(res, 400));

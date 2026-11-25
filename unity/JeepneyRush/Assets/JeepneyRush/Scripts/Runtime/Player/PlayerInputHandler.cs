@@ -35,16 +35,35 @@ namespace JeepneyRush
         public bool GasHeld => InputEnabled && (GasButton || InputCompat.KeyHeld(InputCompat.HoldKey.Gas));
         public bool BrakeHeld => InputEnabled && (BrakeButton || InputCompat.KeyHeld(InputCompat.HoldKey.Brake));
 
+        /// <summary>Set every frame by the on-screen steering wheel (Wheel mode), -1 .. 1.</summary>
+        public float WheelInput { get; set; }
+
         private readonly TiltSteer _tilt = new TiltSteer();
 
-        /// <summary>Run start: the way the phone is held now counts as "straight ahead".</summary>
-        public void Recalibrate() { if (InputCompat.HasTilt) _tilt.Calibrate(InputCompat.TiltX()); }
+        /// <summary>Tilt settings from the save: calibrated neutral position, dead zone, smoothing.</summary>
+        public void ApplyTiltSettings(SaveData d)
+        {
+            _tilt.DeadZone = d.tiltDeadZone;
+            _tilt.Smoothing = d.tiltSmoothing;
+            if (d.tiltCalibrated) _tilt.Calibrate(d.tiltCentre);
+            else Recalibrate(); // never calibrated: the way the phone is held at the start is "straight"
+        }
+
+        /// <summary>The way the phone is held now counts as "straight ahead". Returns the neutral value (g).</summary>
+        public float Recalibrate()
+        {
+            if (!InputCompat.HasTilt) return 0f;
+            float g = InputCompat.TiltX();
+            _tilt.Calibrate(g);
+            return g;
+        }
 
         private void Update()
         {
             if (!InputEnabled)
             {
                 GasButton = BrakeButton = SteerLeftButton = SteerRightButton = false;
+                WheelInput = 0;
                 Steer = 0;
                 return;
             }
@@ -57,6 +76,7 @@ namespace JeepneyRush
             float dt = Time.unscaledDeltaTime;
             float steer = 0f;
             if (Mode == SteerMode.Tilt && InputCompat.HasTilt) steer = _tilt.Input(InputCompat.TiltX(), Sensitivity, dt);
+            else if (Mode == SteerMode.Wheel) steer = WheelInput;
             else steer = TapSteer.Input(SteerLeftButton, SteerRightButton);
             // keyboard always works (PC, and phones with a keyboard)
             bool kl = InputCompat.KeyHeld(InputCompat.HoldKey.Left), kr = InputCompat.KeyHeld(InputCompat.HoldKey.Right);

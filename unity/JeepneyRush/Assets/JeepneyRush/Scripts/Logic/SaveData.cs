@@ -30,6 +30,27 @@ namespace JeepneyRush.Logic
         public int steerMode;
         /// <summary>Lane-keeping assist: with hands off, the jeepney settles into the nearest lane.</summary>
         public bool laneAssist = true;
+        // ---- steering & controls (Settings ▸ Controls)
+        /// <summary>Most steering the input can ask for (0.7 .. 1).</summary>
+        public float maxSteer = 1f;
+        /// <summary>How fast the wheel straightens when released (0.5 slow .. 2 fast).</summary>
+        public float steerReturn = 1f;
+        /// <summary>Tilt: calibrated "straight ahead" (gravity x in g) and whether it was set.</summary>
+        public float tiltCentre;
+        public bool tiltCalibrated;
+        /// <summary>Tilt dead zone (g) and sensor smoothing (filter speed 1/s).</summary>
+        public float tiltDeadZone = 0.035f;
+        public float tiltSmoothing = 14f;
+        /// <summary>Virtual wheel: 0 small, 1 medium, 2 large; opacity; largest rotation (degrees).</summary>
+        public int wheelSize = 1;
+        public float wheelOpacity = 0.9f;
+        public float wheelMaxAngle = 135f;
+        /// <summary>HUD buttons: size multiplier and opacity; mirrored layout for left-handed players.</summary>
+        public float buttonScale = 1f;
+        public float buttonOpacity = 1f;
+        public bool leftHanded;
+        /// <summary>The steering tutorial has been shown for these modes (bit per SteerMode).</summary>
+        public int steerTutorials;
         public int graphicsQuality = 3; // 0 low, 1 medium, 2 high, 3 auto (adapts to the device)
         public bool tutorialDone;
         /// <summary>Shows a camera button on the HUD for taking screenshots (F12 / F11 on PC always work).</summary>
@@ -113,6 +134,7 @@ namespace JeepneyRush.Logic
             return h.ToString("x8");
         }
 
+        private static float Fix(float v, float lo, float hi, float def) => float.IsNaN(v) || float.IsInfinity(v) || v <= 0 ? def : Math.Max(lo, Math.Min(hi, v));
         private static int NonNeg(int v, int max = 1_000_000_000) => v < 0 ? 0 : v > max ? max : v;
         private static float NonNeg(float v, float max = 1e9f) => float.IsNaN(v) || float.IsInfinity(v) || v < 0 ? 0 : v > max ? max : v;
 
@@ -135,7 +157,17 @@ namespace JeepneyRush.Logic
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;
             if (d.graphicsQuality < 0 || d.graphicsQuality > 3) d.graphicsQuality = 3;
-            if (d.steerMode < 0 || d.steerMode > 1) d.steerMode = 0;
+            if (d.steerMode < 0 || d.steerMode > 2) d.steerMode = 0;
+            d.maxSteer = Fix(d.maxSteer, 0.7f, 1f, 1f);
+            d.steerReturn = Fix(d.steerReturn, 0.5f, 2f, 1f);
+            d.tiltDeadZone = Fix(d.tiltDeadZone, 0.01f, 0.12f, 0.035f);
+            d.tiltSmoothing = Fix(d.tiltSmoothing, 4f, 30f, 14f);
+            if (float.IsNaN(d.tiltCentre) || Math.Abs(d.tiltCentre) > 1f) { d.tiltCentre = 0; d.tiltCalibrated = false; }
+            if (d.wheelSize < 0 || d.wheelSize > 2) d.wheelSize = 1;
+            d.wheelOpacity = Fix(d.wheelOpacity, 0.3f, 1f, 0.9f);
+            d.wheelMaxAngle = Fix(d.wheelMaxAngle, 60f, 180f, 135f);
+            d.buttonScale = Fix(d.buttonScale, 0.8f, 1.25f, 1f);
+            d.buttonOpacity = Fix(d.buttonOpacity, 0.3f, 1f, 1f);
             d.runs = NonNeg(d.runs);
             d.totalDistance = NonNeg(d.totalDistance);
             d.totalCoins = NonNeg(d.totalCoins);

@@ -30,7 +30,7 @@ namespace JeepneyRush.Tests
             Assert.Less(m.VelocityX, m.MaxLateralSpeed, "the wheel takes time to reach full lock (no instant snap)");
             for (int i = 0; i < 60; i++) { m.Tick(0f, dt); maxJump = Math.Max(maxJump, Math.Abs(m.VelocityX - prevV)); prevV = m.VelocityX; }
             Assert.AreEqual(0f, m.VelocityX, 1e-3, "hands off: the turn eases out and the jeepney goes straight");
-            Assert.Less(maxJump, m.MaxLateralSpeed * dt / SteeringModel.WheelTime + 1e-3f, "sideways speed never jumps");
+            Assert.Less(maxJump, m.MaxLateralSpeed * dt / Math.Min(Cfg.steering.wheelTime, Cfg.steering.returnTime) + 1e-3f, "sideways speed never jumps");
         }
 
         [Test]
@@ -118,6 +118,108 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(1f, TapSteer.Input(false, true));
             Assert.AreEqual(0f, TapSteer.Input(true, true));
             Assert.AreEqual(0f, TapSteer.Input(false, false));
+        }
+
+        [Test]
+        public void HoldingADirectionForLongNeverRunsOffTheRoad()
+        {
+            foreach (int dir in new[] { -1, 1 })
+                foreach (float hold in new[] { 0.3f, 1.5f, 10f })
+                {
+                    var m = new SteeringModel(Cfg);
+                    float maxSide = 0, maxV = 0;
+                    for (float t = 0; t < hold; t += 1f / 60f)
+                    {
+                        m.Tick(dir, 1f / 60f);
+                        maxSide = Math.Max(maxSide, Math.Abs(m.X));
+                        maxV = Math.Max(maxV, Math.Abs(m.VelocityX));
+                    }
+                    // the jeepney's body (half width) stays on the asphalt: never onto the curb / sidewalk
+                    Assert.LessOrEqual(maxSide + Cfg.playerHalfWidth, Logic.Geometry.SceneryBuilder.RoadHalfWidth - 0.2f, $"dir {dir} hold {hold}s");
+                    Assert.LessOrEqual(maxV, m.MaxLateralSpeed * (1 + Cfg.steering.lowSpeedBoost) + 1e-3f, "steady, bounded sideways speed (no ever-increasing turn)");
+                    if (hold >= 10f) Assert.AreEqual(0f, m.VelocityX, 0.05f, "held at the edge: the jeepney has stopped moving sideways");
+                    // let go: it drifts back onto the road and settles in the outer lane
+                    for (int i = 0; i < 300; i++) m.Tick(0f, 1f / 60f);
+                    if (hold >= 1.5f)
+                    {
+                        Assert.AreEqual(dir < 0 ? 0 : Cfg.laneCount - 1, m.Lane);
+                        Assert.AreEqual(Cfg.LaneX(m.Lane), m.X, 0.08f);
+                    }
+                }
+        }
+
+        [Test]
+        public void SteeringIsTighterAtLowSpeedButNeverSlowerThanPlanned()
+        {
+            float Lane(float speed01)
+            {
+                var m = new SteeringModel(Cfg) { Assist = false, Speed01 = speed01 };
+                float x0 = m.X, t = 0;
+                while (m.X - x0 < Cfg.laneSpacing && t < 5) { m.Tick(1f, 1f / 240f); t += 1f / 240f; }
+                return t;
+            }
+            float slow = Lane(0.1f), fast = Lane(1f);
+            Assert.Less(slow, fast, "crawling into a stop: tighter steering");
+            Assert.LessOrEqual(fast, Cfg.laneChangeDuration + 0.03f, "top speed: exactly the lane time the spawner plans with");
+        }
+
+        [Test]
+        public void CappedSteeringIsPlannedForBySpawner()
+        {
+            var capped = new SteeringPrefs { Sensitivity = 1f, MaxInput = 0.8f, ReturnSpeed = 1f };
+            float t = SteeringModel.OneLaneTime(Cfg, 1f, capped);
+            Assert.Greater(t, SteeringModel.OneLaneTime(Cfg));
+            Assert.GreaterOrEqual(SteeringModel.PlannedLaneTime(Cfg, capped), t);
+            Assert.AreEqual(Cfg.laneChangeDuration, SteeringModel.PlannedLaneTime(Cfg, SteeringPrefs.Default), 0.04f);
+        }
+
+        [Test]
+        public void ReturnSpeedSettingChangesHowFastTheWheelStraightens()
+        {
+            float Settle(float ret)
+            {
+                var m = new SteeringModel(Cfg) { Assist = false, Prefs = new SteeringPrefs { Sensitivity = 1, MaxInput = 1, ReturnSpeed = ret } };
+                for (int i = 0; i < 30; i++) m.Tick(1f, 1f / 60f);
+                float t = 0;
+                while (Math.Abs(m.Wheel) > 0.01f && t < 3) { m.Tick(0f, 1f / 60f); t += 1f / 60f; }
+                return t;
+            }
+            Assert.Less(Settle(2f), Settle(0.5f));
+        }
+
+        [Test]
+        public void VirtualWheelTurnsProportionallyAndSpringsBack()
+        {
+            var w = new VirtualWheel { MaxAngle = 135f, ReturnSpeed = 420f, Sensitivity = 1f };
+            const float r = 150f;
+            // grab the top of the rim and drag a quarter turn clockwise (screen y grows downward)
+            w.Press(0, -r, r);
+            for (int i = 1; i <= 30; i++) { double a = i / 30.0 * Math.PI / 2; w.Drag((float)(Math.Sin(a) * r), (float)(-Math.Cos(a) * r), r); }
+            Assert.AreEqual(90f, w.Angle, 1f);
+            Assert.AreEqual(90f / 135f, w.Input, 0.02f, "steering proportional to the rotation");
+            // keep turning: limited at MaxAngle, never unlimited
+            for (int i = 1; i <= 60; i++) { double a = Math.PI / 2 + i / 60.0 * Math.PI; w.Drag((float)(Math.Sin(a) * r), (float)(-Math.Cos(a) * r), r); }
+            Assert.AreEqual(135f, w.Angle, 0.01f);
+            Assert.AreEqual(1f, w.Input, 1e-4);
+            // counter-clockwise past centre steers left, without lifting the finger
+            for (int i = 1; i <= 90; i++) { double a = Math.PI * 1.5 - i / 90.0 * Math.PI * 1.25; w.Drag((float)(Math.Sin(a) * r), (float)(-Math.Cos(a) * r), r); }
+            Assert.Less(w.Input, 0f);
+            // held: it stays where it is; released: it eases back to centre
+            float held = w.Angle;
+            w.Tick(0.2f);
+            Assert.AreEqual(held, w.Angle);
+            w.Release();
+            w.Tick(0.1f);
+            Assert.AreEqual(held + 42f, w.Angle, 0.5f, "returns at ReturnSpeed, smoothly");
+            for (int i = 0; i < 60; i++) w.Tick(1f / 60f);
+            Assert.AreEqual(0f, w.Angle);
+            // higher sensitivity: full steering with less rotation
+            var s = new VirtualWheel { MaxAngle = 135f, Sensitivity = 1.5f };
+            s.Press(0, -r, r);
+            for (int i = 1; i <= 30; i++) { double a = i / 30.0 * Math.PI / 2; s.Drag((float)(Math.Sin(a) * r), (float)(-Math.Cos(a) * r), r); }
+            Assert.AreEqual(1f, s.Input, 1e-4);
+            Assert.AreEqual(-20f, VirtualWheel.DeltaAngle(10f, -10f), 1e-4);
+            Assert.AreEqual(20f, VirtualWheel.DeltaAngle(170f, -170f), 1e-4);
         }
     }
 }

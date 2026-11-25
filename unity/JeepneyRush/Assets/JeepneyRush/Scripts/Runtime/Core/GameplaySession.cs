@@ -72,6 +72,7 @@ namespace JeepneyRush
 
         private WeatherManager _weather;
         private int _lastTurn;
+        private BalanceConfig _plannedCfg;
         // EDSA rush hour + day/night
         private JamSchedule _jams;
         private float _jamCap = 1f, _jam, _stuckT, _complainT, _hour;
@@ -233,6 +234,43 @@ namespace JeepneyRush
         private void OnStateChanged(GameState from, GameState to)
         {
             _input.InputEnabled = to == GameState.Playing || to == GameState.Starting;
+            // pausing / dying with a finger on a pedal or the wheel must never leave it stuck
+            if (!_input.InputEnabled) Services.UI?.ReleaseAllHolds();
+        }
+
+        /// <summary>The steering mode the player chose, or buttons when the phone has no tilt sensor.</summary>
+        public static SteerMode EffectiveSteerMode(SaveData d) =>
+            (SteerMode)d.steerMode == SteerMode.Tilt && !InputCompat.HasTilt ? SteerMode.Tap : (SteerMode)d.steerMode;
+
+        /// <summary>
+        /// Applies Settings ▸ Controls (also mid-run, from the pause menu – no restart needed):
+        /// steering mode + HUD layout, sensitivity, max input, return speed, assists, tilt calibration.
+        /// The spawner plans with the lane-change time these settings really give.
+        /// </summary>
+        public void ApplyControlSettings()
+        {
+            var d = Services.Save.Data;
+            var mode = EffectiveSteerMode(d);
+            _input.Mode = mode;
+            _input.Sensitivity = d.swipeSensitivity;
+            _input.ApplyTiltSettings(d);
+            var prefs = new SteeringPrefs { Sensitivity = d.swipeSensitivity, MaxInput = d.maxSteer, ReturnSpeed = d.steerReturn };
+            _player.Lanes.Prefs = prefs;
+            _player.Lanes.Assist = d.laneAssist;
+            if (_plannedCfg != null) _plannedCfg.laneChangeDuration = SteeringModel.PlannedLaneTime(_cfg, prefs);
+            Services.UI.ApplyControlLayout(mode);
+        }
+
+        private void ShowSteeringTutorial(SaveData save)
+        {
+            var mode = EffectiveSteerMode(save);
+            int bit = 1 << (int)mode;
+            if (save.runs >= 3 && (save.steerTutorials & bit) != 0) return;
+            save.steerTutorials |= bit;
+            string text = mode == SteerMode.Tilt ? "I-TILT ANG PHONE PARA LUMIKO · I-CALIBRATE SA SETTINGS"
+                : mode == SteerMode.Wheel ? "IKUTIN ANG MANIBELA PARA LUMIKO · BITAWAN PARA DUMIRETSO"
+                : "HAWAKAN ANG LEFT / RIGHT PARA LUMIKO";
+            Services.UI.Float(text, UIManager.FloatKind.Info);
         }
 
         // ---------------------------------------------------------------- run lifecycle
@@ -275,7 +313,10 @@ namespace JeepneyRush
             RoadCurve.Distance = 0;
             _weather.ResetRun(seed, _env);
             _jams = new JamSchedule(seed, _env);
-            _director = new SpawnDirector(_cfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
+            // the spawner plans with the lane-change time the player's steering settings really give
+            _plannedCfg = _cfg.Clone();
+            _plannedCfg.laneChangeDuration = SteeringModel.PlannedLaneTime(_cfg, _player.Lanes.Prefs);
+            _director = new SpawnDirector(_plannedCfg, _rng, _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
             // events are placed ~10 s ahead: they must fit the time of day now AND when the jeepney gets there
             _director.IsNight = () => DayNight.IsNightFor(_runTime) || DayNight.IsNightFor(_runTime + EventLookaheadSeconds);
             // road gems: a few per run, capped per day (the server applies the same caps)
@@ -297,14 +338,10 @@ namespace JeepneyRush
             _nearMiss.Reset();
             Services.UI.SetArcade(0, 1, 0);
             _input.Sensitivity = save.swipeSensitivity;
-            _input.Mode = (SteerMode)save.steerMode;
-            Services.UI.ApplyControlLayout(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? SteerMode.Tilt : SteerMode.Tap);
             _player.ResetRun();
-            _player.Lanes.Assist = save.laneAssist;
-            _input.Recalibrate();
+            ApplyControlSettings();
             _lastTurn = 0;
-            if (save.runs < 3) // first runs: how to steer
-                Services.UI.Float(_input.Mode == SteerMode.Tilt && InputCompat.HasTilt ? "I-TILT ANG PHONE PARA LUMIKO" : "PINDUTIN ANG LEFT / RIGHT PARA LUMIKO", UIManager.FloatKind.Info);
+            ShowSteeringTutorial(save);
             _road.Layout();
             _speed = _runTime = _cleanDistance = _bestClean = 0;
             _smoothHumps = _hits = 0;
@@ -641,8 +678,9 @@ namespace JeepneyRush
             RoadCurve.Distance = _score.Distance;
             _player.SlopePitch = RoadCurve.PlayerPitch;
 
-            // ---- player: analog steering (tap zones / tilt / keys)
+            // ---- player: one steering system for buttons / tilt / wheel / keys
             _player.Lanes.Steer = _dying ? 0f : _input.Steer;
+            _player.Lanes.Speed01 = Mathf.Clamp01(Mathf.Abs(_speed) / Mathf.Max(1f, _cfg.maxSpeed * _cfg.gasMultiplier));
             int turn = _player.Lanes.TurnDirection;
             if (turn != 0 && turn != _lastTurn) GameEvents.RaiseLane(turn); // blinker click as the turn starts
             _lastTurn = turn;

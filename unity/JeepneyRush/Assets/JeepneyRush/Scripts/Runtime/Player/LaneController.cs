@@ -16,6 +16,13 @@ namespace JeepneyRush
         /// <summary>Steering input this frame (-1 full left .. +1 full right).</summary>
         public float Steer;
         public bool Assist { get => _model.Assist; set => _model.Assist = value; }
+        /// <summary>Forward speed 0 .. 1 of top speed (lower speeds steer a little tighter).</summary>
+        public float Speed01 { get => _model.Speed01; set => _model.Speed01 = value; }
+        public SteeringPrefs Prefs { get => _model.Prefs; set => _model.Prefs = value; }
+        /// <summary>Steering wheel position -1 .. 1 (cockpit wheel, HUD wheel).</summary>
+        public float Wheel => _model.Wheel;
+        /// <summary>Heading relative to the road (radians) at this forward speed.</summary>
+        public float Heading(float forwardSpeed) => _model.Heading(forwardSpeed);
         /// <summary>Lane-change time multiplier (wet / flooded road = slippery = slower steering).</summary>
         public float DurationScale { get => _model.DurationScale; set => _model.DurationScale = value; }
 

@@ -472,7 +472,25 @@ const textures = await page.evaluate(() => {
     icon('ui_pu_PassengerBonus', 128, 128, (x) => { disc(x, '#DDFBEA'); x.fillStyle = '#2A9D8F'; x.beginPath(); x.arc(56, 44, 16, 0, Math.PI * 2); x.fill(); x.beginPath(); x.roundRect(32, 64, 48, 40, 14); x.fill(); x.fillStyle = '#18C06A'; x.fillRect(86, 46, 12, 36); x.fillRect(74, 58, 36, 12); });
     icon('ui_pu_RepairKit', 128, 128, (x) => { disc(x, '#FFE0DE'); x.fillStyle = '#D62828'; x.strokeStyle = '#1b1033'; x.lineWidth = 6; x.beginPath(); x.roundRect(26, 38, 76, 56, 10); x.fill(); x.stroke(); x.fillStyle = '#fff'; x.fillRect(56, 46, 16, 40); x.fillRect(44, 58, 40, 16); });
     icon('ui_gas', 128, 128, (x) => { x.fillStyle = '#1b1033'; x.beginPath(); x.moveTo(64, 14); x.lineTo(104, 64); x.lineTo(80, 64); x.lineTo(80, 112); x.lineTo(48, 112); x.lineTo(48, 64); x.lineTo(24, 64); x.closePath(); x.fill(); });
-    // steering buttons: bold white arrows (the button itself is slate grey)
+    // on-screen steering wheel: chunky jeepney wheel – wrapped rim, three chrome spokes, a sun-and-stars
+    // horn pad, and a yellow marker at the top so the rotation is always readable
+    icon('ui_wheel', 512, 512, (x, w, h) => {
+      const c = 256, R = 236;
+      x.save(); x.translate(c, c);
+      x.fillStyle = 'rgba(0,0,0,0.28)'; x.beginPath(); x.arc(6, 10, R, 0, Math.PI * 2); x.arc(6, 10, R - 52, 0, Math.PI * 2, true); x.fill(); // shadow under the rim only
+      const rim = x.createRadialGradient(0, 0, R - 50, 0, 0, R); rim.addColorStop(0, '#2b2d42'); rim.addColorStop(0.5, '#3d405b'); rim.addColorStop(1, '#1b1033');
+      x.fillStyle = rim; x.beginPath(); x.arc(0, 0, R, 0, Math.PI * 2); x.arc(0, 0, R - 52, 0, Math.PI * 2, true); x.fill();
+      x.strokeStyle = 'rgba(255,255,255,0.18)'; x.lineWidth = 6; for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) { x.beginPath(); x.arc(0, 0, R - 26, a, a + 0.08); x.stroke(); } // wrap stitching
+      x.strokeStyle = '#c9ced6'; x.lineWidth = 8; x.beginPath(); x.arc(0, 0, R - 54, 0, Math.PI * 2); x.stroke(); // chrome inner ring
+      x.fillStyle = '#fcd116'; x.strokeStyle = '#1b1033'; x.lineWidth = 6; x.beginPath(); x.roundRect(-16, -R - 2, 32, 56, 10); x.fill(); x.stroke(); // top marker
+      for (const a of [Math.PI / 2, Math.PI / 2 + 2.2, Math.PI / 2 - 2.2]) { x.save(); x.rotate(a); const g = x.createLinearGradient(0, -22, 0, 22); g.addColorStop(0, '#e9ecef'); g.addColorStop(0.5, '#9aa0a6'); g.addColorStop(1, '#e9ecef'); x.fillStyle = g; x.strokeStyle = '#1b1033'; x.lineWidth = 5; x.beginPath(); x.roundRect(50, -22, R - 110, 44, 14); x.fill(); x.stroke(); x.restore(); }
+      x.fillStyle = '#1b1033'; x.beginPath(); x.arc(0, 0, 92, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#ce1126'; x.beginPath(); x.arc(0, 0, 80, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#0038a8'; x.beginPath(); x.arc(0, 0, 80, Math.PI, Math.PI * 2); x.fill();
+      x.fillStyle = '#fcd116'; x.beginPath(); for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? 30 : 52; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.closePath(); x.fill();
+      x.restore();
+    });
+        // steering buttons: bold white arrows (the button itself is slate grey)
     for (const [name, dir] of [['ui_steer_left', -1], ['ui_steer_right', 1]]) icon(name, 128, 128, (x) => { x.save(); x.translate(64, 64); x.scale(dir, 1); x.strokeStyle = '#ffffff'; x.lineWidth = 15; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(-40, 0); x.lineTo(40, 0); x.moveTo(8, -32); x.lineTo(40, 0); x.lineTo(8, 32); x.stroke(); x.restore(); });
     icon('ui_brake', 128, 128, (x) => { x.fillStyle = '#1b1033'; x.beginPath(); for (let i = 0; i < 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; x.lineTo(64 + Math.cos(a) * 54, 64 + Math.sin(a) * 54); } x.fill(); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `34px ${D}`; x.fillText('STOP', 64, 68); });
     icon('ui_lock', 128, 128, (x) => { x.strokeStyle = '#1b1033'; x.lineWidth = 14; x.beginPath(); x.arc(64, 52, 24, Math.PI, 0); x.stroke(); x.fillStyle = '#1b1033'; x.beginPath(); x.roundRect(28, 52, 72, 56, 10); x.fill(); x.fillStyle = '#FCD116'; x.beginPath(); x.arc(64, 78, 9, 0, Math.PI * 2); x.fill(); });

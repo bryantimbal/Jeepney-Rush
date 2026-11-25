@@ -237,7 +237,7 @@ namespace JeepneyRush
             UpdateRainAndWipers(dt);
             // steering wheel follows the lane change. Seen from the driver's seat (looking +Z), a positive
             // Z rotation turns counter-clockwise, so steering right (+X) needs a negative angle.
-            float steer = Mathf.Clamp(-Lanes.VelocityX * 12f, -110f, 110f);
+            float steer = -Lanes.Wheel * 110f; // the cockpit wheel shows the real steering input
             _wheelT.localRotation = Quaternion.Euler(0, 0, steer);
             // old gauges lag and shake a little
             _gaugeShown = Mathf.Lerp(_gaugeShown, _gaugeKmh, 1f - Mathf.Exp(-dt * 4f));
@@ -450,6 +450,8 @@ namespace JeepneyRush
             _crashSlow = _cfg.crashSlowdown;
         }
 
+        private float _yaw;
+
         public void Tick(float dt, float speed)
         {
             _time += dt;
@@ -481,7 +483,10 @@ namespace JeepneyRush
             UpdateHeadlights();
             UpdateCockpit(dt);
             // the nose points into the turn (steering), the body leans gently outward
-            Body.localRotation = Quaternion.Euler(_pitch, Lanes.VelocityX * 0.7f + fishtail, _lean);
+            // heading = the real direction of travel (sideways speed vs forward speed), smoothed
+            float targetYaw = Mathf.Clamp(Lanes.Heading(speed) * Mathf.Rad2Deg, -14f, 14f);
+            _yaw = Mathf.Lerp(_yaw, targetYaw, 1f - Mathf.Exp(-dt * 10f));
+            Body.localRotation = Quaternion.Euler(_pitch, _yaw + fishtail, _lean);
             UpdateSignals(dt);
             _wheelSpin += speed * dt / JeepneyBuilder.WheelRadius * Mathf.Rad2Deg;
             foreach (var w in _wheels) w.localRotation = Quaternion.Euler(_wheelSpin, 0, 0);

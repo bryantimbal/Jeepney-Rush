@@ -116,6 +116,10 @@ namespace JeepneyRush
                 swipeSensitivity = keep.swipeSensitivity, graphicsQuality = keep.graphicsQuality, tutorialDone = keep.tutorialDone,
                 screenshotButton = keep.screenshotButton, storeFrame = keep.storeFrame,
                 steerMode = keep.steerMode, laneAssist = keep.laneAssist, cameraEffects = keep.cameraEffects, driverView = keep.driverView,
+                maxSteer = keep.maxSteer, steerReturn = keep.steerReturn, tiltCentre = keep.tiltCentre, tiltCalibrated = keep.tiltCalibrated,
+                tiltDeadZone = keep.tiltDeadZone, tiltSmoothing = keep.tiltSmoothing, wheelSize = keep.wheelSize, wheelOpacity = keep.wheelOpacity,
+                wheelMaxAngle = keep.wheelMaxAngle, buttonScale = keep.buttonScale, buttonOpacity = keep.buttonOpacity, leftHanded = keep.leftHanded,
+                steerTutorials = keep.steerTutorials, soundTrip = keep.soundTrip,
             };
             Save();
         }

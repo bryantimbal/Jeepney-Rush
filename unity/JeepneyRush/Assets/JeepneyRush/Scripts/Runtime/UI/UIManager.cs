@@ -57,7 +57,7 @@ namespace JeepneyRush
 
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
-            foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings,
+            foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
                          BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
@@ -108,7 +108,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -132,8 +132,12 @@ namespace JeepneyRush
             _splash.style.backgroundImage = UiKit.Tex("ui_splash_bg");
             _splash.style.alignItems = Align.Center;
             _splash.style.justifyContent = Justify.Center;
-            var logo = UiKit.Icon("logo", 900);
-            logo.style.height = 460;
+            // smaller, centred logo; height from the texture's own aspect ratio so it never stretches
+            const float jrLogoW = 680f;
+            var logo = UiKit.Icon("logo", jrLogoW);
+            var jrTex = UiKit.Tex("logo");
+            logo.style.height = jrTex != null && jrTex.width > 0 ? jrLogoW * jrTex.height / jrTex.width : jrLogoW * 520f / 1024f;
+            logo.style.marginBottom = 24;
             _splash.Add(logo);
             var tag = UiKit.Text("The Ultimate Pinoy Driving Challenge!", 40, UiKit.Ink, false);
             tag.style.backgroundColor = UiKit.Yellow;
@@ -186,7 +190,7 @@ namespace JeepneyRush
             _dev.style.justifyContent = Justify.Center;
             // size from the texture's own aspect ratio, so the logo can never be stretched
             var logoTex = UiKit.Tex("ninjatech_logo");
-            const float logoW = 720f;
+            const float logoW = 560f; // a little smaller and better balanced on every screen
             _devLogo = UiKit.Icon("ninjatech_logo", logoW);
             _devLogo.style.height = logoTex != null && logoTex.width > 0 ? logoW * logoTex.height / logoTex.width : logoW * 1024f / 902f;
             _dev.Add(_devLogo);
@@ -581,18 +585,7 @@ namespace JeepneyRush
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => d().vibration = v));
-            card.Add(Segmented("Steering", new[] { "Buttons", "Tilt phone" }, () => d().steerMode, i =>
-            {
-                d().steerMode = i;
-                if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING BUTTONS", FloatKind.Info);
-                ApplyControlLayout(i == 1 && InputCompat.HasTilt ? Logic.SteerMode.Tilt : Logic.SteerMode.Tap);
-                var session = Services.Game.Session;
-                if (session != null) session.Input.Mode = (Logic.SteerMode)i;
-            }));
-            card.Add(Toggle("Lane assist", () => d().laneAssist, v => d().laneAssist = v));
-            card.Add(Segmented("Steering sensitivity", new[] { "Low", "Normal", "High" },
-                () => d().swipeSensitivity < 0.85f ? 0 : d().swipeSensitivity > 1.15f ? 2 : 1,
-                i => d().swipeSensitivity = i == 0 ? 0.7f : i == 1 ? 1f : 1.3f));
+            card.Add(UiKit.Button("CONTROLS & STEERING", OpenControls, UiKit.Yellow, UiKit.Ink, 40, 110));
             card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High", "Auto" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
             var rel = ReleaseConfig.Active;
             if (!string.IsNullOrWhiteSpace(rel.privacyPolicyUrl))
@@ -677,6 +670,7 @@ namespace JeepneyRush
             b.RegisterCallback<PointerCancelEvent>(e => { if (e.pointerId == pointer) Up(); });
             b.RegisterCallback<PointerCaptureOutEvent>(_ => { if (pointer >= 0) Up(); });
             b.RegisterCallback<DetachFromPanelEvent>(_ => { if (pointer >= 0) Up(); });
+            _holdReleases.Add(() => { if (pointer >= 0) { if (b.HasPointerCapture(pointer)) b.ReleasePointer(pointer); Up(); } });
             return b;
         }
 
@@ -837,6 +831,7 @@ namespace JeepneyRush
             bottom.style.justifyContent = Justify.SpaceBetween;
             bottom.style.alignItems = Align.FlexEnd;
             UiKit.Pad(bottom.style, 26, 30);
+            _ctlBottom = bottom;
             _ctlLeft = UiKit.Box("ctlLeft");
             _ctlLeft.style.alignItems = Align.FlexStart;
             _speedBox = UiKit.Box("speedBox");
@@ -849,8 +844,10 @@ namespace JeepneyRush
             _debug = UiKit.Text("", 22, UiKit.Hex("#7CFC7C"), false, 1f);
             _debug.style.unityTextAlign = TextAnchor.MiddleLeft;
             Show(_debug, false);
-            _speedBox.Add(_debug);
+            (_speedCol ?? _speedBox).Add(_debug); // FPS readout under the speed (top right)
             bottom.Add(_ctlLeft);
+            _wheelEl = BuildWheel();
+            _pedalButtons.Add(_wheelEl);
             // TURBO: fires a stored booster (shown once one has been collected)
             _boostBtn = HoldButton("TURBO", "ui_pu_Turbo", UiKit.Hex("#FF8A00"), v => { if (v) Services.Game.Session?.UseBoost(); });
             _boostBtn.name = "turbo";
@@ -897,7 +894,7 @@ namespace JeepneyRush
             _ctlTopRow.style.alignItems = Align.FlexEnd;
             _ctlTopRow.style.justifyContent = Justify.FlexEnd;
             bottom.Add(_ctlRight);
-            ApplyControlLayout(Services.Save != null && Services.Save.Data.steerMode == 1 && InputCompat.HasTilt ? Logic.SteerMode.Tilt : Logic.SteerMode.Tap);
+            ApplyControlLayout(Services.Save != null ? GameplaySession.EffectiveSteerMode(Services.Save.Data) : Logic.SteerMode.Tap);
             _hud.Add(bottom);
             BuildArcade(_hud);
 
@@ -951,7 +948,8 @@ namespace JeepneyRush
             if (dist != _lastDist) { _lastDist = dist; _distance.text = $"{dist:N0} m"; }
             if (score.Coins != _lastCoins) { _lastCoins = score.Coins; _coins.text = score.Coins.ToString("N0"); }
             int kmh = Mathf.RoundToInt(Mathf.Abs(s.Speed) * 3.6f);
-            if (kmh != _lastSpeed) { _lastSpeed = kmh; _speed.text = kmh.ToString(); }
+            if (kmh != _lastSpeed) { _lastSpeed = kmh; _speed.text = kmh.ToString(); if (_speedPillText != null) _speedPillText.text = kmh.ToString(); }
+            UpdateGearVisibility(kmh, s.ReverseGear);
             var c = s.Player.Collisions;
             if (c.Health != _lastHealth)
             {
@@ -1055,6 +1053,7 @@ namespace JeepneyRush
             card.Add(UiKit.Button("RESUME", () => Services.Game.Resume(), UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("RESTART", () => Services.Game.Restart(), Color.white, UiKit.Ink, 48, 128));
             card.Add(UiKit.Button("MAIN MENU", () => Services.Game.GoToMainMenu(), Color.white, UiKit.Ink, 48, 128));
+            card.Add(UiKit.Button("CONTROLS", OpenControls, UiKit.Hex("#D8D3FF"), UiKit.Ink, 40, 110));
             // the scene is frozen while paused: perfect moment for a clean store screenshot
             _pausePhoto = UiKit.Button("PHOTO WITHOUT HUD", () => Screenshots.Instance?.Take(true), UiKit.Hex("#D8D3FF"), UiKit.Ink, 40, 110);
             card.Add(_pausePhoto);

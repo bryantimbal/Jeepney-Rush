@@ -378,8 +378,33 @@ namespace JeepneyRush
 
         private const float SpeedoSize = 175f;
 
+        private VisualElement _speedCol, _speedPill;
+        private Label _speedPillText, _speedoKmh;
+
+        /// <summary>
+        /// Speed readout under the hearts and fuel gauge (top right). LIKOD view: a compact digital
+        /// "63 km/h". DRIVER view: the analog dashboard gauge (needle + km/h in the middle). Both read
+        /// the same speed value; switching views swaps them instantly.
+        /// </summary>
         private VisualElement BuildSpeedometer()
         {
+            _speedCol = UiKit.Box("speedCol");
+            _speedCol.style.alignItems = Align.FlexEnd;
+            _speedPill = UiKit.Box("speedPill");
+            _speedPill.style.flexDirection = FlexDirection.Row;
+            _speedPill.style.alignItems = Align.FlexEnd;
+            _speedPill.style.marginTop = 10;
+            _speedPill.style.backgroundColor = new Color(UiKit.Ink.r, UiKit.Ink.g, UiKit.Ink.b, 0.78f);
+            UiKit.Border(_speedPill.style, 4, new Color(1, 1, 1, 0.25f), 26);
+            UiKit.Pad(_speedPill.style, 6, 18);
+            _speedPillText = UiKit.Text("0", 52, Color.white, true, 2f);
+            _speedPill.Add(_speedPillText);
+            var unit = UiKit.Text("km/h", 24, new Color(1, 1, 1, 0.8f), false);
+            unit.style.marginLeft = 8;
+            unit.style.marginBottom = 8;
+            _speedPill.Add(unit);
+            _speedCol.Add(_speedPill);
+            if (_debug != null) { _debug.style.unityTextAlign = TextAnchor.MiddleRight; _speedCol.Add(_debug); }
             _speedo = UiKit.Box("speedo");
             _speedo.style.width = _speedo.style.height = SpeedoSize;
             _speedo.style.marginTop = 10;
@@ -399,6 +424,15 @@ namespace JeepneyRush
             _needle.style.width = _needle.style.height = SpeedoSize;
             _needle.style.backgroundImage = UiKit.Tex("gauge_needle");
             _speedo.Add(_needle);
+            // digital km/h in the middle of the dial
+            _speedoKmh = UiKit.Text("0", SpeedoSize * 0.17f, Color.white, true, 1.5f);
+            _speedoKmh.style.position = Position.Absolute;
+            _speedoKmh.style.left = 0;
+            _speedoKmh.style.right = 0;
+            _speedoKmh.style.top = SpeedoSize * 0.46f;
+            _speedoKmh.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _speedoKmh.pickingMode = PickingMode.Ignore;
+            _speedo.Add(_speedoKmh);
             // the needle lags and shakes a little, like an old cable-driven gauge
             _speedo.schedule.Execute(() =>
             {
@@ -409,99 +443,32 @@ namespace JeepneyRush
                 float wobble = _speedShown > 2f ? Mathf.Sin(t * 23f) * 0.9f + Mathf.Sin(t * 7.3f) * 0.6f : 0f;
                 _needle.style.rotate = new Rotate(Logic.Speedometer.NeedleAngle(_speedShown + wobble));
             }).Every(16);
-            return _speedo;
+            _speedCol.Add(_speedo);
+            SetViewMode(false);
+            return _speedCol;
         }
 
         /// <summary>Speed (km/h) and the lifetime odometer (metres) for the analog speedometer.</summary>
         public void SetSpeedo(float kmh, double odometerMetres)
         {
             _speedTarget = kmh;
+            if (_speedoKmh != null) _speedoKmh.text = Mathf.RoundToInt(kmh).ToString();
             if (_odo != null) _odo.text = Logic.Speedometer.Odometer(odometerMetres);
         }
 
         /// <summary>Driver view hides the HUD speedometer (the one on the dashboard takes over).</summary>
         public void SetViewMode(bool driver)
         {
-            if (_speedo != null) _speedo.style.display = driver ? DisplayStyle.None : DisplayStyle.Flex;
+            // DRIVER view = analog gauge only; LIKOD view = compact digital readout only
+            if (_speedo != null) _speedo.style.display = driver ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_speedPill != null) _speedPill.style.display = driver ? DisplayStyle.None : DisplayStyle.Flex;
+            _driverView = driver;
             if (_viewBtn != null) _viewBtn.text = driver ? "VIEW: DRIVER" : "VIEW: LIKOD";
             // keep the road visible: pedals slightly see-through from the driver's seat
-            foreach (var b in _pedalButtons) if (b != null) b.style.opacity = driver ? 0.72f : 1f;
+            ApplyControlOpacity();
         }
 
         private readonly System.Collections.Generic.List<VisualElement> _pedalButtons = new System.Collections.Generic.List<VisualElement>();
-
-        private VisualElement _ctlLeft, _ctlRight, _ctlTopRow, _hornCentre, _speedBox;
-        private VisualElement _brakeBtn, _gasBtn, _hornBtn, _steerLeftBtn, _steerRightBtn;
-        public Logic.SteerMode ControlLayout { get; private set; } = (Logic.SteerMode)(-1);
-
-        private static void Shape(VisualElement b, float w, float h, float radius, float lip)
-        {
-            b.style.width = w;
-            b.style.height = h;
-            // icon and label scale with the button so short buttons (TURBO, BUSINA) never overflow
-            float s = Mathf.Min(w, h);
-            var icon = b.Q<Image>();
-            if (icon != null) icon.style.width = icon.style.height = Mathf.Clamp(s * 0.42f, 48f, 96f);
-            var label = b.Q<Label>();
-            if (label != null && label.name != "count") label.style.fontSize = Mathf.Clamp(s * 0.19f, 24f, 40f);
-            UiKit.Border(b.style, 7, UiKit.Ink, radius);
-            b.style.borderBottomWidth = lip;
-            b.style.marginTop = b.style.marginBottom = b.style.marginLeft = b.style.marginRight = 0;
-        }
-
-        /// <summary>
-        /// Thumb controls for the steering mode.
-        /// BUTTONS: left thumb steers (LEFT above RIGHT), right thumb drives (GAS above BRAKE),
-        /// TURBO · BUSINA · GEAR in a row above the right-hand pedals.
-        /// TILT: BRAKE (left) · BUSINA (centre) · GAS (right, gear above it).
-        /// </summary>
-        public void ApplyControlLayout(Logic.SteerMode mode)
-        {
-            if (_ctlLeft == null || mode == ControlLayout) return;
-            ControlLayout = mode;
-            _ctlLeft.Clear(); _ctlRight.Clear(); _ctlTopRow.Clear(); _hornCentre.Clear();
-            _ctlLeft.Add(_speedBox);
-            _gearBtn.style.alignSelf = Align.FlexEnd;
-            if (mode == Logic.SteerMode.Tap)
-            {
-                const float w = 300, h = 186, gap = 16;
-                _steerLeftBtn.style.backgroundColor = UiKit.Hex("#4A5568");
-                foreach (var b in new[] { _steerLeftBtn, _steerRightBtn, _gasBtn, _brakeBtn }) Shape(b, w, h, 44, 16);
-                _steerLeftBtn.style.marginTop = 10;
-                _steerRightBtn.style.marginTop = gap;
-                _brakeBtn.style.marginTop = gap;
-                _ctlLeft.Add(_steerLeftBtn);
-                _ctlLeft.Add(_steerRightBtn);
-                Shape(_boostBtn, 140, 140, 40, 14);
-                Shape(_hornBtn, 140, 140, 70, 14);
-                _boostBtn.style.marginRight = 12;
-                _hornBtn.style.marginRight = 12;
-                _gearBtn.style.marginTop = 0;
-                _ctlTopRow.style.marginBottom = gap;
-                _ctlTopRow.Add(_boostBtn);
-                _ctlTopRow.Add(_hornBtn);
-                _ctlTopRow.Add(_gearBtn);
-                _ctlRight.Add(_ctlTopRow);
-                _ctlRight.Add(_gasBtn);
-                _ctlRight.Add(_brakeBtn);
-            }
-            else
-            {
-                Shape(_boostBtn, 170, 170, 50, 16);
-                _boostBtn.style.marginTop = 12;
-                Shape(_brakeBtn, 245, 245, 245 * 0.24f, 20);
-                _brakeBtn.style.marginTop = 16;
-                _ctlLeft.Add(_boostBtn);
-                _ctlLeft.Add(_brakeBtn);
-                Shape(_hornBtn, 200, 200, 100, 20);
-                _hornCentre.Add(_hornBtn);
-                Shape(_gasBtn, 245, 245, 245 * 0.24f, 20);
-                _gearBtn.style.marginTop = 14;
-                _gearBtn.style.marginBottom = 16;
-                _ctlRight.Add(_gearBtn);
-                _ctlRight.Add(_gasBtn);
-            }
-        }
 
         /// <summary>In-game clock under the weather ("🌙 9:15 PM" style, text only).</summary>
         public void SetClock(string text, bool night)

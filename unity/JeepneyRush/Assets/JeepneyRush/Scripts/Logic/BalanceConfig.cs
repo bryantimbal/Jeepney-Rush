@@ -13,6 +13,8 @@ namespace JeepneyRush.Logic
         public int laneCount = 3;
         public float laneSpacing = 3.2f;
         public float laneChangeDuration = 0.6f; // one lane at full steering lock (analog steering builds up and eases off)
+        /// <summary>Steering feel: wheel build-up/return, low-speed boost, road-edge and lane assists.</summary>
+        public SteeringTuning steering = new SteeringTuning();
         public int startHealth = 3;
         public float invulnerabilityTime = 1.5f;
         /// <summary>Collision half extents of the jeepney (slightly smaller than the mesh = forgiving).</summary>
