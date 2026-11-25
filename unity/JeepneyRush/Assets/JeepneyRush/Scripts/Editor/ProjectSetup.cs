@@ -62,7 +62,8 @@ namespace JeepneyRush.EditorTools
             PlayerSettings.companyName = "Jeepney Rush";
             PlayerSettings.productName = "Jeepney Rush";
             if (string.IsNullOrEmpty(PlayerSettings.bundleVersion) || PlayerSettings.bundleVersion == "0.1") PlayerSettings.bundleVersion = "0.1.0";
-            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            // the game itself picks portrait / landscape / auto from Settings ▸ Screen at startup
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = true;
             // startup: Unity's "Made with Unity" splash (the engine always shows it before any game code
             // runs), then the game's own Ninja Tech developer screen – same navy, so it flows as one intro
@@ -77,8 +78,8 @@ namespace JeepneyRush.EditorTools
             }
             catch (Exception e) { Debug.Log("[Jeepney Rush] Unity splash settings left as they are: " + e.Message); }
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
-            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
-            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
             PlayerSettings.Android.minSdkVersion = (AndroidSdkVersions)26; // Android 8.0: the minimum Unity 6 supports
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
 #if UNITY_2021_2_OR_NEWER

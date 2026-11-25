@@ -19,6 +19,17 @@ namespace JeepneyRush.Tests
             Assert.IsTrue(StoreFrame.PlayAccepts(r.W, r.H));
         }
 
+        [TestCase(2400, 1080)] [TestCase(2340, 1080)] [TestCase(1920, 1200)] [TestCase(2048, 1536)]
+        public void LandscapeFrameIsSixteenByNine(int w, int h)
+        {
+            var r = StoreFrame.Compute(w, h);
+            Assert.That(Math.Abs(r.W * 9.0 / r.H - 16.0), Is.LessThan(0.03), r.ToString());
+            Assert.IsTrue(r.W == w || r.H == h, "fills one side");
+            Assert.LessOrEqual(Math.Abs((w - r.W) - 2 * r.X), 1);
+            Assert.LessOrEqual(Math.Abs((h - r.H) - 2 * r.Y), 1);
+            Assert.IsTrue(StoreFrame.PlayAccepts(r.W, r.H));
+        }
+
         [Test]
         public void TallPhonesNeedTheFrame()
         {

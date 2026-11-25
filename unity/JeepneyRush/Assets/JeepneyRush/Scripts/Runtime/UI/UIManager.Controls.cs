@@ -230,8 +230,8 @@ namespace JeepneyRush
             c.Add(SmallButton("CALIBRATE TILT", () =>
             {
                 float g = InputCompat.HasTilt ? (Services.Game?.Session?.Input != null ? Services.Game.Session.Input.Recalibrate() : InputCompat.TiltX()) : 0f;
-                d().tiltCentre = g;
-                d().tiltCalibrated = InputCompat.HasTilt;
+                if (ScreenOrientationControl.IsLandscape) { d().tiltCentreLand = g; d().tiltCalibratedLand = InputCompat.HasTilt; }
+                else { d().tiltCentre = g; d().tiltCalibrated = InputCompat.HasTilt; }
                 Apply();
                 RefreshCalibLabel();
                 Toast(InputCompat.HasTilt ? "NA-CALIBRATE NA! ✓ Ito na ang 'diretso'." : "No tilt sensor on this device.");
@@ -269,8 +269,11 @@ namespace JeepneyRush
         {
             if (_calibLabel == null || Services.Save == null) return;
             var d = Services.Save.Data;
-            _calibLabel.text = !InputCompat.HasTilt ? "This device has no tilt sensor." : d.tiltCalibrated ? "✓ Calibrated" : "Not calibrated yet (uses how you hold the phone at the start).";
-            _calibLabel.style.color = d.tiltCalibrated ? UiKit.Hex("#2E9E5B") : UiKit.Grey;
+            bool land = ScreenOrientationControl.IsLandscape;
+            bool cal = land ? d.tiltCalibratedLand : d.tiltCalibrated;
+            string which = land ? "landscape" : "portrait";
+            _calibLabel.text = !InputCompat.HasTilt ? "This device has no tilt sensor." : cal ? $"✓ Calibrated ({which})" : $"Not calibrated for {which} yet (uses how you hold the phone at the start).";
+            _calibLabel.style.color = cal ? UiKit.Hex("#2E9E5B") : UiKit.Grey;
         }
 
         /// <summary>Opens Settings ▸ Controls (from the settings or the pause menu – applies immediately).</summary>

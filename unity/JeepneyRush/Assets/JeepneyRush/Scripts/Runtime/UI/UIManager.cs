@@ -35,7 +35,7 @@ namespace JeepneyRush
             var host = new GameObject("UI");
             host.transform.SetParent(transform, false);
             host.SetActive(false);
-            var ps = ScriptableObject.CreateInstance<PanelSettings>();
+            var ps = _panel = ScriptableObject.CreateInstance<PanelSettings>();
             ps.name = "JR_PanelSettings";
             ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             ps.referenceResolution = new Vector2Int(1080, 1920);
@@ -79,6 +79,30 @@ namespace JeepneyRush
             HideAll();
             GameEvents.StateChanged += OnState;
         }
+
+        private PanelSettings _panel;
+        private int _panelW, _panelH;
+        private bool _panelDriving;
+
+        /// <summary>
+        /// Portrait: the 1080×1920 layouts scale with the screen width (as always). Landscape: the
+        /// whole UI scales uniformly to the screen HEIGHT (no stretching; the extra width stays
+        /// free), a bit larger while driving so the pedals stay thumb-sized.
+        /// </summary>
+        private void UpdatePanelScale()
+        {
+            if (_panel == null) return;
+            var st = Services.Game != null ? Services.Game.State : GameState.MainMenu;
+            bool driving = st == GameState.Playing || st == GameState.Starting;
+            if (Screen.width == _panelW && Screen.height == _panelH && driving == _panelDriving) return;
+            _panelW = Screen.width; _panelH = Screen.height; _panelDriving = driving;
+            var (rw, rh, match) = Logic.ScreenLayout.Panel(Screen.width, Screen.height, driving);
+            _panel.referenceResolution = new Vector2Int(rw, rh);
+            _panel.match = match;
+            ApplySafeArea();
+        }
+
+        private void LateUpdate() => UpdatePanelScale();
 
         private void ApplySafeArea()
         {
@@ -597,6 +621,11 @@ namespace JeepneyRush
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => { d().vibration = v; if (v) Haptics.Pulse(80); })); // a test buzz when switched on
+            card.Add(Segmented("Screen", new[] { "Portrait", "Landscape", "Auto-rotate" }, () => d().orientation, i =>
+            {
+                d().orientation = i;
+                ScreenOrientationControl.Apply((Logic.OrientationMode)i);
+            }));
             card.Add(UiKit.Button("CONTROLS & STEERING", OpenControls, UiKit.Yellow, UiKit.Ink, 40, 110));
             card.Add(Segmented("Graphics", new[] { "Low", "Medium", "High", "Auto" }, () => d().graphicsQuality, i => { d().graphicsQuality = i; GraphicsQuality.Apply(i); }));
             var rel = ReleaseConfig.Active;

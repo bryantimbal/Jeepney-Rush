@@ -161,7 +161,8 @@ namespace JeepneyRush
                 _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + GarageCam, 1f - Mathf.Exp(-dt * 4f));
                 // aim below the jeepney so it sits in the upper part of the screen, above the garage card
                 _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + GarageLook - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
-                _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, 62f, 1f - Mathf.Exp(-dt * 4f));
+                float garageFov = _cam.aspect > 1f ? 40f : 62f; // landscape: same framing without a fish-eye
+                _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, garageFov, 1f - Mathf.Exp(-dt * 4f));
             }
             else _camera.Orbit(_jeepRoot.position, _t);
         }

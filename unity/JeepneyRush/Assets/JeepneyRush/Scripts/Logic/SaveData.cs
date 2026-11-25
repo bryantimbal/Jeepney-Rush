@@ -49,6 +49,11 @@ namespace JeepneyRush.Logic
         public float buttonScale = 1f;
         public float buttonOpacity = 1f;
         public bool leftHanded;
+        /// <summary>Settings ▸ Screen: 0 portrait, 1 landscape, 2 auto-rotate (see OrientationMode).</summary>
+        public int orientation;
+        /// <summary>Tilt calibration for landscape (the phone is held a different way round).</summary>
+        public float tiltCentreLand;
+        public bool tiltCalibratedLand;
         /// <summary>The steering tutorial has been shown for these modes (bit per SteerMode).</summary>
         public int steerTutorials;
         public int graphicsQuality = 3; // 0 low, 1 medium, 2 high, 3 auto (adapts to the device)
@@ -164,6 +169,8 @@ namespace JeepneyRush.Logic
             d.tiltSmoothing = Fix(d.tiltSmoothing, 4f, 30f, 14f);
             if (float.IsNaN(d.tiltCentre) || Math.Abs(d.tiltCentre) > 1f) { d.tiltCentre = 0; d.tiltCalibrated = false; }
             if (d.wheelSize < 0 || d.wheelSize > 2) d.wheelSize = 1;
+            if (d.orientation < 0 || d.orientation > 2) d.orientation = 0;
+            if (float.IsNaN(d.tiltCentreLand) || Math.Abs(d.tiltCentreLand) > 1f) { d.tiltCentreLand = 0; d.tiltCalibratedLand = false; }
             d.wheelOpacity = Fix(d.wheelOpacity, 0.3f, 1f, 0.9f);
             d.wheelMaxAngle = Fix(d.wheelMaxAngle, 60f, 180f, 135f);
             d.buttonScale = Fix(d.buttonScale, 0.8f, 1.25f, 1f);

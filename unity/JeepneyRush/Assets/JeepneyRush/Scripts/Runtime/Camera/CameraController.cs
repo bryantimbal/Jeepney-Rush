@@ -44,8 +44,8 @@ namespace JeepneyRush
             _lastW = _cam.pixelWidth;
             _lastH = _cam.pixelHeight;
             float aspect = Mathf.Max(0.3f, (float)_cam.pixelWidth / Mathf.Max(1, _cam.pixelHeight));
-            float v = 2f * Mathf.Atan(Mathf.Tan(horizontalFov * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
-            _baseFov = Mathf.Clamp(v, 50f, 78f);
+            // portrait: keep the lanes across; landscape: capped so the wide screen is never a fish-eye
+            _baseFov = Logic.ScreenLayout.ChaseFov(horizontalFov, aspect);
         }
 
         public void AddShake(float amount) => _shake = Mathf.Max(_shake, amount);
@@ -95,9 +95,9 @@ namespace JeepneyRush
                 float yaw = Mathf.Clamp(lateralVelocity * 0.8f, -6f, 6f);
                 transform.rotation = DriverAnchor.rotation * Quaternion.Euler(Logic.Geometry.CockpitBuilder.PitchDeg, yaw + 2f, 0);
                 float aspect = Mathf.Max(0.3f, (float)_cam.pixelWidth / Mathf.Max(1, _cam.pixelHeight));
-                float v = 2f * Mathf.Atan(Mathf.Tan(driverHorizontalFov * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
                 _fovBoost = Mathf.Lerp(_fovBoost, speed01 * 5f, 1f - Mathf.Exp(-dt * 3f));
-                _cam.fieldOfView = Mathf.Clamp(v, 60f, Logic.Geometry.CockpitBuilder.MaxVerticalFov) + _fovBoost; // tall phones: don't stare at the ceiling
+                // tall phones: don't stare at the ceiling; landscape: no fish-eye windscreen
+                _cam.fieldOfView = Logic.ScreenLayout.DriverFov(driverHorizontalFov, aspect, Logic.Geometry.CockpitBuilder.MaxVerticalFov) + _fovBoost;
                 _pos = new Vector3(player.x * 0.55f, offset.y, offset.z); // ready for switching back
                 return;
             }

@@ -19,18 +19,23 @@ namespace JeepneyRush.Logic
             public override string ToString() => $"{X},{Y} {W}x{H}";
         }
 
-        /// <summary>The 9:16 frame for a portrait screen (taller screens get bars top and bottom, wider ones at the sides).</summary>
+        /// <summary>
+        /// The store frame for the screen: 9:16 in portrait, 16:9 in landscape (bars on the long
+        /// sides of the screen, centred).
+        /// </summary>
         public static Rect Compute(int screenW, int screenH)
         {
             if (screenW <= 0 || screenH <= 0) return new Rect(0, 0, Math.Max(0, screenW), Math.Max(0, screenH));
-            // compare screenW/screenH with 9/16 using integers
-            if ((long)screenH * AspectW > (long)screenW * AspectH)
+            bool landscape = screenW > screenH;
+            int aw = landscape ? AspectH : AspectW, ah = landscape ? AspectW : AspectH;
+            // compare screenW/screenH with aw/ah using integers
+            if ((long)screenH * aw > (long)screenW * ah)
             {
-                int h = (int)((long)screenW * AspectH / AspectW);
+                int h = (int)((long)screenW * ah / aw);
                 h -= h % 2;
                 return new Rect(0, (screenH - h) / 2, screenW, h);
             }
-            int w = (int)((long)screenH * AspectW / AspectH);
+            int w = (int)((long)screenH * aw / ah);
             w -= w % 2;
             return new Rect((screenW - w) / 2, 0, w, screenH);
         }

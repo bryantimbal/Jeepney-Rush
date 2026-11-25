@@ -119,17 +119,20 @@ namespace JeepneyRush
             }
         }
 
-        /// <summary>Sideways gravity in g (portrait: + = phone tilted to the right). 0 without a sensor.</summary>
+        /// <summary>Sideways gravity on the screen in g (+ = tilted to the right, in portrait or landscape). 0 without a sensor.</summary>
         public static float TiltX()
         {
 #if ENABLE_INPUT_SYSTEM
             var acc = Accelerometer.current;
             if (acc == null) return 0f;
             if (!acc.enabled) InputSystem.EnableDevice(acc);
-            return acc.acceleration.ReadValue().x;
+            var a = acc.acceleration.ReadValue();
 #else
-            return SystemInfo.supportsAccelerometer ? Input.acceleration.x : 0f;
+            if (!SystemInfo.supportsAccelerometer) return 0f;
+            var a = Input.acceleration;
 #endif
+            // the sensor reports in the phone's own axes: turn it into "sideways on the screen"
+            return Logic.ScreenLayout.ScreenTiltX(a.x, a.y, ScreenOrientationControl.CurrentRotation);
         }
 
         /// <summary>Android back maps to Escape in both input backends.</summary>

@@ -47,6 +47,7 @@ namespace JeepneyRush
             DontDestroyOnLoad(_systems);
             Services.Save = _systems.AddComponent<SaveManager>();
             Services.Save.Load();
+            ScreenOrientationControl.Apply((Logic.OrientationMode)Services.Save.Data.orientation);
             Services.Pools = _systems.AddComponent<PoolManager>();
             Services.Scenes = _systems.AddComponent<SceneLoader>();
             Services.Audio = _systems.AddComponent<AudioManager>();

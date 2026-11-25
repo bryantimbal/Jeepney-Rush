@@ -39,13 +39,16 @@ namespace JeepneyRush
         public float WheelInput { get; set; }
 
         private readonly TiltSteer _tilt = new TiltSteer();
+        private bool _landscape;
 
         /// <summary>Tilt settings from the save: calibrated neutral position, dead zone, smoothing.</summary>
         public void ApplyTiltSettings(SaveData d)
         {
             _tilt.DeadZone = d.tiltDeadZone;
             _tilt.Smoothing = d.tiltSmoothing;
-            if (d.tiltCalibrated) _tilt.Calibrate(d.tiltCentre);
+            _landscape = ScreenOrientationControl.IsLandscape;
+            bool calibrated = _landscape ? d.tiltCalibratedLand : d.tiltCalibrated;
+            if (calibrated) _tilt.Calibrate(_landscape ? d.tiltCentreLand : d.tiltCentre);
             else Recalibrate(); // never calibrated: the way the phone is held at the start is "straight"
         }
 
@@ -73,6 +76,8 @@ namespace JeepneyRush
             if (InputCompat.KeyPressed(InputCompat.Key.Gear)) Fire(Action.Gear);
             if (InputCompat.KeyPressed(InputCompat.Key.Boost)) Fire(Action.Boost);
 
+            // the screen turned (auto-rotate): use that orientation's calibration
+            if (ScreenOrientationControl.IsLandscape != _landscape && Services.Save != null) ApplyTiltSettings(Services.Save.Data);
             float dt = Time.unscaledDeltaTime;
             float steer = 0f;
             if (Mode == SteerMode.Tilt && InputCompat.HasTilt) steer = _tilt.Input(InputCompat.TiltX(), Sensitivity, dt);
