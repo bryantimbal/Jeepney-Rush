@@ -16,7 +16,7 @@ namespace JeepneyRush
         private void BuildGarage()
         {
             _garage = MakeScreen("garage", false);
-            var overlay = UiKit.Overlay(new Color(0, 0, 0, 0));
+            var overlay = _garageOverlay = UiKit.Overlay(new Color(0, 0, 0, 0));
             overlay.style.justifyContent = Justify.FlexEnd;
             overlay.style.paddingBottom = 40;
             _garage.Add(overlay);

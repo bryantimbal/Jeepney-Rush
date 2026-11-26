@@ -48,12 +48,14 @@ namespace JeepneyRush
             {
                 // cut straight into the garage (no long glide across the map)
                 var focus = _jeepRoot.position;
-                _camera.transform.position = focus + GarageCam;
-                _camera.transform.rotation = Quaternion.LookRotation(focus + GarageLook - _camera.transform.position);
+                bool land = Screen.width > Screen.height;
+                _camera.transform.position = focus + (land ? GarageCamLandscape : GarageCam);
+                _camera.transform.rotation = Quaternion.LookRotation(focus + (land ? GarageLookLandscape : GarageLook) - _camera.transform.position);
             }
         }
 
         private static readonly Vector3 GarageCam = new Vector3(0, 3.4f, -12.5f), GarageLook = new Vector3(0, -2.9f, 0);
+        private static readonly Vector3 GarageCamLandscape = new Vector3(0, 3.2f, -11f), GarageLookLandscape = new Vector3(3.0f, 1.2f, 0);
 
         private void BuildGarage()
         {
@@ -158,10 +160,14 @@ namespace JeepneyRush
                 if (_cam == null) _cam = _camera.GetComponent<Camera>();
                 var focus = _jeepRoot.position;
                 // a fixed shot from the garage door
-                _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + GarageCam, 1f - Mathf.Exp(-dt * 4f));
-                // aim below the jeepney so it sits in the upper part of the screen, above the garage card
-                _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + GarageLook - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
-                float garageFov = _cam.aspect > 1f ? 40f : 62f; // landscape: same framing without a fish-eye
+                // portrait: aim below the jeepney so it sits above the garage card;
+                // landscape: the card is on the right, so aim to the right of it – the whole jeepney shows on the left
+                bool land = _cam.aspect > 1f;
+                var camOff = land ? GarageCamLandscape : GarageCam;
+                var look = land ? GarageLookLandscape : GarageLook;
+                _camera.transform.position = Vector3.Lerp(_camera.transform.position, focus + camOff, 1f - Mathf.Exp(-dt * 4f));
+                _camera.transform.rotation = Quaternion.Slerp(_camera.transform.rotation, Quaternion.LookRotation(focus + look - _camera.transform.position), 1f - Mathf.Exp(-dt * 4f));
+                float garageFov = _cam.aspect > 1f ? 42f : 62f; // landscape: no fish-eye
                 _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, garageFov, 1f - Mathf.Exp(-dt * 4f));
             }
             else _camera.Orbit(_jeepRoot.position, _t);

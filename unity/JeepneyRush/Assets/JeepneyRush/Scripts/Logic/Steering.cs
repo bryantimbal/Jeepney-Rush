@@ -86,7 +86,7 @@ namespace JeepneyRush.Logic
 
         public SteeringModel(BalanceConfig cfg) { _cfg = cfg; Reset(); }
 
-        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; }
+        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; _lastDir = 0; }
 
         private float Scale => Math.Max(0.5f, DurationScale);
         private float LaneTime => _cfg.laneChangeDuration * Scale;
@@ -120,6 +120,20 @@ namespace JeepneyRush.Logic
         public float Heading(float forwardSpeed) => (float)Math.Atan2(VelocityX, Math.Max(4f, forwardSpeed));
 
         private float _kick;
+        private int _lastDir;
+        /// <summary>How far into the next lane (fraction of a lane) a released steer commits to it.</summary>
+        public const float CommitFraction = 0.22f;
+
+        private int AssistLane()
+        {
+            float f = X / _cfg.laneSpacing + (_cfg.laneCount - 1) * 0.5f; // fractional lane index
+            int dir = _lastDir != 0 ? _lastDir : Math.Sign(VelocityX);
+            int lane;
+            if (dir > 0) { int lo = (int)Math.Floor(f); lane = f - lo >= CommitFraction ? lo + 1 : lo; }
+            else if (dir < 0) { int hi = (int)Math.Ceiling(f); lane = hi - f >= CommitFraction ? hi - 1 : hi; }
+            else lane = (int)Math.Round(f);
+            return Math.Max(0, Math.Min(_cfg.laneCount - 1, lane));
+        }
 
         /// <summary>Side-swipe: the jeepney is shoved back the way it came and the wheel straightens.</summary>
         public void BounceBack()
@@ -136,7 +150,8 @@ namespace JeepneyRush.Logic
             if (dt <= 0) return;
             var p = Prefs.Clamped();
             input = Math.Max(-1f, Math.Min(1f, input)) * p.MaxInput;
-            if (_kick > 0) { _kick -= dt; input = 0; }
+            if (_kick > 0) { _kick -= dt; input = 0; _lastDir = 0; }
+            if (Math.Abs(input) > 0.05f) _lastDir = Math.Sign(input);
 
             // ---- the steering wheel: builds up toward the input, returns to centre on release
             float toward = (Math.Abs(input) > 1e-4f && (Math.Sign(input) == Math.Sign(Wheel) || Math.Abs(Wheel) < 1e-4f) && Math.Abs(input) >= Math.Abs(Wheel))
@@ -148,14 +163,10 @@ namespace JeepneyRush.Logic
             float target = Wheel * vmax;
             if (Math.Abs(input) <= 0.02f && Math.Abs(Wheel) < 0.05f && Assist && _kick <= 0)
             {
-                // lane keeping: ease toward the nearest lane centre (the lane we're heading into when moving)
-                int lane = Lane;
-                if (Math.Abs(VelocityX) > 1.5f)
-                {
-                    int ahead = Lane + Math.Sign(VelocityX);
-                    if (ahead >= 0 && ahead < _cfg.laneCount && Math.Sign(_cfg.LaneX(ahead) - X) == Math.Sign(VelocityX)
-                        && Math.Abs(_cfg.LaneX(ahead) - X) < _cfg.laneSpacing * 0.75f) lane = ahead;
-                }
+                // lane keeping: once the jeepney is a little way (CommitFraction) into the next lane in
+                // the direction it was steered, it finishes the lane change (a quick tap = one lane);
+                // otherwise it eases back to the lane it came from
+                int lane = AssistLane();
                 float off = _cfg.LaneX(lane) - X;
                 target = Math.Abs(off) < AssistDeadband ? 0f : Math.Max(-T.assistMaxSpeed, Math.Min(T.assistMaxSpeed, off * T.assistGain));
             }
@@ -197,31 +208,40 @@ namespace JeepneyRush.Logic
             Math.Max(cfg.laneChangeDuration, OneLaneTime(cfg, 1f, prefs) + 0.01f);
     }
 
-    /// <summary>Phone tilt → steering input: calibrated centre, dead zone, smoothing, proportional response.</summary>
+    /// <summary>
+    /// Phone tilt → steering input, like a steering wheel: the phone's ROLL angle (degrees) around
+    /// the calibrated neutral, with a dead zone, smoothing and a proportional response. A steady
+    /// tilt gives a steady input (never a growing one).
+    /// </summary>
     public sealed class TiltSteer
     {
-        /// <summary>Gravity x (g) for full lock at sensitivity 1 – about 20° of tilt.</summary>
-        public const float FullLockG = 0.34f;
-        public const float DeadZoneG = 0.035f;
+        /// <summary>Roll (degrees) for full lock at sensitivity 1.</summary>
+        public const float FullLockDeg = 24f;
+        public const float DeadZoneDegDefault = 3.5f;
+        /// <summary>Neutral roll (degrees).</summary>
         public float Centre;
-        /// <summary>Dead zone around the calibrated centre (g): 0.02 small .. 0.07 large.</summary>
-        public float DeadZone = DeadZoneG;
-        /// <summary>Sensor filter speed (1/s): 6 = very smooth, 14 = normal, 24 = quick.</summary>
+        /// <summary>Dead zone around the neutral (degrees): 2 small .. 6 large.</summary>
+        public float DeadZone = DeadZoneDegDefault;
+        /// <summary>Sensor filter speed (1/s): 7 = very smooth, 14 = normal, 24 = quick.</summary>
         public float Smoothing = 14f;
-        private float _smooth;
+        private float _smooth, _lastRoll;
         private bool _has;
 
         public bool Calibrated => _has;
-        public void Calibrate(float gx) { Centre = gx; _smooth = 0; _has = true; }
+        public void Calibrate(float rollDeg) { if (float.IsNaN(rollDeg)) rollDeg = 0; Centre = rollDeg; _lastRoll = rollDeg; _smooth = 0; _has = true; }
 
-        /// <param name="gx">accelerometer x in g (portrait: + = tilted right).</param>
-        /// <param name="sensitivity">0.5 .. 1.5 (Settings).</param>
-        public float Input(float gx, float sensitivity, float dt)
+        /// <param name="rollDeg">phone roll in degrees (NaN = phone too flat: keep the last reading)</param>
+        /// <param name="sensitivity">0.5 .. 1.5 (Settings)</param>
+        public float Input(float rollDeg, float sensitivity, float dt)
         {
-            if (!_has) Calibrate(gx);
-            float d = gx - Centre;
-            float dz = Math.Max(0f, Math.Min(0.15f, DeadZone));
-            float full = Math.Max(dz + 0.05f, FullLockG / Math.Max(0.5f, Math.Min(1.5f, sensitivity)));
+            if (float.IsNaN(rollDeg)) rollDeg = _lastRoll;
+            _lastRoll = rollDeg;
+            if (!_has) Calibrate(rollDeg);
+            float d = rollDeg - Centre;
+            if (d > 180f) d -= 360f;
+            if (d < -180f) d += 360f;
+            float dz = Math.Max(0f, Math.Min(12f, DeadZone));
+            float full = Math.Max(dz + 4f, FullLockDeg / Math.Max(0.5f, Math.Min(1.5f, sensitivity)));
             float v = Math.Abs(d) <= dz ? 0f : Math.Sign(d) * Math.Min(1f, (Math.Abs(d) - dz) / (full - dz));
             v = Math.Sign(v) * v * v * 0.35f + v * 0.65f; // finer control near the centre
             float k = 1f - (float)Math.Exp(-dt * Math.Max(2f, Smoothing)); // filter sensor jitter

@@ -51,7 +51,12 @@ namespace JeepneyRush.Logic
         public bool leftHanded;
         /// <summary>Settings ▸ Screen: 0 portrait, 1 landscape, 2 auto-rotate (see OrientationMode).</summary>
         public int orientation;
-        /// <summary>Tilt calibration for landscape (the phone is held a different way round).</summary>
+        /// <summary>Tilt neutral as a roll angle (degrees), per orientation – replaces the old g-based values.</summary>
+        public float tiltRoll, tiltRollLand;
+        public bool tiltRollCal, tiltRollLandCal;
+        /// <summary>Detected once: does this phone's input backend already rotate the sensor to the screen?</summary>
+        public bool tiltAxesKnown, tiltAxesRotated;
+        /// <summary>(old, g-based – no longer used)</summary>
         public float tiltCentreLand;
         public bool tiltCalibratedLand;
         /// <summary>The steering tutorial has been shown for these modes (bit per SteerMode).</summary>
@@ -171,6 +176,8 @@ namespace JeepneyRush.Logic
             if (d.wheelSize < 0 || d.wheelSize > 2) d.wheelSize = 1;
             if (d.orientation < 0 || d.orientation > 2) d.orientation = 0;
             if (float.IsNaN(d.tiltCentreLand) || Math.Abs(d.tiltCentreLand) > 1f) { d.tiltCentreLand = 0; d.tiltCalibratedLand = false; }
+            if (float.IsNaN(d.tiltRoll) || Math.Abs(d.tiltRoll) > 90f) { d.tiltRoll = 0; d.tiltRollCal = false; }
+            if (float.IsNaN(d.tiltRollLand) || Math.Abs(d.tiltRollLand) > 90f) { d.tiltRollLand = 0; d.tiltRollLandCal = false; }
             d.wheelOpacity = Fix(d.wheelOpacity, 0.3f, 1f, 0.9f);
             d.wheelMaxAngle = Fix(d.wheelMaxAngle, 60f, 180f, 135f);
             d.buttonScale = Fix(d.buttonScale, 0.8f, 1.25f, 1f);

@@ -119,20 +119,51 @@ namespace JeepneyRush
             }
         }
 
-        /// <summary>Sideways gravity on the screen in g (+ = tilted to the right, in portrait or landscape). 0 without a sensor.</summary>
-        public static float TiltX()
+        /// <summary>Raw accelerometer x / y in g (as reported by the input backend). False without a sensor.</summary>
+        public static bool TiltRaw(out float ax, out float ay)
         {
+            ax = ay = 0f;
 #if ENABLE_INPUT_SYSTEM
             var acc = Accelerometer.current;
-            if (acc == null) return 0f;
+            if (acc == null) return false;
             if (!acc.enabled) InputSystem.EnableDevice(acc);
             var a = acc.acceleration.ReadValue();
 #else
-            if (!SystemInfo.supportsAccelerometer) return 0f;
+            if (!SystemInfo.supportsAccelerometer) return false;
             var a = Input.acceleration;
 #endif
-            // the sensor reports in the phone's own axes: turn it into "sideways on the screen"
-            return Logic.ScreenLayout.ScreenTiltX(a.x, a.y, ScreenOrientationControl.CurrentRotation);
+            ax = a.x; ay = a.y;
+            return true;
+        }
+
+        /// <summary>
+        /// Whether the backend already rotates the readings to the screen (the Input System does by
+        /// default; it depends on the backend and its settings, so it is detected from how the phone is
+        /// held – see <see cref="DetectTiltAxes"/> – and remembered in the save).
+        /// </summary>
+        public static bool TiltAxesRotated = true;
+
+        /// <summary>
+        /// Looks at gravity while the phone is held normally in landscape: along the phone's own x axis
+        /// means raw readings, along y means already rotated. Returns false when it can't tell (phone
+        /// flat, portrait – where both are the same).
+        /// </summary>
+        public static bool DetectTiltAxes()
+        {
+            if (!TiltRaw(out float ax, out float ay)) return false;
+            var r = ScreenOrientationControl.CurrentRotation;
+            if (r != Logic.ScreenLayout.Rotation.LandscapeLeft && r != Logic.ScreenLayout.Rotation.LandscapeRight) return false;
+            float big = System.Math.Max(System.Math.Abs(ax), System.Math.Abs(ay)), small = System.Math.Min(System.Math.Abs(ax), System.Math.Abs(ay));
+            if (big < 0.45f || small > big * 0.6f) return false; // too flat or too turned to be sure
+            TiltAxesRotated = Logic.ScreenLayout.DetectCompensated(ax, ay, r);
+            return true;
+        }
+
+        /// <summary>Phone roll in degrees like a steering wheel (+ = turned right), in any orientation. NaN if flat / no sensor.</summary>
+        public static float TiltRoll()
+        {
+            if (!TiltRaw(out float ax, out float ay)) return float.NaN;
+            return Logic.ScreenLayout.RollDegrees(ax, ay, ScreenOrientationControl.CurrentRotation, TiltAxesRotated);
         }
 
         /// <summary>Android back maps to Escape in both input backends.</summary>

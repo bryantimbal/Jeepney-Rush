@@ -99,6 +99,7 @@ namespace JeepneyRush
             var (rw, rh, match) = Logic.ScreenLayout.Panel(Screen.width, Screen.height, driving);
             _panel.referenceResolution = new Vector2Int(rw, rh);
             _panel.match = match;
+            ApplyOrientationLayouts(Logic.ScreenLayout.IsLandscape(Screen.width, Screen.height));
             ApplySafeArea();
         }
 
@@ -385,13 +386,13 @@ namespace JeepneyRush
             bestRow.Add(UiKit.Pill(bestLabel, _menuBest));
             _menu.Add(bestRow);
             _menu.Add(BuildOnlineChip());
-            var logo = UiKit.Icon("logo", 780);
+            var logo = _menuLogo = UiKit.Icon("logo", 780);
             logo.style.height = 400;
             _menu.Add(logo);
-            var spacer = UiKit.Box();
+            var spacer = _menuSpacer = UiKit.Box();
             spacer.style.flexGrow = 1;
             _menu.Add(spacer);
-            var buttons = UiKit.Box();
+            var buttons = _menuButtons = UiKit.Box();
             buttons.style.width = 900;
             buttons.style.marginBottom = 24;
             // PLAY: big, glossy and gently "breathing" so it's the obvious thing to tap

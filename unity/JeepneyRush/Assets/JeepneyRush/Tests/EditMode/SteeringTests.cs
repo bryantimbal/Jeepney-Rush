@@ -97,18 +97,39 @@ namespace JeepneyRush.Tests
         public void TiltHasADeadZoneAndFullLock()
         {
             var t = new TiltSteer();
-            t.Calibrate(0.1f); // the phone is held slightly tilted: that's "straight"
+            t.Calibrate(8f); // the phone is held slightly turned: that's "straight"
             float v = 0;
-            for (int i = 0; i < 60; i++) v = t.Input(0.12f, 1f, 1f / 60f);
+            for (int i = 0; i < 60; i++) v = t.Input(10f, 1f, 1f / 60f);
             Assert.AreEqual(0f, v, "small wobbles inside the dead zone don't steer");
-            for (int i = 0; i < 60; i++) v = t.Input(0.1f + TiltSteer.FullLockG + 0.05f, 1f, 1f / 60f);
+            for (int i = 0; i < 60; i++) v = t.Input(8f + TiltSteer.FullLockDeg + 3f, 1f, 1f / 60f);
             Assert.AreEqual(1f, v, 0.02f);
-            for (int i = 0; i < 60; i++) v = t.Input(0.1f - 0.2f, 1f, 1f / 60f);
-            Assert.That(v, Is.InRange(-0.9f, -0.2f), "half tilt left = partial steering");
+            float held = v;
+            for (int i = 0; i < 300; i++) v = t.Input(8f + TiltSteer.FullLockDeg + 3f, 1f, 1f / 60f);
+            Assert.AreEqual(held, v, 1e-4, "holding the tilt keeps the SAME input (it never grows)");
+            for (int i = 0; i < 60; i++) v = t.Input(8f - 12f, 1f, 1f / 60f);
+            Assert.That(v, Is.InRange(-0.7f, -0.15f), "half tilt left = partial steering");
             float hi = 0;
             var t2 = new TiltSteer(); t2.Calibrate(0);
-            for (int i = 0; i < 60; i++) hi = t2.Input(-0.2f, 1.5f, 1f / 60f);
+            for (int i = 0; i < 60; i++) hi = t2.Input(-12f, 1.5f, 1f / 60f);
             Assert.Less(hi, v, "higher sensitivity steers harder for the same tilt");
+            // phone laid flat for a moment (NaN): keeps the last reading instead of jumping
+            float before = t2.Input(float.NaN, 1.5f, 1f / 60f);
+            Assert.AreEqual(hi, before, 0.05f);
+        }
+
+        [Test]
+        public void ATapFinishesTheLaneChangeASmallNudgeDoesNot()
+        {
+            float Run(float tapSeconds)
+            {
+                var m = new SteeringModel(Cfg);
+                for (float t = 0; t < tapSeconds; t += 1f / 60f) m.Tick(1f, 1f / 60f);
+                for (int i = 0; i < 300; i++) m.Tick(0f, 1f / 60f);
+                return m.X;
+            }
+            Assert.AreEqual(Cfg.LaneX(1), Run(0.05f), 0.05f, "a brush of the button: back to the lane");
+            Assert.AreEqual(Cfg.LaneX(2), Run(0.25f), 0.05f, "a quick tap: one full lane over");
+            Assert.AreEqual(Cfg.LaneX(2), Run(0.45f), 0.05f);
         }
 
         [Test]

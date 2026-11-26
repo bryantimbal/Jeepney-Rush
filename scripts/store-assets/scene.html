@@ -179,7 +179,8 @@ switch (mode) {
     add('garage', 0, 0, 0);
     jeepney(q.get('liv') || 'pilipinas', 0, 0, -152 * Math.PI / 180);
     for (const [px, py, pz] of [[-2.6, 4.3, 1.5], [2.6, 4.3, -3.5], [0, 4.6, -6.5]]) { const l = new THREE.PointLight('#fff6e6', 40, 12, 1.6); l.position.set(px, py, pz); scene.add(l); }
-    cam.fov = 62; cam.position.set(0, 3.4, 12.5); cam.lookAt(0, -2.9, 0);
+    if (W > H) { cam.fov = 42; cam.position.set(0, 3.2, 11); cam.lookAt(3.0, 1.2, 0); } // landscape: card on the right
+    else { cam.fov = 62; cam.position.set(0, 3.4, 12.5); cam.lookAt(0, -2.9, 0); }
     break;
   }
   case 'garage': { // the jeepney collection, facing the camera in a showroom

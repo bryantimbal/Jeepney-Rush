@@ -121,6 +121,8 @@ namespace JeepneyRush
                 wheelMaxAngle = keep.wheelMaxAngle, buttonScale = keep.buttonScale, buttonOpacity = keep.buttonOpacity, leftHanded = keep.leftHanded,
                 steerTutorials = keep.steerTutorials, soundTrip = keep.soundTrip,
                 orientation = keep.orientation, tiltCentreLand = keep.tiltCentreLand, tiltCalibratedLand = keep.tiltCalibratedLand,
+                tiltRoll = keep.tiltRoll, tiltRollLand = keep.tiltRollLand, tiltRollCal = keep.tiltRollCal, tiltRollLandCal = keep.tiltRollLandCal,
+                tiltAxesKnown = keep.tiltAxesKnown, tiltAxesRotated = keep.tiltAxesRotated,
             };
             Save();
         }
