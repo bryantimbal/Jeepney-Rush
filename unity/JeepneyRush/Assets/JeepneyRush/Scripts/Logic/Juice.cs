@@ -95,13 +95,13 @@ namespace JeepneyRush.Logic
 
     public static class Lines
     {
-        public static readonly string[] Bump = { "ARAY KO!", "DAHAN-DAHAN PO!", "KUYA, INGAT!", "ANO BA 'YAN?!", "NAKU PO!", "SAN KA NATUTONG MAGMANEHO?!" };
-        public static readonly string[] Leave = { "BABABA NA AKO!", "LALAKAD NA LANG AKO!", "IBANG JEEP NA LANG!" };
+        public static readonly string[] Bump = { "ARAY KO!", "DAHAN-DAHAN PO!", "KUYA, INGAT!", "ANO BA 'YAN?!", "NAKU PO!", "SAN KA NATUTONG MAGMANEHO?!", "BUHAY PA BA KAMI, KUYA?!", "ANG KAPE KO, NATAPON!", "MAY NAHULOG NA CELLPHONE!", "SUMMER RIDE BA 'TO?!", "KUYA, HINDI 'TO BUMP CAR!", "LUMIPAD ANG WIG NI ALING NENA!", "NAKAGAT KO DILA KO!" };
+        public static readonly string[] Leave = { "BABABA NA AKO!", "LALAKAD NA LANG AKO!", "IBANG JEEP NA LANG!", "MAG-GRAB NA LANG AKO!", "MAS MABILIS PA AKONG MAGLAKAD!", "BAHALA KA NA, KUYA!", "MAG-TRICYCLE NA LANG AKO!" };
         public static readonly string[] Landing = { "WHOA!", "SUSMARYOSEP!", "PARANG RIDE!" };
-        public static readonly string[] Hump = { "ARAY! ANG HUMP!", "KUYA, MAY HUMP!", "TUMALBOG AKO!", "ANG SAKIT NG PWET KO!" };
-        public static readonly string[] Smooth = { "AYOS, KUYA!", "SMOOTH!", "GALING MAG-DRIVE!" };
-        public static readonly string[] Flood = { "BAHA! BAHA!", "BASA PAA KO!", "LUSONG NA, KUYA!", "LUBOG NA TAYO!" };
-        public static readonly string[] Board = { "BAYAD PO!", "PAKIABOT PO!", "SAKAY PO!" };
+        public static readonly string[] Hump = { "ARAY! ANG HUMP!", "KUYA, MAY HUMP!", "TUMALBOG AKO!", "ANG SAKIT NG PWET KO!", "NASAAN ANG SEATBELT NITO?!", "UMAKYAT ANG SIKMURA KO!", "KUYA, MAY ITLOG AKONG DALA!", "ANG BALAKANG KO, KUYA!", "ROLLER COASTER BA 'TO?!" };
+        public static readonly string[] Smooth = { "AYOS, KUYA!", "SMOOTH!", "GALING MAG-DRIVE!", "PARANG NAKA-AIRCON SA SARAP!", "PANALO KA, KUYA!", "NAKATULOG AKO SA SARAP!", "TSUPER OF THE YEAR!", "ANG SMOOTH, PARANG BAGONG ASPALTO!", "MAY TIP KA SA'KIN, KUYA!" };
+        public static readonly string[] Flood = { "BAHA! BAHA!", "BASA PAA KO!", "LUSONG NA, KUYA!", "LUBOG NA TAYO!", "MAY ISDA NA SA KALSADA!", "BANGKA NA ANG KAILANGAN NATIN!", "ANG SAPATOS KO, BAGO PA 'YAN!", "VENICE NG PILIPINAS!", "ITAAS ANG MGA PAA!" };
+        public static readonly string[] Board = { "BAYAD PO!", "PAKIABOT PO!", "SAKAY PO!", "BAYAD PO, ISA LANG!", "ISANG ESTUDYANTE PO!", "BAYAD PO, GALING KANTO!", "DALAWA PO, ISANG BUO, ISANG STUDENT!", "PAKIABOT NAMAN PO, SALAMAT!", "KUYA, MAY SUKLI PA AKO HA!", "BARYA LANG PO SA UMAGA!", "ISANDAAN LANG PO, PASENSYA NA!" };
 
         /// <summary>Boarding line; "ISANG ___ PO!" always names a stop on the current route (no Quiapo on the beach).</summary>
         public static string BoardFor(EnvironmentKind env, GameRandom rng)
@@ -110,16 +110,16 @@ namespace JeepneyRush.Logic
             var names = StopNames.ForEnvironment(env);
             return $"ISANG {StopNames.All[names[rng.Int(0, names.Count - 1)]]} PO!";
         }
-        public static readonly string[] Alight = { "PARA PO!", "SA TABI LANG PO!", "DITO NA LANG PO, SALAMAT!", "PARA PO, SA KANTO LANG!" };
-        public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!" };
-        public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!" };
+        public static readonly string[] Alight = { "PARA PO!", "SA TABI LANG PO!", "DITO NA LANG PO, SALAMAT!", "PARA PO, SA KANTO LANG!", "KUYA, SA TABI-TABI LANG!", "PARA PO SA MAY ALFAMART!", "DIYAN SA MAY PULANG GATE!", "PARA PO, LAGPAS NA AKO!", "KUYA, YUNG SUKLI KO PO!", "SA HARAP NG SIMBAHAN PO!", "PARA! ...AY, DITO NA NGA PALA!" };
+        public static readonly string[] Ticket = { "HULI KA, BOSS!", "LISENSYA, KUYA!", "OVERSPEEDING YAN!", "ANONG PANGALAN MO, BOSS?", "KITA MO 'YUNG KARATULA?", "SEMINAR KA NA NAMAN, BOSS!" };
+        public static readonly string[] Polite = { "INGAT PO!", "SALAMAT SA PAGSUNOD!", "GOOD JOB, DRIVER!", "GANYAN DAPAT, TSUPER!", "MODEL DRIVER KA, BOSS!", "SIGE, LARGA NA!" };
 
         // stuck in traffic -------------------------------------------------------------
-        public static readonly string[] LateForWork = { "MALE-LATE NA AKO SA TRABAHO!", "KUYA, MAY MEETING AKO!", "PAPAGALITAN AKO NG BOSS KO!", "LATE NA NAMAN AKO!", "MAKAKALTASAN NA NAMAN AKO!", "MAY EXAM PA AKO, KUYA!" };
-        public static readonly string[] GoingHome = { "GUSTO KO NANG UMUWI!", "GUTOM NA AKO, KUYA!", "NAGHIHINTAY ANG MGA ANAK KO!", "ANONG ORAS NA KAMI MAKAKAUWI?", "PAGOD NA AKO SA TRABAHO!", "LUMALAMIG NA ANG ULAM SA BAHAY!" };
-        public static readonly string[] Traffic = { "GRABE ANG TRAFFIC!", "WALANG GALAWAN!", "PARKING LOT NA 'TO!", "KUYA, SINGIT KA DOON!", "LALAKARIN KO NA LANG KAYA?", "BUONG ARAW NA TAYO DITO!" };
-        public static readonly string[] Edsa = { "GRABE ANG EDSA!", "EDSA NA NAMAN!", "SANA NAG-MRT NA LANG AKO!", "ISANG ORAS NA TAYO SA CUBAO!" };
-        public static readonly string[] JamClear = { "SA WAKAS!", "LUMUWAG NA!", "BILIS NA, KUYA!", "SALAMAT, UMANDAR NA!" };
+        public static readonly string[] LateForWork = { "MALE-LATE NA AKO SA TRABAHO!", "KUYA, MAY MEETING AKO!", "PAPAGALITAN AKO NG BOSS KO!", "LATE NA NAMAN AKO!", "MAKAKALTASAN NA NAMAN AKO!", "MAY EXAM PA AKO, KUYA!", "BUNDY CLOCK KO, KUYA!", "NAKA-ON NA ANG CAMERA SA ZOOM!", "SABI KO SA BOSS NASA BAHAY NA AKO!", "TATLONG BESES NA AKONG LATE NGAYONG LINGGO!", "DI PA AKO NAKAKAPAG-ALMUSAL!" };
+        public static readonly string[] GoingHome = { "GUSTO KO NANG UMUWI!", "GUTOM NA AKO, KUYA!", "NAGHIHINTAY ANG MGA ANAK KO!", "ANONG ORAS NA KAMI MAKAKAUWI?", "PAGOD NA AKO SA TRABAHO!", "LUMALAMIG NA ANG ULAM SA BAHAY!", "MAY TELESERYE PA AKONG HINAHABOL!", "SINIGANG ANG ULAM NAMIN MAMAYA!", "NAGLALABA PA AKO MAMAYA!", "SAHOD NA BUKAS, KAPIT LANG!", "TULOG NA LANG ANG PAHINGA KO!" };
+        public static readonly string[] Traffic = { "GRABE ANG TRAFFIC!", "WALANG GALAWAN!", "PARKING LOT NA 'TO!", "KUYA, SINGIT KA DOON!", "LALAKARIN KO NA LANG KAYA?", "BUONG ARAW NA TAYO DITO!", "NAKA-DALAWANG KANTA NA SA RADYO, DI PA TAYO GUMAGALAW!", "TUMUBO NA BALBAS KO DITO!", "SANA MAY JEEP NA LUMILIPAD!", "MAY NAGTITINDA NA NG MANI SA GITNA!", "PWEDE NA AKONG MAG-NAP!", "BAKA SA PASKO PA TAYO MAKARATING!" };
+        public static readonly string[] Edsa = { "GRABE ANG EDSA!", "EDSA NA NAMAN!", "SANA NAG-MRT NA LANG AKO!", "ISANG ORAS NA TAYO SA CUBAO!", "GUADALUPE PA LANG TAYO?!", "SI EDSA, HINDI NAGBABAGO!", "NAKA-THREE ROSARIES NA AKO DITO!", "MAY BUS LANE PERO WALANG BUS!", "NAKITA KO NA NAMAN 'YUNG BILLBOARD NA 'YAN!" };
+        public static readonly string[] JamClear = { "SA WAKAS!", "LUMUWAG NA!", "BILIS NA, KUYA!", "SALAMAT, UMANDAR NA!", "HALLELUJAH! UMANDAR!", "LIPAD, KUYA!", "PARANG NANALO SA LOTTO!", "SALAMAT SA DIYOS!", "ARANGKADA NA!" };
 
         /// <summary>A commuter's complaint while stuck: late for work in the morning, tired and hungry going home at night.</summary>
         public static string Stuck(float hour, EnvironmentKind env, GameRandom rng)
@@ -139,21 +139,21 @@ namespace JeepneyRush.Logic
         public static readonly string[] PullCord = { "*HILA* DING-DING!", "*HILA* BABABA PO!", "DING! DITO LANG PO!" };
 
         // riders after 3 skipped stops in a row
-        public static readonly string[] Panic = { "KUYA, LAMPAS NA AKO!", "SAAN MO KAMI DADALHIN?!", "PARA! PARA! PARA!", "BABABA NA KAMI!", "TULONG! AYAW HUMINTO!", "HINDI KA BA MARUNONG HUMINTO?!" };
-        public static readonly string[] JumpOff = { "BABABA NA KAMI DITO!", "DI NA AKO MAGBABAYAD!", "BAHALA KA SA BUHAY MO!" };
-        public static readonly string[] Police = { "PULL OVER! TABI!", "HOY! HUMINTO KA!", "LISENSYA MO, BOSS!" };
+        public static readonly string[] Panic = { "KUYA, LAMPAS NA AKO!", "SAAN MO KAMI DADALHIN?!", "PARA! PARA! PARA!", "BABABA NA KAMI!", "TULONG! AYAW HUMINTO!", "HINDI KA BA MARUNONG HUMINTO?!", "KUYA, ISESEND KO 'TO SA TIKTOK!", "DI KO NA MAHAHABOL ANG SERVICE KO!", "IPAPA-TULFO KITA!", "NAG-SIGN OF THE CROSS NA AKO!" };
+        public static readonly string[] JumpOff = { "BABABA NA KAMI DITO!", "DI NA AKO MAGBABAYAD!", "BAHALA KA SA BUHAY MO!", "IREREPORT KITA SA LTFRB!", "MAG-JOGGING NA LANG AKO!", "BABALIKAN KITA SA REVIEWS!" };
+        public static readonly string[] Police = { "PULL OVER! TABI!", "HOY! HUMINTO KA!", "LISENSYA MO, BOSS!", "DOKUMENTO, BOSS!", "OR CR, BOSS!", "SAAN TAYO PUPUNTA, BOSS?" };
 
         // ---- horn interactions
-        public static readonly string[] HornTricycle = { "SIGE, TABI AKO!", "ETO NA, BOSS!", "DAHAN-DAHAN LANG!" };
-        public static readonly string[] HornBus = { "MAS MALAKI AKO, PRE!", "HINTAY KA LANG!" };
-        public static readonly string[] HornCallRider = { "SAKAY AKO! SAKAY!", "PARA! PARA! SASAKAY AKO!", "KUYA, HINTAY!" };
+        public static readonly string[] HornTricycle = { "SIGE, TABI AKO!", "ETO NA, BOSS!", "DAHAN-DAHAN LANG!", "OO NA, OO NA!", "PATAWAD, PO!", "SINGIT LANG AKO, BOSS!", "KALMA LANG, PRE!" };
+        public static readonly string[] HornBus = { "MAS MALAKI AKO, PRE!", "HINTAY KA LANG!", "MAUNA KA NA, MAY HINIHINTAY AKO!", "PRESYO NG GAS, PRE, KALMA!" };
+        public static readonly string[] HornCallRider = { "SAKAY AKO! SAKAY!", "PARA! PARA! SASAKAY AKO!", "KUYA, HINTAY!", "KUYAAAA! SAKAY AKO!", "HINTAY! NADAPA LANG AKO!", "UY, KUYA, PARA!" };
         public static readonly string[] HornEnforcer = { "BAWAL BUMUSINA DITO, BOSS!", "ANONG BUSINA 'YAN?!", "TAHIMIK LANG, TSUPER!" };
 
         // ---- jeepney barkers ("barker" / "dispatcher") calling riders at the stops
-        public static readonly string[] BarkerFill = { "ISA NA LANG, LARGA NA!", "KASYA PA SA KANAN!", "DALAWA PA SA KALIWA!", "USOG-USOG PO, KASYA PA!", "SAKAY NA, ALIS NA!", "MAY BAKANTE PA, SAKAY NA!" };
-        public static readonly string[] BarkerThanks = { "SIGE, LARGA!", "O, ANDAR NA!", "SALAMAT, BOSS!", "PANG-KAPE LANG, BOSS!", "INGAT, PARE!" };
-        public static readonly string[] BarkerFull = { "PUNO NA 'YAN! SUSUNOD NA LANG!", "WALA NANG UPUAN, NEXT JEEP!", "PUNO NA, BOSS!" };
-        public static readonly string[] BarkerSkipped = { "HOY! MAY SASAKAY DITO!", "BOSS! BAKIT DI KA HUMINTO?!", "SAYANG! MAY PASAHERO DITO!" };
+        public static readonly string[] BarkerFill = { "ISA NA LANG, LARGA NA!", "KASYA PA SA KANAN!", "DALAWA PA SA KALIWA!", "USOG-USOG PO, KASYA PA!", "SAKAY NA, ALIS NA!", "MAY BAKANTE PA, SAKAY NA!", "KASYA PA ANG ISA, PAYAT 'YAN!", "SABIT NA LANG KUNG MAPILIT!", "PUNO NA? DI PA! TATLO PA!", "SA KANDUNGAN NA LANG, SIR!", "UPO NA, USOG KONTI!" };
+        public static readonly string[] BarkerThanks = { "SIGE, LARGA!", "O, ANDAR NA!", "SALAMAT, BOSS!", "PANG-KAPE LANG, BOSS!", "INGAT, PARE!", "SA SUSUNOD ULIT, BOSS!", "PAMBILI KO NG YOSI, SALAMAT!", "SALAMAT, ARANGKADA!" };
+        public static readonly string[] BarkerFull = { "PUNO NA 'YAN! SUSUNOD NA LANG!", "WALA NANG UPUAN, NEXT JEEP!", "PUNO NA, BOSS!", "SABIT NA LANG KUNG GUSTO!", "SA BUBONG NA LANG!", "TIIS-TIIS MUNA!" };
+        public static readonly string[] BarkerSkipped = { "HOY! MAY SASAKAY DITO!", "BOSS! BAKIT DI KA HUMINTO?!", "SAYANG! MAY PASAHERO DITO!", "SAYANG ANG BARYA, BOSS!", "HOY! ANG ARTE MO NAMAN!", "SIGE, SA IBANG JEEP NA SILA!" };
 
         /// <summary>
         /// What a barker shouts while the jeepney approaches: a destination further down this

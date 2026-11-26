@@ -66,7 +66,7 @@ namespace JeepneyRush
             _floats = UiKit.Box("floats");
             _floats.style.position = Position.Absolute;
             _floats.style.left = _floats.style.right = 0;
-            _floats.style.top = Length.Percent(15f); // in the sky band, clear of the road (see UIManager.Clearance)
+            _floats.style.top = Length.Percent(25f); // above the warning banner
             _floats.style.alignItems = Align.Center;
             _root.Add(_floats);
             _flash = UiKit.Box("flash");
@@ -1054,20 +1054,19 @@ namespace JeepneyRush
 
         public void Float(string text, FloatKind kind)
         {
-            // keep the road visible: the same message never stacks, at most two at a time (newest wins)
-            foreach (var c in _floats.Children()) if (c is Label same && same.text == text) return;
-            while (_floats.childCount >= MaxFloats) _floats.RemoveAt(0);
+            foreach (var c in _floats.Children()) if (c is Label same && same.text == text) return; // the same message never stacks
+            if (_floats.childCount > 3) _floats.RemoveAt(0);
             var color = kind == FloatKind.Good ? UiKit.Hex("#3EE07A") : kind == FloatKind.Bad ? UiKit.Hex("#FF5A5A") : kind == FloatKind.Big ? UiKit.Yellow : UiKit.Yellow;
-            var l = UiKit.Text(text, kind == FloatKind.Big ? 76 : 46, color, true, 3f);
+            var l = UiKit.Text(text, kind == FloatKind.Big ? 96 : 56, color, true, 3.5f);
             l.style.whiteSpace = WhiteSpace.Normal;
-            l.style.maxWidth = Length.Percent(80f);
+            l.style.maxWidth = Length.Percent(92f);
             l.style.unityTextAlign = TextAnchor.MiddleCenter;
             _floats.Add(l);
             long start = 0;
             l.schedule.Execute(t =>
             {
                 if (start == 0) start = t.now;
-                float k = (t.now - start) / 1150f;
+                float k = (t.now - start) / 1300f;
                 float sc = k < 0.15f ? Mathf.Lerp(0.4f, 1.15f, k / 0.15f) : k < 0.25f ? Mathf.Lerp(1.15f, 1f, (k - 0.15f) / 0.1f) : 1f;
                 l.style.scale = new Scale(new Vector3(sc, sc, 1));
                 l.style.opacity = k < 0.8f ? 1f : Mathf.Clamp01(1 - (k - 0.8f) / 0.2f);

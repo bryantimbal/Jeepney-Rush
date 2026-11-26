@@ -39,18 +39,18 @@ namespace JeepneyRush
             _banner.style.position = Position.Absolute;
             _banner.style.left = _banner.style.right = 0;
             // above the horizon so the road stays visible (just under the stop panel / power-ups)
-            _banner.style.top = Length.Percent(10.5f); // top band (UIManager.Clearance sets portrait / landscape)
+            _banner.style.top = Length.Percent(30.5f);
             _banner.style.alignItems = Align.Center;
             var inner = UiKit.Box();
             inner.style.flexDirection = FlexDirection.Row;
             inner.style.alignItems = Align.Center;
             inner.style.backgroundColor = UiKit.Hex("#0038A8");
             UiKit.Border(inner.style, 5, UiKit.Yellow, 26);
-            UiKit.Pad(inner.style, 6, 18);
-            inner.style.maxWidth = Length.Percent(78f);
-            inner.Add(UiKit.Icon("ui_brake", 40));
-            _bannerLabel = UiKit.Text("", 28, Color.white, true, 2f);
-            _bannerLabel.style.marginLeft = 12;
+            UiKit.Pad(inner.style, 7, 22);
+            inner.style.maxWidth = Length.Percent(92f);
+            inner.Add(UiKit.Icon("ui_brake", 48));
+            _bannerLabel = UiKit.Text("", 31, Color.white, true, 2f);
+            _bannerLabel.style.marginLeft = 14;
             _bannerLabel.style.whiteSpace = WhiteSpace.Normal;
             _bannerLabel.style.flexShrink = 1;
             inner.Add(_bannerLabel);
@@ -201,8 +201,7 @@ namespace JeepneyRush
         /// </summary>
         public void Say(string text, Func<Vector3> anchor, bool angry = false, float seconds = 1.8f)
         {
-            // at most two bubbles (the oldest goes); the road stays visible
-            while (_bubbles.Count >= MaxBubbles) { _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
+            if (_bubbles.Count >= 3) { _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
             var b = UiKit.Box("bubble");
             b.style.position = Position.Absolute;
             b.style.backgroundImage = UiKit.Tex("ui_bubble");
@@ -210,15 +209,16 @@ namespace JeepneyRush
             b.style.unitySliceRight = 60;
             b.style.unitySliceTop = 40;
             b.style.unitySliceBottom = 50;
-            b.style.paddingLeft = b.style.paddingRight = 26;
-            b.style.paddingTop = 12;
-            b.style.paddingBottom = 34;
-            b.style.minWidth = 160;
+            b.style.paddingLeft = b.style.paddingRight = 30;
+            b.style.paddingTop = 15;
+            b.style.paddingBottom = 40;
+            b.style.minWidth = 200;
             b.style.unityBackgroundImageTintColor = angry ? UiKit.Hex("#FFD6D6") : Color.white;
-            var l = UiKit.Text(text, 30, angry ? UiKit.Red : UiKit.Ink, true);
+            var l = UiKit.Text(text, 34, angry ? UiKit.Red : UiKit.Ink, true);
             l.style.whiteSpace = WhiteSpace.Normal; // long lines wrap instead of running off the screen
-            float fxw = _fxLayer.resolvedStyle.width;
-            b.style.maxWidth = float.IsNaN(fxw) || fxw <= 0 ? 300f : fxw * BubbleMaxWidthNow; // narrow: always fits beside the road
+            b.style.maxWidth = 660;
+            // a little comic tilt, and angry bubbles shake
+            float tilt = UnityEngine.Random.Range(-3.5f, 3.5f);
             b.Add(l);
             _fxLayer.Add(b);
             _bubbles.Add(b);
@@ -237,12 +237,12 @@ namespace JeepneyRush
                 if (float.IsNaN(ph) || ph <= 0) ph = 1920;
                 const float margin = 24f;
                 float x = Mathf.Clamp(p.Value.x - 60 + jitter, margin, Mathf.Max(margin, pw - w - margin));
-                float y = Mathf.Clamp(p.Value.y - 130 - k * 30f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
-                x = ClearOfCorridor(x, y, w, h, pw, ph, margin); // never over the lane ahead
+                float y = Mathf.Clamp(p.Value.y - 150 - k * 40f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
                 b.style.left = x;
                 b.style.top = y;
                 float pop = k < 0.1f ? Mathf.Lerp(0.3f, 1.1f, k / 0.1f) : k < 0.18f ? Mathf.Lerp(1.1f, 1f, (k - 0.1f) / 0.08f) : 1f;
                 b.style.scale = new Scale(new Vector3(pop, pop, 1));
+                b.style.rotate = new Rotate(tilt + (angry && k < 0.35f ? Mathf.Sin(k * 90f) * 4f * (1f - k / 0.35f) : 0f));
                 b.style.opacity = k > 0.85f ? (1 - k) / 0.15f : 1f;
             }, () =>
             {
