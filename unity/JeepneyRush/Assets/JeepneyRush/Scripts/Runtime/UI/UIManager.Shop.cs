@@ -36,13 +36,17 @@ namespace JeepneyRush
             var tabs = UiKit.Box();
             tabs.style.flexDirection = FlexDirection.Row;
             tabs.style.marginTop = 8;
-            _tabJeeps = UiKit.Button("JEEPNEYS", () => { _garageUpgrades = false; RefreshGarage(); }, UiKit.Yellow, UiKit.Ink, 36, 96);
+            _tabJeeps = UiKit.Button("JEEPNEYS", () => { _garageUpgrades = false; _garageTalyer = false; RefreshGarage(); }, UiKit.Yellow, UiKit.Ink, 36, 96);
             _tabJeeps.style.flexGrow = 1;
             _tabJeeps.style.marginRight = 10;
-            _tabUpgrades = UiKit.Button("UPGRADES", () => { _garageUpgrades = true; RefreshGarage(); }, Color.white, UiKit.Ink, 36, 96);
+            _tabUpgrades = UiKit.Button("UPGRADES", () => { _garageUpgrades = true; _garageTalyer = false; RefreshGarage(); }, Color.white, UiKit.Ink, 36, 96);
             _tabUpgrades.style.flexGrow = 1;
+            _tabUpgrades.style.marginRight = 10;
+            _tabTalyer = UiKit.Button("TALYER", () => { _garageTalyer = true; _garageUpgrades = false; RefreshGarage(); }, Color.white, UiKit.Ink, 36, 96);
+            _tabTalyer.style.flexGrow = 1;
             tabs.Add(_tabJeeps);
             tabs.Add(_tabUpgrades);
+            tabs.Add(_tabTalyer);
             card.Add(tabs);
 
             // ---- jeepney page
@@ -76,6 +80,9 @@ namespace JeepneyRush
             _garageUpgradePage = UiKit.Box();
             card.Add(_garageUpgradePage);
 
+            // ---- talyer (customization) page
+            BuildTalyerPage(card);
+
             card.Add(UiKit.Button("BACK", () =>
             {
                 CloseModal();
@@ -90,6 +97,7 @@ namespace JeepneyRush
             _garageIndex = 0;
             for (int i = 0; i < JeepneyCatalog.All.Length; i++) if (JeepneyCatalog.All[i].Id == Services.Save.Data.selectedJeepney) _garageIndex = i;
             _garageUpgrades = false;
+            _garageTalyer = false;
             Show(_menu, false);
             Services.Game.Menu?.SetGarageMode(true);
             OpenModal(_garage);
@@ -107,11 +115,21 @@ namespace JeepneyRush
         {
             var d = Services.Save.Data;
             _garageCoins.text = d.coins.ToString("N0");
-            _tabJeeps.style.backgroundColor = _garageUpgrades ? Color.white : UiKit.Yellow;
+            _tabJeeps.style.backgroundColor = _garageUpgrades || _garageTalyer ? Color.white : UiKit.Yellow;
             _tabUpgrades.style.backgroundColor = _garageUpgrades ? UiKit.Yellow : Color.white;
-            Show(_garageJeepPage, !_garageUpgrades);
+            _tabTalyer.style.backgroundColor = _garageTalyer ? UiKit.Hex("#F77F00") : Color.white;
+            _tabTalyer.style.color = _garageTalyer ? Color.white : UiKit.Ink;
+            Show(_garageJeepPage, !_garageUpgrades && !_garageTalyer);
             Show(_garageUpgradePage, _garageUpgrades);
+            Show(_talyerPage, _garageTalyer);
             if (_garageUpgrades) { RefreshUpgrades(); return; }
+            if (_garageTalyer)
+            {
+                // the talyer works on the jeepney on the turntable (switch jeepney in the JEEPNEYS tab)
+                Services.Game.Menu?.ShowLivery(JeepneyCatalog.All[_garageIndex].Id);
+                RefreshTalyer();
+                return;
+            }
 
             var j = JeepneyCatalog.All[_garageIndex];
             _garageName.text = $"{j.DisplayName.ToUpperInvariant()}  ({_garageIndex + 1}/{JeepneyCatalog.All.Length})";

@@ -30,7 +30,8 @@ namespace JeepneyRush
         public bool SignalSound = true;
         /// <summary>Road slope under the jeepney (radians, + = uphill), set by the session.</summary>
         public float SlopePitch;
-        private string _livery;
+        private string _livery;   // livery id + talyer look (rebuild key)
+        private string _liveryId;
         private bool _soundSystem;
         private readonly System.Collections.Generic.List<GameObject> _disco = new System.Collections.Generic.List<GameObject>();
         private int _discoBeat = int.MinValue;
@@ -102,11 +103,15 @@ namespace JeepneyRush
         /// <summary>Swap the paint job (garage) without rebuilding gameplay state.</summary>
         public void SetLivery(string liveryId)
         {
-            if (_livery == liveryId && _bodyModel != null) return;
-            _livery = liveryId;
+            // the jeepney wears its talyer setup (paint, stickers, sign, mudflaps, ornament, lights)
+            var look = Services.Save != null ? Customization.Effective(Services.Save.Data, liveryId) : null;
+            string key = liveryId + "#" + (look?.ModelKey ?? "");
+            if (_livery == key && _bodyModel != null) return;
+            _livery = key;
+            _liveryId = liveryId;
             if (_bodyModel != null) Destroy(_bodyModel);
             foreach (var w in _wheels) if (w != null) Destroy(w.gameObject);
-            _bodyModel = ModelLibrary.Instantiate(ModelLibrary.Jeepney(liveryId), "Jeepney_" + liveryId, Body);
+            _bodyModel = ModelLibrary.Instantiate(ModelLibrary.Jeepney(liveryId, look), "Jeepney_" + liveryId, Body);
             BuildBlinkers();
             BuildDisco();
             BuildHeadlights();
@@ -125,12 +130,12 @@ namespace JeepneyRush
         {
             if (_cockpit != null) Destroy(_cockpit);
             _glassSwap.Clear();
-            var livery = JeepneyCatalog.Get(_livery);
+            var livery = JeepneyCatalog.Get(_liveryId);
             _layout = CockpitBuilder.Layout(livery);
             _mirrorRiders = -1;
-            _cockpit = ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_" + _livery, () => CockpitBuilder.Extras(livery)), "Cockpit", Body, castShadows: false);
+            _cockpit = ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_" + _liveryId, () => CockpitBuilder.Extras(livery)), "Cockpit", Body, castShadows: false);
             // the clean open cab (hood, thin pillars, low dash) replaces the full body in this view
-            ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_shell_" + _livery, () => CockpitBuilder.Shell(livery)), "CabShell", _cockpit.transform, castShadows: false);
+            ModelLibrary.Instantiate(ModelLibrary.Get("cockpit_shell_" + _liveryId, () => CockpitBuilder.Shell(livery)), "CabShell", _cockpit.transform, castShadows: false);
             var wheelPivot = new GameObject("WheelPivot").transform;
             wheelPivot.SetParent(_cockpit.transform, false);
             var wp = _layout.WheelPos;
@@ -300,7 +305,7 @@ namespace JeepneyRush
         {
             foreach (var g in _disco) if (g != null) Destroy(g);
             _disco.Clear();
-            _soundSystem = JeepneyCatalog.Get(_livery).SoundSystem;
+            _soundSystem = JeepneyCatalog.Get(_liveryId).SoundSystem;
             if (!_soundSystem) return;
             string[] cols = { "#FF2E4D", "#00E5FF", "#FFC300", "#7B2FF7", "#18FF6D", "#FF4FD8" };
             float[] zs = { 0.3f, -0.6f, -1.5f, -2.4f };

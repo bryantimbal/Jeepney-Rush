@@ -109,13 +109,18 @@ namespace JeepneyRush
             if (Services.Game != null) Services.Game.Unregister(this);
         }
 
-        public void ShowLivery(string id)
+        /// <summary>Shows a jeepney on the turntable with its talyer setup (or <paramref name="look"/> to preview one).</summary>
+        public void ShowLivery(string id, JeepneyLook look = null)
         {
-            if (_livery == id) return;
-            _livery = id;
+            look ??= Customization.Effective(Services.Save.Data, id);
+            string key = id + "#" + look.ModelKey;
+            if (_livery == key) return;
+            bool sameJeepney = _livery != null && _livery.StartsWith(id + "#");
+            _livery = key;
             if (_body != null) Destroy(_body);
             if (_wheels != null) foreach (var w in _wheels) Destroy(w.gameObject);
-            _body = ModelLibrary.Instantiate(ModelLibrary.Jeepney(id), "Body", _jeepRoot);
+            _body = ModelLibrary.Instantiate(ModelLibrary.Jeepney(id, look), "Body", _jeepRoot);
+            if (sameJeepney) { _fx?.Confetti(_jeepRoot.position + Vector3.up * 2.5f, 18); var w0 = JeepneyBuilder.WheelPositions; _wheels = new Transform[w0.Length]; for (int i = 0; i < w0.Length; i++) { _wheels[i] = ModelLibrary.Instantiate(ModelLibrary.WheelFor(id), "Wheel" + i, _jeepRoot).transform; _wheels[i].localPosition = new Vector3(w0[i].X, w0[i].Y, w0[i].Z); } return; }
             if (_wheels != null) { _swapT = 0f; _fx?.Confetti(_jeepRoot.position + Vector3.up * 2.5f, 30); }
             var wp = JeepneyBuilder.WheelPositions;
             _wheels = new Transform[wp.Length];

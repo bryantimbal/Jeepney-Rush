@@ -194,6 +194,8 @@ namespace JeepneyRush.Logic
         /// <summary>Career stars per shift (Career.Shifts order) and the license rank already rewarded.</summary>
         public int[] career = new int[0];
         public int career_rank;
+        /// <summary>Talyer items bought (Customization ids).</summary>
+        public string[] cosmetics = new string[0];
     }
 
     /// <summary>Result of <c>submit_run</c>.</summary>
@@ -262,6 +264,8 @@ namespace JeepneyRush.Logic
             d.gems = s.gems;
             d.adFree = s.ad_free;
             d.ownedProducts = new List<string>(s.owned_products ?? new string[0]);
+            // an older server (without cosmetics) keeps the local list; the server never forgets an item
+            if (s.cosmetics != null && s.cosmetics.Length > 0) d.ownedCosmetics = new List<string>(s.cosmetics);
             if (s.career != null && s.career.Length > 0) // an older server without career mode keeps the local progress
             {
                 d.careerMasks = Copy(s.career, Career.Shifts.Length);

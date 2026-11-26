@@ -337,6 +337,7 @@ namespace JeepneyRush
             _score.Init(_cfg);
             _fx.Clear();
             _player.SetLivery(RunJeepney);
+            Services.Audio.HornSfx = Customization.HornSound(Customization.HornOf(save, RunJeepney)); // the horn fitted in the talyer
             _patok = JeepneyCatalog.Get(RunJeepney).SoundSystem;
             _bellStopId = -1; _prevSpeed = 0; _stopArmed = false;
             Services.Audio.SetSoundTrip(JeepneyCatalog.Get(RunJeepney).SoundSystem && Services.Save.Data.soundTrip);

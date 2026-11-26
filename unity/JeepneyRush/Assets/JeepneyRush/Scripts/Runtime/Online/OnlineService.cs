@@ -328,6 +328,7 @@ namespace JeepneyRush
                 case null: return null;
                 case "coins": return "Kulang ang coins.";
                 case "owned": return "Owned na.";
+                case "not_for_sale": return "Hindi nabibili – kinikita sa career.";
                 case "max_level": return "Max level na.";
                 case "not_done": return "Hindi pa tapos.";
                 case "claimed": return "Na-claim na.";
@@ -355,6 +356,7 @@ namespace JeepneyRush
         public void SetName(string name, Action<bool, string> done) => Op("jr_set_name", "{\"p_name\":" + Json.Str(name) + "}", (ok, m, _) => done?.Invoke(ok, m));
 
         // ================================================================== Phase 4: gems, purchases, ad rewards
+        public void BuyCosmetic(string id, Action<bool, string> done) => Op("jr_buy_cosmetic", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
         public void BuyJeepneyWithGems(string id, Action<bool, string> done) => Op("jr_buy_jeepney_gems", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
 
         /// <summary>Sends a store purchase token to the verify-purchase Edge Function (Google Play check + grant).</summary>
