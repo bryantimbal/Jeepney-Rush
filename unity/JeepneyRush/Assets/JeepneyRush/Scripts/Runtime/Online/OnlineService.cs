@@ -408,8 +408,18 @@ namespace JeepneyRush
         public string UserId => _client?.UserId;
 
         // ================================================================== social
-        public void Leaderboard(string board, string scope, Action<LeaderboardPage, string> done) => StartCoroutine(Get(
-            "jr_leaderboard", "{\"p_board\":" + Json.Str(board) + ",\"p_scope\":" + Json.Str(scope) + ",\"p_limit\":50}", done));
+        /// <summary>One leaderboard page. statClass 0..2 = only that jeepney stat class, -1 = everyone.</summary>
+        public void Leaderboard(string board, string scope, int statClass, Action<LeaderboardPage, string> done)
+        {
+            string args = "{\"p_board\":" + Json.Str(board) + ",\"p_scope\":" + Json.Str(scope) + ",\"p_limit\":50";
+            if (statClass < 0) { StartCoroutine(Get("jr_leaderboard", args + "}", done)); return; }
+            // a backend without the stat-class migration doesn't know p_class: fall back to everyone
+            StartCoroutine(Get<LeaderboardPage>("jr_leaderboard", args + ",\"p_class\":" + statClass + "}", (page, err) =>
+            {
+                if (page != null || !SignedIn) { done?.Invoke(page, err); return; }
+                StartCoroutine(Get<LeaderboardPage>("jr_leaderboard", args + "}", (p2, e2) => { if (p2 != null) p2.@class = -1; done?.Invoke(p2, e2); }));
+            }));
+        }
 
         public void Friends(Action<FriendList, string> done) => StartCoroutine(Get("jr_list_friends", "{}", done));
 

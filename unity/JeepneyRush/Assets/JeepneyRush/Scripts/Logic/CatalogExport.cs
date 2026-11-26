@@ -59,7 +59,7 @@ namespace JeepneyRush.Logic
             sb.Append("-- Re-generate: dotnet run --project unity/tools/ExportCatalog\n\n");
             sb.Append("delete from public.jr_catalog_jeepneys;\n");
             foreach (var j in JeepneyCatalog.All)
-                sb.Append($"insert into public.jr_catalog_jeepneys (id, name, price, gem_price) values ({Q(j.Id)}, {Q(j.DisplayName)}, {j.Price}, {j.GemPrice});\n");
+                sb.Append($"insert into public.jr_catalog_jeepneys (id, name, price, gem_price, stat_class) values ({Q(j.Id)}, {Q(j.DisplayName)}, {j.Price}, {j.GemPrice}, {(int)JeepneyClasses.For(j)});\n");
             sb.Append("\ndelete from public.jr_catalog_upgrades;\n");
             foreach (var k in Upgrades.All)
                 for (int lv = 0; lv < Upgrades.MaxLevel; lv++)

@@ -146,6 +146,18 @@ namespace JeepneyRush
             Stat("Health", Mathf.Clamp(2 + j.HealthBonus * 2, 1, 5), j.HealthBonus > 0 ? $"+{j.HealthBonus}" : "");
             Stat("Top speed", Mathf.Clamp(2 + Mathf.RoundToInt(j.SpeedBonus * 1.5f), 1, 5), j.SpeedBonus > 0 ? $"+{j.SpeedBonus:0.#} m/s" : "");
             Stat("Handling", Mathf.Clamp(3 + Mathf.RoundToInt(j.HandlingBonus * 100), 1, 5), "");
+            // stat class: rankings only compare jeepneys of the same class
+            var cls = JeepneyClasses.For(j);
+            var badge = UiKit.Text(JeepneyClasses.Name(cls) + " CLASS", 28, Color.white);
+            badge.style.backgroundColor = UiKit.Hex(JeepneyClasses.Colour(cls));
+            UiKit.Border(badge.style, 3, UiKit.Ink, 12);
+            UiKit.Pad(badge.style, 4, 14);
+            badge.style.alignSelf = Align.FlexStart;
+            badge.style.marginTop = 6;
+            _garageStats.Add(badge);
+            var why = UiKit.Text("Ranked only against " + JeepneyClasses.Name(cls).ToLowerInvariant() + " jeepneys", 24, UiKit.Grey, false);
+            why.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _garageStats.Add(why);
             bool owned = d.Owns(j.Id), selected = d.selectedJeepney == j.Id;
             _garageStatus.text = selected ? "DRIVING THIS ONE" : owned ? "OWNED" : $"PRICE: {j.Price:N0} COINS";
             _garageStatus.style.color = selected || owned ? UiKit.Green : UiKit.Ink;

@@ -17,6 +17,9 @@ namespace JeepneyRush
         private string _rankBoard = "all", _rankScope = "global";
         private readonly Button[] _rankBoardBtns = new Button[3];
         private readonly Button[] _rankScopeBtns = new Button[2];
+        private readonly Button[] _rankClassBtns = new Button[JeepneyClasses.Count + 1];
+        /// <summary>Stat class shown in RANKINGS (-1 = everyone); starts at the class of the jeepney you drive.</summary>
+        private int _rankClass = -2;
         private DailyChallenge _dailyToday;
 
         private static bool UseServer() => Services.Online != null && Services.Online.Authoritative;
@@ -359,6 +362,20 @@ namespace JeepneyRush
                 scopes.Add(b);
             }
             card.Add(scopes);
+            // stat classes: boosted jeepneys are ranked with jeepneys of similar power
+            var classes = UiKit.Box();
+            classes.style.flexDirection = FlexDirection.Row;
+            for (int i = 0; i <= JeepneyClasses.Count; i++)
+            {
+                int c = i < JeepneyClasses.Count ? i : -1;
+                string label = c < 0 ? "EVERYONE" : JeepneyClasses.Name((JeepneyClass)c);
+                var b = UiKit.Button(label, () => { _rankClass = c; LoadRanks(); }, Color.white, UiKit.Ink, 26, 80);
+                b.style.flexGrow = 1;
+                b.style.marginRight = i < JeepneyClasses.Count ? 6 : 0;
+                _rankClassBtns[i] = b;
+                classes.Add(b);
+            }
+            card.Add(classes);
             _rankInfo = Note("", 28);
             card.Add(_rankInfo);
             var scroll = UiKit.Scroll(900);
@@ -372,6 +389,8 @@ namespace JeepneyRush
         private void OpenRanks(string board = "all")
         {
             _rankBoard = board;
+            // always open on the class of the jeepney you're driving
+            _rankClass = (int)JeepneyClasses.For(Services.Save.Data.selectedJeepney);
             OpenModal(_ranks);
             LoadRanks();
         }
@@ -381,16 +400,27 @@ namespace JeepneyRush
             string[] bkeys = { "all", "week", "daily" }, skeys = { "global", "friends" };
             for (int i = 0; i < 3; i++) _rankBoardBtns[i].style.backgroundColor = bkeys[i] == _rankBoard ? UiKit.Yellow : Color.white;
             for (int i = 0; i < 2; i++) _rankScopeBtns[i].style.backgroundColor = skeys[i] == _rankScope ? UiKit.Yellow : Color.white;
+            if (_rankClass < -1) _rankClass = (int)JeepneyClasses.For(Services.Save.Data.selectedJeepney);
+            for (int i = 0; i <= JeepneyClasses.Count; i++)
+            {
+                int c = i < JeepneyClasses.Count ? i : -1;
+                bool on = c == _rankClass;
+                _rankClassBtns[i].style.backgroundColor = on ? (c < 0 ? UiKit.Yellow : UiKit.Hex(JeepneyClasses.Colour((JeepneyClass)c))) : Color.white;
+                _rankClassBtns[i].style.color = on && c >= 0 ? Color.white : UiKit.Ink;
+            }
             _rankList.Clear();
             var o = Services.Online;
-            _rankInfo.text = _rankBoard == "week" ? "Best score this week (resets Monday, PH time)" : _rankBoard == "daily" ? "Today's Daily Challenge – same road for everyone" : "Best score ever";
+            _rankInfo.text = (_rankBoard == "week" ? "Best score this week (resets Monday, PH time)" : _rankBoard == "daily" ? "Today's Daily Challenge – same road for everyone" : "Best score ever")
+                + (_rankClass < 0 ? "\nAll jeepneys together" : "\n" + JeepneyClasses.Blurb((JeepneyClass)_rankClass));
             if (!o.Configured) { _rankList.Add(Note("Rankings need the online backend – see ACCOUNT for how to enable it.", 34, UiKit.Ink)); return; }
             if (!o.SignedIn) { _rankList.Add(Note("Sign in (or play as guest) under ACCOUNT to see the rankings.", 34, UiKit.Ink)); return; }
             _rankList.Add(Note("Loading…"));
-            o.Leaderboard(_rankBoard, _rankScope, (page, err) =>
+            int wantClass = _rankClass;
+            o.Leaderboard(_rankBoard, _rankScope, wantClass, (page, err) =>
             {
                 _rankList.Clear();
                 if (page == null) { _rankList.Add(Note(err ?? "Could not load rankings.", 34, UiKit.Red)); return; }
+                if (wantClass >= 0 && page.@class < 0) _rankList.Add(Note("Class rankings need the latest server update – showing everyone.", 26, UiKit.Grey));
                 if (page.rows.Length == 0) _rankList.Add(Note(_rankScope == "friends" ? "No scores from friends yet." : "No scores yet – be the first!", 34, UiKit.Ink));
                 bool meShown = false;
                 foreach (var r in page.rows) { _rankList.Add(RankRow(r)); meShown |= r.is_me; }
@@ -469,7 +499,16 @@ namespace JeepneyRush
             if (r.rank_daily > 0) parts.Add($"#{r.rank_daily} today");
             if (r.rank_week > 0) parts.Add($"#{r.rank_week} this week");
             if (r.rank_all > 0) parts.Add($"#{r.rank_all} all-time");
-            _goOnline.text = parts.Count > 0 ? "RANK: " + string.Join(" · ", parts) : "Run uploaded.";
+            if (r.class_rank_all > 0 && r.@class >= 0 && r.@class < JeepneyClasses.Count)
+            {
+                // ranks within your jeepney's stat class first: that's who you're really racing
+                parts.Clear();
+                if (r.class_rank_daily > 0) parts.Add($"#{r.class_rank_daily} today");
+                if (r.class_rank_week > 0) parts.Add($"#{r.class_rank_week} this week");
+                parts.Add($"#{r.class_rank_all} all-time");
+                _goOnline.text = JeepneyClasses.Name((JeepneyClass)r.@class) + " CLASS RANK: " + string.Join(" · ", parts);
+            }
+            else _goOnline.text = parts.Count > 0 ? "RANK: " + string.Join(" · ", parts) : "Run uploaded.";
             if (r.clamped) _goOnline.text += " (adjusted by the server)";
             if (_menu != null) RefreshMenuTop();
         }

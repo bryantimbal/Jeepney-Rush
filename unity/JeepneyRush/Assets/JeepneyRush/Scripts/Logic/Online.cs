@@ -186,6 +186,11 @@ namespace JeepneyRush.Logic
         public int rank_all;
         public int rank_week;
         public int rank_daily;
+        /// <summary>Stat class the run counted for (JeepneyClass; -1 = old server without classes).</summary>
+        public int @class = -1;
+        public int class_rank_all;
+        public int class_rank_week;
+        public int class_rank_daily;
         public ServerSnapshot snapshot;
     }
 
@@ -323,6 +328,8 @@ namespace JeepneyRush.Logic
     {
         public string board;
         public string scope;
+        /// <summary>Stat class of this board (-1 = everyone).</summary>
+        public int @class = -1;
         public LeaderboardRow[] rows = new LeaderboardRow[0];
         public LeaderboardRow me;
     }
