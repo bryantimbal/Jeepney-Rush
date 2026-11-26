@@ -41,34 +41,28 @@ namespace JeepneyRush
         private readonly TiltSteer _tilt = new TiltSteer();
         private bool _landscape;
 
-        /// <summary>Tilt settings from the save: calibrated neutral position, dead zone, smoothing.</summary>
+        /// <summary>Tilt settings from the save: calibrated straight-ahead angle (per orientation), dead zone, smoothing.</summary>
         public void ApplyTiltSettings(SaveData d)
         {
             _tilt.DeadZone = d.tiltDeadZone * 100f; // stored as the old g value: 0.02 / 0.035 / 0.06 → 2° / 3.5° / 6°
             _tilt.Smoothing = d.tiltSmoothing;
             _landscape = ScreenOrientationControl.IsLandscape;
-            LearnTiltAxes(d);
-            bool calibrated = _landscape ? d.tiltRollLandCal : d.tiltRollCal;
-            if (calibrated) _tilt.Calibrate(_landscape ? d.tiltRollLand : d.tiltRoll);
+            bool calibrated = _landscape ? d.tiltNeutralLandCal : d.tiltNeutralCal;
+            if (calibrated) _tilt.Calibrate(_landscape ? d.tiltNeutralLand : d.tiltNeutral);
             else Recalibrate(); // never calibrated: the way the phone is held at the start is "straight"
         }
 
-        /// <summary>Remembers (once, when it can tell) whether this phone's sensor readings are already rotated to the screen.</summary>
-        public static void LearnTiltAxes(SaveData d)
-        {
-            if (d.tiltAxesKnown) { InputCompat.TiltAxesRotated = d.tiltAxesRotated; return; }
-            if (InputCompat.DetectTiltAxes()) { d.tiltAxesKnown = true; d.tiltAxesRotated = InputCompat.TiltAxesRotated; }
-        }
+        /// <summary>Kept for old callers: the sensor axes are now read from the backend (no learning needed).</summary>
+        public static void LearnTiltAxes(SaveData d) { }
 
-        /// <summary>The way the phone is held now counts as "straight ahead". Returns the neutral roll (degrees).</summary>
+        /// <summary>The way the phone is held now counts as "straight ahead". Returns the neutral angle (degrees).</summary>
         public float Recalibrate()
         {
             if (!InputCompat.HasTilt) return 0f;
-            if (Services.Save != null) LearnTiltAxes(Services.Save.Data);
-            float roll = InputCompat.TiltRoll();
-            if (float.IsNaN(roll)) roll = 0f;
-            _tilt.Calibrate(roll);
-            return roll;
+            float a = InputCompat.TiltAngle();
+            if (float.IsNaN(a)) a = 0f;
+            _tilt.Calibrate(a);
+            return a;
         }
 
         private void Update()
@@ -90,7 +84,7 @@ namespace JeepneyRush
             if (ScreenOrientationControl.IsLandscape != _landscape && Services.Save != null) ApplyTiltSettings(Services.Save.Data);
             float dt = Time.unscaledDeltaTime;
             float steer = 0f;
-            if (Mode == SteerMode.Tilt && InputCompat.HasTilt) steer = _tilt.Input(InputCompat.TiltRoll(), Sensitivity, dt);
+            if (Mode == SteerMode.Tilt && InputCompat.HasTilt) steer = _tilt.Input(InputCompat.TiltAngle(), Sensitivity, dt);
             else if (Mode == SteerMode.Wheel) steer = WheelInput;
             else steer = TapSteer.Input(SteerLeftButton, SteerRightButton);
             // keyboard always works (PC, and phones with a keyboard)

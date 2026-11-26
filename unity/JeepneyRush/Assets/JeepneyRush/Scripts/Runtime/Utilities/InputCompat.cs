@@ -120,9 +120,12 @@ namespace JeepneyRush
         }
 
         /// <summary>Raw accelerometer x / y in g (as reported by the input backend). False without a sensor.</summary>
-        public static bool TiltRaw(out float ax, out float ay)
+        public static bool TiltRaw(out float ax, out float ay) => TiltRaw(out ax, out ay, out _);
+
+        /// <summary>Raw accelerometer x / y / z in g (z = out of the screen). False without a sensor.</summary>
+        public static bool TiltRaw(out float ax, out float ay, out float az)
         {
-            ax = ay = 0f;
+            ax = ay = az = 0f;
 #if ENABLE_INPUT_SYSTEM
             var acc = Accelerometer.current;
             if (acc == null) return false;
@@ -132,7 +135,7 @@ namespace JeepneyRush
             if (!SystemInfo.supportsAccelerometer) return false;
             var a = Input.acceleration;
 #endif
-            ax = a.x; ay = a.y;
+            ax = a.x; ay = a.y; az = a.z;
             return true;
         }
 
@@ -142,6 +145,30 @@ namespace JeepneyRush
         /// held – see <see cref="DetectTiltAxes"/> – and remembered in the save).
         /// </summary>
         public static bool TiltAxesRotated = true;
+
+        /// <summary>
+        /// Whether the current backend rotates sensor readings to the screen – read from the backend
+        /// itself, no guessing: the Input System does when its "compensate for screen orientation"
+        /// setting is on (the default); the old Input Manager never does.
+        /// </summary>
+        public static bool BackendRotatesToScreen
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return InputSystem.settings == null || InputSystem.settings.compensateForScreenOrientation;
+#else
+                return false;
+#endif
+            }
+        }
+
+        /// <summary>Phone tilt in degrees like a steering wheel (+ = right), 3-axis and lean-compensated, in any orientation. NaN without a reading.</summary>
+        public static float TiltAngle()
+        {
+            if (!TiltRaw(out float ax, out float ay, out float az)) return float.NaN;
+            return Logic.ScreenLayout.TiltAngleDeg(ax, ay, az, ScreenOrientationControl.CurrentRotation, BackendRotatesToScreen);
+        }
 
         /// <summary>
         /// Looks at gravity while the phone is held normally in landscape: along the phone's own x axis

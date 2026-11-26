@@ -39,17 +39,20 @@ namespace JeepneyRush
             _banner.style.position = Position.Absolute;
             _banner.style.left = _banner.style.right = 0;
             // above the horizon so the road stays visible (just under the stop panel / power-ups)
-            _banner.style.top = Length.Percent(30.5f);
+            _banner.style.top = Length.Percent(10.5f); // top band (UIManager.Clearance sets portrait / landscape)
             _banner.style.alignItems = Align.Center;
             var inner = UiKit.Box();
             inner.style.flexDirection = FlexDirection.Row;
             inner.style.alignItems = Align.Center;
             inner.style.backgroundColor = UiKit.Hex("#0038A8");
             UiKit.Border(inner.style, 5, UiKit.Yellow, 26);
-            UiKit.Pad(inner.style, 8, 24);
-            inner.Add(UiKit.Icon("ui_brake", 54));
-            _bannerLabel = UiKit.Text("", 34, Color.white, true, 2f);
-            _bannerLabel.style.marginLeft = 16;
+            UiKit.Pad(inner.style, 6, 18);
+            inner.style.maxWidth = Length.Percent(78f);
+            inner.Add(UiKit.Icon("ui_brake", 40));
+            _bannerLabel = UiKit.Text("", 28, Color.white, true, 2f);
+            _bannerLabel.style.marginLeft = 12;
+            _bannerLabel.style.whiteSpace = WhiteSpace.Normal;
+            _bannerLabel.style.flexShrink = 1;
             inner.Add(_bannerLabel);
             _banner.Add(inner);
             Show(_banner, false);
@@ -198,7 +201,8 @@ namespace JeepneyRush
         /// </summary>
         public void Say(string text, Func<Vector3> anchor, bool angry = false, float seconds = 1.8f)
         {
-            if (_bubbles.Count >= 3) { _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
+            // at most two bubbles (the oldest goes); the road stays visible
+            while (_bubbles.Count >= MaxBubbles) { _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
             var b = UiKit.Box("bubble");
             b.style.position = Position.Absolute;
             b.style.backgroundImage = UiKit.Tex("ui_bubble");
@@ -206,14 +210,15 @@ namespace JeepneyRush
             b.style.unitySliceRight = 60;
             b.style.unitySliceTop = 40;
             b.style.unitySliceBottom = 50;
-            b.style.paddingLeft = b.style.paddingRight = 34;
-            b.style.paddingTop = 18;
-            b.style.paddingBottom = 44;
-            b.style.minWidth = 220;
+            b.style.paddingLeft = b.style.paddingRight = 26;
+            b.style.paddingTop = 12;
+            b.style.paddingBottom = 34;
+            b.style.minWidth = 160;
             b.style.unityBackgroundImageTintColor = angry ? UiKit.Hex("#FFD6D6") : Color.white;
-            var l = UiKit.Text(text, 38, angry ? UiKit.Red : UiKit.Ink, true);
+            var l = UiKit.Text(text, 30, angry ? UiKit.Red : UiKit.Ink, true);
             l.style.whiteSpace = WhiteSpace.Normal; // long lines wrap instead of running off the screen
-            b.style.maxWidth = 760;
+            float fxw = _fxLayer.resolvedStyle.width;
+            b.style.maxWidth = float.IsNaN(fxw) || fxw <= 0 ? 300f : fxw * BubbleMaxWidthNow; // narrow: always fits beside the road
             b.Add(l);
             _fxLayer.Add(b);
             _bubbles.Add(b);
@@ -232,7 +237,8 @@ namespace JeepneyRush
                 if (float.IsNaN(ph) || ph <= 0) ph = 1920;
                 const float margin = 24f;
                 float x = Mathf.Clamp(p.Value.x - 60 + jitter, margin, Mathf.Max(margin, pw - w - margin));
-                float y = Mathf.Clamp(p.Value.y - 150 - k * 40f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
+                float y = Mathf.Clamp(p.Value.y - 130 - k * 30f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
+                x = ClearOfCorridor(x, y, w, h, pw, ph, margin); // never over the lane ahead
                 b.style.left = x;
                 b.style.top = y;
                 float pop = k < 0.1f ? Mathf.Lerp(0.3f, 1.1f, k / 0.1f) : k < 0.18f ? Mathf.Lerp(1.1f, 1f, (k - 0.1f) / 0.08f) : 1f;

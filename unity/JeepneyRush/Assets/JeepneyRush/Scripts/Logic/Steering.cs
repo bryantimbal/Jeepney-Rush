@@ -338,44 +338,90 @@ namespace JeepneyRush.Logic
     }
 
     /// <summary>
-    /// Phone tilt → steering input, like a steering wheel: the phone's ROLL angle (degrees) around
-    /// the calibrated neutral, with a dead zone, smoothing and a proportional response. A steady
-    /// tilt gives a steady input (never a growing one).
+    /// Phone tilt → steering input, like a steering wheel. The angle comes from
+    /// <see cref="ScreenLayout.TiltAngleDeg"/> (3-axis, lean-compensated). Then:
+    ///  • a One-Euro filter: very calm while the phone is held still (no jitter, no wandering),
+    ///    yet almost no lag when you turn quickly – one fixed filter can only do one of the two
+    ///  • a dead zone around the calibrated straight-ahead angle, then a smooth response curve
+    ///    (fine near the centre, full lock at <see cref="FullLockDeg"/> / sensitivity)
+    ///  • slow re-centring: while the phone is held inside the dead zone, "straight" follows the
+    ///    way it is held (hands drift during a run) – a real turn never moves it.
+    /// A steady tilt gives a steady input (never a growing one).
     /// </summary>
     public sealed class TiltSteer
     {
-        /// <summary>Roll (degrees) for full lock at sensitivity 1.</summary>
-        public const float FullLockDeg = 24f;
-        public const float DeadZoneDegDefault = 3.5f;
-        /// <summary>Neutral roll (degrees).</summary>
+        /// <summary>Tilt (degrees) for full lock at sensitivity 1.</summary>
+        public const float FullLockDeg = 22f;
+        public const float DeadZoneDegDefault = 3f;
+        /// <summary>Neutral angle (degrees).</summary>
         public float Centre;
         /// <summary>Dead zone around the neutral (degrees): 2 small .. 6 large.</summary>
         public float DeadZone = DeadZoneDegDefault;
-        /// <summary>Sensor filter speed (1/s): 7 = very smooth, 14 = normal, 24 = quick.</summary>
+        /// <summary>Settings: 7 = very smooth, 14 = normal, 24 = quick (the filter's resting cut-off, ×0.1 Hz).</summary>
         public float Smoothing = 14f;
-        private float _smooth, _lastRoll;
-        private bool _has;
+        /// <summary>How quickly the filter opens up for fast turns (per °/s).</summary>
+        public const float Beta = 0.05f;
+        /// <summary>Re-centring speed while held inside the dead zone (fraction per second).</summary>
+        public const float RecentreRate = 0.35f;
+        /// <summary>Seconds inside the dead zone before re-centring starts.</summary>
+        public const float RecentreAfter = 1.2f;
+
+        private float _x, _dx, _last, _still;
+        private bool _has, _init;
 
         public bool Calibrated => _has;
-        public void Calibrate(float rollDeg) { if (float.IsNaN(rollDeg)) rollDeg = 0; Centre = rollDeg; _lastRoll = rollDeg; _smooth = 0; _has = true; }
+        /// <summary>The filtered tilt relative to straight ahead (degrees, for the calibration screen).</summary>
+        public float Filtered => _x;
 
-        /// <param name="rollDeg">phone roll in degrees (NaN = phone too flat: keep the last reading)</param>
-        /// <param name="sensitivity">0.5 .. 1.5 (Settings)</param>
-        public float Input(float rollDeg, float sensitivity, float dt)
+        public void Calibrate(float angleDeg)
         {
-            if (float.IsNaN(rollDeg)) rollDeg = _lastRoll;
-            _lastRoll = rollDeg;
-            if (!_has) Calibrate(rollDeg);
-            float d = rollDeg - Centre;
+            if (float.IsNaN(angleDeg)) angleDeg = 0;
+            Centre = angleDeg; _last = angleDeg; _x = 0; _dx = 0; _init = false; _still = 0; _has = true;
+        }
+
+        private static float Alpha(float cutoffHz, float dt)
+        {
+            float tau = 1f / (2f * (float)Math.PI * Math.Max(0.01f, cutoffHz));
+            return 1f / (1f + tau / Math.Max(1e-4f, dt));
+        }
+
+        /// <param name="angleDeg">phone tilt in degrees (NaN = no reading this frame: keep the last one)</param>
+        /// <param name="sensitivity">0.5 .. 1.5 (Settings)</param>
+        public float Input(float angleDeg, float sensitivity, float dt)
+        {
+            if (dt <= 0) dt = 1f / 60f;
+            if (float.IsNaN(angleDeg)) angleDeg = _last;
+            _last = angleDeg;
+            if (!_has) Calibrate(angleDeg);
+            float d = angleDeg - Centre;
             if (d > 180f) d -= 360f;
             if (d < -180f) d += 360f;
+            // ---- One-Euro filter (degrees)
+            if (!_init) { _x = d; _dx = 0; _init = true; }
+            float rawDx = (d - _x) / dt;
+            _dx += (rawDx - _dx) * Alpha(1f, dt);
+            float cutoff = Math.Max(0.4f, Math.Min(3f, Smoothing * 0.1f)) + Beta * Math.Abs(_dx);
+            _x += (d - _x) * Alpha(cutoff, dt);
             float dz = Math.Max(0f, Math.Min(12f, DeadZone));
+            // ---- slow re-centring while the phone is held still inside the dead zone
+            if (Math.Abs(_x) < dz) // (tremor keeps the speed estimate busy, so only the angle counts)
+            {
+                _still += dt;
+                if (_still > RecentreAfter)
+                {
+                    float shift = _x * Math.Min(1f, dt * RecentreRate);
+                    Centre += shift;
+                    _x -= shift;
+                }
+            }
+            else _still = 0;
+            // ---- dead zone + response curve
             float full = Math.Max(dz + 4f, FullLockDeg / Math.Max(0.5f, Math.Min(1.5f, sensitivity)));
-            float v = Math.Abs(d) <= dz ? 0f : Math.Sign(d) * Math.Min(1f, (Math.Abs(d) - dz) / (full - dz));
-            v = Math.Sign(v) * v * v * 0.35f + v * 0.65f; // finer control near the centre
-            float k = 1f - (float)Math.Exp(-dt * Math.Max(2f, Smoothing)); // filter sensor jitter
-            _smooth += (v - _smooth) * k;
-            return Math.Abs(_smooth) < 0.01f ? 0f : _smooth;
+            float a = Math.Abs(_x);
+            if (a <= dz) return 0f;
+            float v = Math.Min(1f, (a - dz) / (full - dz));
+            v = v * v * 0.35f + v * 0.65f; // finer control near the centre, still continuous
+            return Math.Sign(_x) * v;
         }
     }
 

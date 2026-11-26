@@ -243,11 +243,10 @@ namespace JeepneyRush
             c.Add(Note("Hold the phone the way you like to drive, then calibrate.", 28));
             c.Add(SmallButton("CALIBRATE TILT", () =>
             {
-                if (InputCompat.HasTilt) { d().tiltAxesKnown = false; PlayerInputHandler.LearnTiltAxes(d()); } // calibrating re-checks the sensor axes
-                float roll = InputCompat.HasTilt ? (Services.Game?.Session?.Input != null ? Services.Game.Session.Input.Recalibrate() : InputCompat.TiltRoll()) : 0f;
-                if (float.IsNaN(roll)) roll = 0f;
-                if (ScreenOrientationControl.IsLandscape) { d().tiltRollLand = roll; d().tiltRollLandCal = InputCompat.HasTilt; }
-                else { d().tiltRoll = roll; d().tiltRollCal = InputCompat.HasTilt; }
+                float a = InputCompat.HasTilt ? (Services.Game?.Session?.Input != null ? Services.Game.Session.Input.Recalibrate() : InputCompat.TiltAngle()) : 0f;
+                if (float.IsNaN(a)) a = 0f;
+                if (ScreenOrientationControl.IsLandscape) { d().tiltNeutralLand = a; d().tiltNeutralLandCal = InputCompat.HasTilt; }
+                else { d().tiltNeutral = a; d().tiltNeutralCal = InputCompat.HasTilt; }
                 Apply();
                 RefreshCalibLabel();
                 Toast(InputCompat.HasTilt ? "NA-CALIBRATE NA! ✓ Ito na ang 'diretso'." : "No tilt sensor on this device.");
@@ -286,7 +285,7 @@ namespace JeepneyRush
             if (_calibLabel == null || Services.Save == null) return;
             var d = Services.Save.Data;
             bool land = ScreenOrientationControl.IsLandscape;
-            bool cal = land ? d.tiltRollLandCal : d.tiltRollCal;
+            bool cal = land ? d.tiltNeutralLandCal : d.tiltNeutralCal;
             string which = land ? "landscape" : "portrait";
             _calibLabel.text = !InputCompat.HasTilt ? "This device has no tilt sensor." : cal ? $"✓ Calibrated ({which})" : $"Not calibrated for {which} yet (uses how you hold the phone at the start).";
             _calibLabel.style.color = cal ? UiKit.Hex("#2E9E5B") : UiKit.Grey;

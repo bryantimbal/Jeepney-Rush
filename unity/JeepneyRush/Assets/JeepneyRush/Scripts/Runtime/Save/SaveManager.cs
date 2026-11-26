@@ -123,6 +123,7 @@ namespace JeepneyRush
                 orientation = keep.orientation, tiltCentreLand = keep.tiltCentreLand, tiltCalibratedLand = keep.tiltCalibratedLand,
                 tiltRoll = keep.tiltRoll, tiltRollLand = keep.tiltRollLand, tiltRollCal = keep.tiltRollCal, tiltRollLandCal = keep.tiltRollLandCal,
                 tiltAxesKnown = keep.tiltAxesKnown, tiltAxesRotated = keep.tiltAxesRotated,
+                tiltNeutral = keep.tiltNeutral, tiltNeutralLand = keep.tiltNeutralLand, tiltNeutralCal = keep.tiltNeutralCal, tiltNeutralLandCal = keep.tiltNeutralLandCal,
             };
             Save();
         }

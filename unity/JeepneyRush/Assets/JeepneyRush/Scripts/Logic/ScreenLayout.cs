@@ -110,6 +110,26 @@ namespace JeepneyRush.Logic
             return (float)(Math.Atan2(sx, -sy) * 180.0 / Math.PI);
         }
 
+        /// <summary>
+        /// Steering angle of the phone (degrees, + = right side down) from the full 3-axis gravity
+        /// reading, in any orientation and any lean. Held upright it is exactly the steering-wheel
+        /// angle; leaned back it compensates for the lean (the same wrist turn gives the same angle);
+        /// held nearly flat it switches smoothly to the left/right tilt of the phone, so it never
+        /// blows up or drops out. NaN only without a usable reading (free fall).
+        /// </summary>
+        public static float TiltAngleDeg(float ax, float ay, float az, Rotation r, bool compensated)
+        {
+            var (sx, sy) = ToScreen(ax, ay, r, compensated);
+            float g = (float)Math.Sqrt(sx * sx + sy * sy + az * az);
+            if (!(g > 0.3f)) return float.NaN;
+            float inPlane = (float)Math.Sqrt(sx * sx + sy * sy) / g;      // 1 upright .. 0 flat
+            float s = sx / (g * Math.Max(TiltFlatFloor, inPlane));
+            return (float)(Math.Asin(Math.Max(-1f, Math.Min(1f, s))) * 180.0 / Math.PI);
+        }
+
+        /// <summary>Below this share of gravity in the screen plane the phone counts as flat (noise is amplified at most 1 / this).</summary>
+        public const float TiltFlatFloor = 0.5f;
+
         private static float Clamp(float v, float lo, float hi) => Math.Max(lo, Math.Min(hi, v));
     }
 }

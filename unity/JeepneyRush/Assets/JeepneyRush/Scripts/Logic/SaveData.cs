@@ -58,6 +58,9 @@ namespace JeepneyRush.Logic
         public bool tiltRollCal, tiltRollLandCal;
         /// <summary>Detected once: does this phone's input backend already rotate the sensor to the screen?</summary>
         public bool tiltAxesKnown, tiltAxesRotated;
+        /// <summary>Tilt v2 (3-axis, lean-compensated angle): calibrated straight-ahead angle per orientation (portrait / landscape).</summary>
+        public float tiltNeutral, tiltNeutralLand;
+        public bool tiltNeutralCal, tiltNeutralLandCal;
         /// <summary>(old, g-based – no longer used)</summary>
         public float tiltCentreLand;
         public bool tiltCalibratedLand;
@@ -205,6 +208,8 @@ namespace JeepneyRush.Logic
             if (float.IsNaN(d.tiltCentreLand) || Math.Abs(d.tiltCentreLand) > 1f) { d.tiltCentreLand = 0; d.tiltCalibratedLand = false; }
             if (float.IsNaN(d.tiltRoll) || Math.Abs(d.tiltRoll) > 90f) { d.tiltRoll = 0; d.tiltRollCal = false; }
             if (float.IsNaN(d.tiltRollLand) || Math.Abs(d.tiltRollLand) > 90f) { d.tiltRollLand = 0; d.tiltRollLandCal = false; }
+            if (float.IsNaN(d.tiltNeutral) || Math.Abs(d.tiltNeutral) > 90f) { d.tiltNeutral = 0; d.tiltNeutralCal = false; }
+            if (float.IsNaN(d.tiltNeutralLand) || Math.Abs(d.tiltNeutralLand) > 90f) { d.tiltNeutralLand = 0; d.tiltNeutralLandCal = false; }
             d.wheelOpacity = Fix(d.wheelOpacity, 0.3f, 1f, 0.9f);
             d.wheelMaxAngle = Fix(d.wheelMaxAngle, 60f, 180f, 135f);
             d.buttonScale = Fix(d.buttonScale, 0.8f, 1.25f, 1f);

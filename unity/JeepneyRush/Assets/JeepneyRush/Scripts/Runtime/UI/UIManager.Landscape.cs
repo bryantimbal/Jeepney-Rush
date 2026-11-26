@@ -19,6 +19,7 @@ namespace JeepneyRush
         /// <summary>Called when the screen turns (and once at start).</summary>
         private void ApplyOrientationLayouts(bool landscape)
         {
+            if (landscape != _hudLandscape) ApplyHudClearance(landscape);
             if (landscape == _landscapeUi) { RefitCards(); return; } // (the UI is built for portrait)
             _landscapeUi = landscape;
             ApplyMenuLayout(landscape);
