@@ -26,8 +26,10 @@ namespace JeepneyRush.Logic
         public bool driverView;
         /// <summary>Steering sensitivity 0.5 .. 1.5 (tilt angle for full lock). Field name kept for old saves.</summary>
         public float swipeSensitivity = 1f;
-        /// <summary>How the jeepney is steered: 0 = hold the left/right side of the screen, 1 = tilt the phone.</summary>
-        public int steerMode;
+        /// <summary>How the jeepney is steered (SteerMode): 0 = LEFT/RIGHT buttons, 1 = tilt the phone, 2 = on-screen steering wheel (default).</summary>
+        public int steerMode = (int)SteerMode.Wheel;
+        /// <summary>The player picked a steering mode in Settings ▸ Controls (until then the default, the wheel, is used).</summary>
+        public bool steerModeChosen;
         /// <summary>Lane-keeping assist: with hands off, the jeepney settles into the nearest lane.</summary>
         public bool laneAssist = true;
         // ---- steering & controls (Settings ▸ Controls)
@@ -191,7 +193,8 @@ namespace JeepneyRush.Logic
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;
             if (d.graphicsQuality < 0 || d.graphicsQuality > 3) d.graphicsQuality = 3;
-            if (d.steerMode < 0 || d.steerMode > 2) d.steerMode = 0;
+            // the steering wheel is the default: saves where the player never chose a mode get it too
+            if (!d.steerModeChosen || d.steerMode < 0 || d.steerMode > 2) d.steerMode = (int)SteerMode.Wheel;
             d.maxSteer = Fix(d.maxSteer, 0.7f, 1f, 1f);
             d.steerReturn = Fix(d.steerReturn, 0.5f, 2f, 1f);
             d.tiltDeadZone = Fix(d.tiltDeadZone, 0.01f, 0.12f, 0.035f);

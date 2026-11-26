@@ -947,7 +947,7 @@ namespace JeepneyRush
             _ctlTopRow.style.alignItems = Align.FlexEnd;
             _ctlTopRow.style.justifyContent = Justify.FlexEnd;
             bottom.Add(_ctlRight);
-            ApplyControlLayout(Services.Save != null ? GameplaySession.EffectiveSteerMode(Services.Save.Data) : Logic.SteerMode.Tap);
+            ApplyControlLayout(Services.Save != null ? GameplaySession.EffectiveSteerMode(Services.Save.Data) : Logic.SteerMode.Wheel);
             _hud.Add(bottom);
             BuildArcade(_hud);
 

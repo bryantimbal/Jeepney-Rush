@@ -365,5 +365,17 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(Cfg.LaneX(System.Math.Max(0, start - 2)), m.X, 1e-3f, "two presses = two lanes");
         }
 
+
+        [Test]
+        public void SteeringWheelIsTheDefault()
+        {
+            Assert.AreEqual((int)SteerMode.Wheel, SaveValidation.Sanitize(new SaveData()).steerMode, "new players");
+            var old = new SaveData { steerMode = (int)SteerMode.Tap };
+            Assert.AreEqual((int)SteerMode.Wheel, SaveValidation.Sanitize(old).steerMode, "an old save that never chose a mode gets the wheel");
+            var chose = new SaveData { steerMode = (int)SteerMode.Tilt, steerModeChosen = true };
+            Assert.AreEqual((int)SteerMode.Tilt, SaveValidation.Sanitize(chose).steerMode, "a player's own choice is kept");
+            var bad = new SaveData { steerMode = 9, steerModeChosen = true };
+            Assert.AreEqual((int)SteerMode.Wheel, SaveValidation.Sanitize(bad).steerMode);
+        }
     }
 }

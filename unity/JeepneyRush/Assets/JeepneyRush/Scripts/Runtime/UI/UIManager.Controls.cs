@@ -224,6 +224,7 @@ namespace JeepneyRush
             c.Add(Segmented("Steering mode", new[] { "Buttons", "Tilt", "Wheel" }, () => d().steerMode, i =>
             {
                 d().steerMode = i;
+                d().steerModeChosen = true;
                 if (i == 1 && !InputCompat.HasTilt) Float("NO TILT SENSOR · USING BUTTONS", FloatKind.Info);
                 Apply();
             }, UiKit.Hex("#22D065"), UiKit.Hex("#DCE6F5"), UiKit.Ink, UiKit.Hex("#2F4A7A"), 112));
