@@ -26,6 +26,12 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("roadblock", VehicleBuilder.Roadblock());
             yield return ("person", PropBuilder.Person(1));
             yield return ("person_seated", PropBuilder.Person(2, true));
+            foreach (RiderKind k in Enum.GetValues(typeof(RiderKind)))
+            {
+                if (k == RiderKind.Regular) continue;
+                yield return ("rider_" + k.ToString().ToLowerInvariant(), RiderBuilder.Rider(k, false));
+                yield return ("rider_" + k.ToString().ToLowerInvariant() + "_seated", RiderBuilder.Rider(k, true));
+            }
             yield return ("coin", PropBuilder.Coin());
             yield return ("shed", PropBuilder.WaitingShed());
             yield return ("intersection", PropBuilder.Intersection());

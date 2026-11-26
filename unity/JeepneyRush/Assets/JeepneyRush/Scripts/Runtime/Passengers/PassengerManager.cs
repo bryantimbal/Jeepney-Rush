@@ -54,6 +54,13 @@ namespace JeepneyRush
                 string key = "person" + v;
                 if (!Services.Pools.Has(key)) Services.Pools.Register(key, () => ModelLibrary.Instantiate(ModelLibrary.Person(v), key));
             }
+            foreach (RiderKind k in System.Enum.GetValues(typeof(RiderKind)))
+            {
+                if (k == RiderKind.Regular) continue;
+                var kind = k;
+                string key = RiderPool(k);
+                if (!Services.Pools.Has(key)) Services.Pools.Register(key, () => ModelLibrary.Instantiate(ModelLibrary.Rider(kind, false), key));
+            }
             BuildSeats();
         }
 
@@ -72,6 +79,8 @@ namespace JeepneyRush
                 _seated.Add(go);
             }
             _bob = new float[_seated.Count];
+            _seatLooks.Clear();
+            _seatKind = new RiderKind[_seated.Count];
             // "sabit" riders standing on the rear step, holding the grab bar (provincial roads)
             foreach (var hg in _hangers) if (hg != null) Destroy(hg);
             _hangers.Clear();
@@ -410,7 +419,9 @@ namespace JeepneyRush
             for (int a = 0; a < r.Alighted; a++)
             {
                 int variant = Random.Range(0, PropBuilder.PersonVariants);
-                var t = Services.Pools.Get("person" + variant, transform).transform;
+                // the one everybody notices gets off first: the fare dodger running, the lola, the balikbayan with his box…
+                var look = a == 0 ? (r.Dodgers > 0 ? RiderKind.Dodger : r.Leaver) : RiderKind.Regular;
+                var t = Services.Pools.Get(look == RiderKind.Regular ? "person" + variant : RiderPool(look), transform).transform;
                 var from = new Vector3(_player.position.x, 0.8f, -3.2f - a * 0.4f);
                 t.position = from;
                 t.localRotation = Quaternion.identity;
@@ -451,9 +462,37 @@ namespace JeepneyRush
         public void UpdateSeats()
         {
             int n = _route != null ? Mathf.Min(_route.Count, _route.SeatCapacity) : 0;
-            for (int i = 0; i < _seated.Count; i++) if (_seated[i] != null) _seated[i].SetActive(i < n);
+            for (int i = 0; i < _seated.Count; i++)
+            {
+                if (_seated[i] == null) continue;
+                _seated[i].SetActive(i < n);
+                if (i < n) ShowLook(i, i < _route.Aboard.Count ? _route.Aboard[i].Kind : RiderKind.Regular);
+            }
             int h = _route != null ? _route.Hanging : 0;
             for (int i = 0; i < _hangers.Count; i++) if (_hangers[i] != null) _hangers[i].SetActive(i < h);
+        }
+
+        private static string RiderPool(RiderKind k) => "rider_" + k;
+
+        // seat i shows rider i: the generic commuter, or a child model for a personality (bobs with the seat)
+        private readonly Dictionary<(int seat, RiderKind kind), GameObject> _seatLooks = new Dictionary<(int, RiderKind), GameObject>();
+        private RiderKind[] _seatKind = new RiderKind[0];
+
+        private void ShowLook(int seat, RiderKind kind)
+        {
+            if (seat >= _seatKind.Length) return;
+            var generic = _seated[seat].GetComponent<MeshRenderer>();
+            if (generic != null) generic.enabled = kind == RiderKind.Regular;
+            if (_seatKind[seat] == kind) return;
+            if (_seatLooks.TryGetValue((seat, _seatKind[seat]), out var old) && old != null) old.SetActive(false);
+            _seatKind[seat] = kind;
+            if (kind == RiderKind.Regular) return;
+            if (!_seatLooks.TryGetValue((seat, kind), out var look) || look == null)
+            {
+                look = ModelLibrary.Instantiate(ModelLibrary.Rider(kind, true), "Seated" + seat + "_" + kind, _seated[seat].transform, castShadows: false);
+                _seatLooks[(seat, kind)] = look;
+            }
+            look.SetActive(true);
         }
 
         /// <summary>The seated driver is hidden in the driver's-seat view (the camera is in his place).</summary>

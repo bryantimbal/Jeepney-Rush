@@ -74,6 +74,8 @@ namespace JeepneyRush
         public static Model Coin() => Get("coin", PropBuilder.Coin);
         public static Model Person(int i) => Get("person" + i, () => PropBuilder.Person(i));
         public static Model SeatedPerson(int i) => Get("seated" + i, () => PropBuilder.Person(i, true));
+        /// <summary>Passenger personality (lola, estudyante, tindera…), standing or seated.</summary>
+        public static Model Rider(RiderKind k, bool seated) => Get("rider_" + k + (seated ? "_seated" : ""), () => RiderBuilder.Rider(k, seated));
         public static Model Shed() => Get("shed", PropBuilder.WaitingShed);
         public static Model StopSign(int nameIndex) => Get("stopsign" + nameIndex, () => PropBuilder.StopSign(nameIndex));
         public static Model StopArrow(bool drop) => Get(drop ? "arrow_drop" : "arrow_pick", () => PropBuilder.StopArrow(drop ? "#2BFF88" : "#FFD100"));
@@ -175,6 +177,7 @@ namespace JeepneyRush
             Coin();
             Wheel();
             for (int i = 0; i < PropBuilder.PersonVariants; i++) { Person(i); SeatedPerson(i); }
+            foreach (RiderKind k in System.Enum.GetValues(typeof(RiderKind))) if (k != RiderKind.Regular) { Rider(k, true); Rider(k, false); }
         }
 
         public static void WarmUpScenery(EnvironmentKind env = EnvironmentKind.Manila)
