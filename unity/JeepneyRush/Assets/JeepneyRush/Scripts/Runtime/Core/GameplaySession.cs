@@ -17,10 +17,17 @@ namespace JeepneyRush
         /// <summary>Set by the menu to play today's Daily Challenge (fixed seed and route).</summary>
         public static DailyChallenge? Challenge;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Challenge = null; TrialJeepney = null; Shift = null; PlayMode = GameMode.FreeRide; }
+        private static void ResetStatics() { Challenge = null; TrialJeepney = null; Shift = null; PlayMode = GameMode.FreeRide; Ghost = null; }
 
         /// <summary>Set by the menu: Rush Hour / Night Shift / Ghost Race (career and the daily challenge always play free-ride rules).</summary>
         public static GameMode PlayMode;
+        /// <summary>Ghost Race: the rival's recorded run (same seed and route).</summary>
+        public static GhostData Ghost;
+        private bool Racing => Mode == GameMode.Ghost && Ghost != null && Ghost.d != null && Ghost.d.Length > 1;
+        /// <summary>Free rides (and ghost races) record a ghost for others to race.</summary>
+        private bool RecordsGhost => Mode == GameMode.FreeRide && !IsCareer && !IsDaily || Mode == GameMode.Ghost;
+        private readonly GhostRecorder _ghostRec = new GhostRecorder();
+        private GameObject _ghostGo;
         public GameMode Mode => Shift != null || Challenge.HasValue ? GameMode.FreeRide : PlayMode;
         /// <summary>The day/night clock for this mode (night shift stays night).</summary>
         private float ClockAt(float runSeconds) => GameModes.Clock(Mode, runSeconds);
@@ -185,7 +192,8 @@ namespace JeepneyRush
             Services.Audio.EnsureLoaded(); // when Play is pressed directly in this scene
             _baseCfg = GameBalance.Active;
             _cfg = BuildRunConfig();
-            _env = Challenge.HasValue ? Challenge.Value.Environment : Shift != null ? Shift.Env : (EnvironmentKind)Services.Save.Data.selectedEnvironment;
+            _env = Challenge.HasValue ? Challenge.Value.Environment : Shift != null ? Shift.Env
+                : Racing ? (EnvironmentKind)Ghost.env : (EnvironmentKind)Services.Save.Data.selectedEnvironment;
             Services.Audio.SetRoute(_env);
             EnvironmentSetup.Apply(_env);
             _camera = EnvironmentSetup.EnsureCamera().GetComponent<CameraController>();
@@ -327,7 +335,9 @@ namespace JeepneyRush
             Time.timeScale = 1f;
             var save = Services.Save.Data;
             _cfg = BuildRunConfig();
-            int seed = Challenge.HasValue ? Challenge.Value.Seed : debugSeed != 0 ? debugSeed : System.Environment.TickCount & 0x7fffffff;
+            int seed = Challenge.HasValue ? Challenge.Value.Seed : Racing ? Ghost.seed : debugSeed != 0 ? debugSeed : System.Environment.TickCount & 0x7fffffff;
+            _ghostRec.Reset();
+            SpawnGhost();
             _seed = seed;
             _rng = new GameRandom(seed);
             _traffic.Clear();
@@ -852,6 +862,7 @@ namespace JeepneyRush
             Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
             if (!_dying && Mode != GameMode.FreeRide) UpdateModeHud(dt);
+            if (!_dying && RecordsGhost) _ghostRec.Tick(dt, _score.MaxDistance, _player.Lanes.X);
             if (!_dying) Services.UI.SetFares(_score.Fares, _score.GasSpent, IsCareer ? Shift.Boundary : -1);
             if (!_dying && IsCareer)
             {
@@ -1813,12 +1824,47 @@ namespace JeepneyRush
                 int s = Mathf.CeilToInt(left);
                 Services.UI.SetCareer($"RUSH HOUR {s / 60}:{s % 60:00}" + (s <= 10 ? " · BILIS!" : ""));
             }
+            else if (Racing)
+            {
+                if ((_modeHudT -= dt) > 0) return;
+                _modeHudT = 0.2f;
+                float lead = Ghosts.Lead(Ghost, _runTime, _score.MaxDistance);
+                Services.UI.SetCareer($"GHOST {Ghost.name}: " + (lead >= 0 ? $"+{lead:0} m UNA KA!" : $"{lead:0} m HABULIN!"));
+            }
             else if (Mode == GameMode.NightShift)
             {
                 if ((_modeHudT -= dt) > 0) return;
                 _modeHudT = 0.5f;
                 Services.UI.SetCareer($"NIGHT SHIFT · {DayNight.Clock(_hour)} · +30% PAMASAHE");
             }
+        }
+
+        /// <summary>Ghost Race: the rival's jeepney, see-through and without collisions.</summary>
+        private void SpawnGhost()
+        {
+            if (_ghostGo != null) Destroy(_ghostGo);
+            _ghostGo = null;
+            if (!Racing) return;
+            string jeep = JeepneyCatalog.Exists(Ghost.jeepney) ? Ghost.jeepney : JeepneyCatalog.DefaultId;
+            _ghostGo = ModelLibrary.Instantiate(ModelLibrary.Jeepney(jeep), "Ghost", null, castShadows: false);
+            var r = _ghostGo.GetComponent<MeshRenderer>();
+            var mats = new Material[r.sharedMaterials.Length];
+            var ghostMat = MaterialLibrary.ForKey("ghost");
+            for (int i = 0; i < mats.Length; i++) mats[i] = ghostMat;
+            r.sharedMaterials = mats;
+            Services.UI.Float($"KALABAN: {Ghost.name} · {Ghost.score:N0}", UIManager.FloatKind.Info);
+        }
+
+        private void LateUpdate()
+        {
+            if (_ghostGo == null || !Racing) return;
+            Ghosts.Sample(Ghost, _runTime, out float gd, out float gx);
+            float z = gd - _score.Distance;
+            bool show = z > -25f && z < 180f;
+            if (_ghostGo.activeSelf != show) _ghostGo.SetActive(show);
+            if (!show) return;
+            _ghostGo.transform.position = new Vector3(gx, 0, _player.transform.position.z + z) + RoadCurve.Offset(z);
+            _ghostGo.transform.rotation = RoadCurve.Rotation(z);
         }
 
         /// <summary>Night Shift: the driver calls it a night (pause ▸ UWI NA). The run ends and everything is kept.</summary>
@@ -1876,6 +1922,8 @@ namespace JeepneyRush
             var rewards = Services.Save.RecordRun(summary);
             var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);
             report.mode = GameModes.Key(Mode);
+            if (RecordsGhost && Services.Online != null && Services.Online.SignedIn)
+                Services.Online.QueueGhost(report.run_id, _ghostRec.Finish(summary.Distance, _player.Lanes.X));
             LastRunId = report.run_id;
             LastEndReason = _endReason;
             LastRating = _rating.Display;
@@ -1896,6 +1944,7 @@ namespace JeepneyRush
                 Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, DodgersEscaped = route.DodgersEscaped + _dodgerCount,
                 Fares = summary.Fares, Gas = summary.Gas, RoadCoins = _score.RoadCoins,
                 Mode = Mode, Finished = _arrived,
+                GhostName = Racing ? Ghost.name : null, GhostScore = Racing ? Ghost.score : 0, BeatGhost = Racing && Ghosts.Beat(Ghost, _score.Score),
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);

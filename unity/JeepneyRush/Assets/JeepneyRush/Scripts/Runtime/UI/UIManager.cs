@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -1207,8 +1207,10 @@ namespace JeepneyRush
             ShowCareerResult(r.Rewards?.Career, _goTitle);
             if (r.Mode != GameMode.FreeRide && (r.Rewards == null || r.Rewards.Career == null))
             {
-                _goTitle.text = r.Mode == GameMode.RushHour ? (r.Finished ? "ORAS NA!" : "RUSH HOUR") : r.Mode == GameMode.NightShift ? (r.Finished ? "UWI NA!" : "NIGHT SHIFT") : GameModes.Name(r.Mode);
-                _goTitle.style.color = r.Finished ? UiKit.Green : UiKit.Red;
+                bool good = r.Finished || r.BeatGhost;
+                _goTitle.text = r.Mode == GameMode.RushHour ? (r.Finished ? "ORAS NA!" : "RUSH HOUR") : r.Mode == GameMode.NightShift ? (r.Finished ? "UWI NA!" : "NIGHT SHIFT")
+                    : r.Mode == GameMode.Ghost && r.GhostName != null ? (r.BeatGhost ? "PANALO!" : "TALO!") : GameModes.Name(r.Mode);
+                _goTitle.style.color = good ? UiKit.Green : UiKit.Red;
             }
             PrepareOnlineGameOver();
             PrepareDoubleCoins(r);
@@ -1224,6 +1226,7 @@ namespace JeepneyRush
                 _goRewards.Add(l);
             }
             if (rw == null || rw.Career == null) { string money = MoneySummary(r); if (money != null) Line(money, UiKit.Hex("#1E7B45")); }
+            if (r.GhostName != null) Line($"vs {r.GhostName}: {r.Score:N0} – {r.GhostScore:N0}" + (r.BeatGhost ? " · TINALO MO!" : ""), r.BeatGhost ? UiKit.Green : UiKit.Red);
             string riders = RidersSummary(r);
             if (riders != null) Line(riders, UiKit.Hex("#B8860B"));
             if (rw != null)

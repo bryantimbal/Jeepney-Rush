@@ -78,11 +78,19 @@ namespace JeepneyRush
             Services.Scenes.Load(SceneLoader.GameplayScene, p => Services.UI.ShowLoading(p));
         }
 
+        /// <summary>Ghost Race against a rival's recorded run (their seed and route).</summary>
+        public void PlayGhost(GhostData ghost)
+        {
+            GameplaySession.Ghost = ghost;
+            PlayMode(GameMode.Ghost);
+        }
+
         public void GoToMainMenu()
         {
             GameplaySession.Challenge = null;
             GameplaySession.Shift = null;
             GameplaySession.PlayMode = GameMode.FreeRide;
+            GameplaySession.Ghost = null;
             Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene)

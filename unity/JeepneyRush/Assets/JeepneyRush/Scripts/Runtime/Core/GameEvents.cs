@@ -72,5 +72,9 @@ namespace JeepneyRush
         /// <summary>Game mode of the run, and whether it ended without a crash (time up / shift ended / terminal).</summary>
         public GameMode Mode;
         public bool Finished;
+        /// <summary>Ghost Race: the rival, their score and whether you beat it.</summary>
+        public string GhostName;
+        public int GhostScore;
+        public bool BeatGhost;
     }
 }

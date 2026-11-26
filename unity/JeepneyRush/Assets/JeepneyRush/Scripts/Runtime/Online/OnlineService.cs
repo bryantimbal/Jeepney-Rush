@@ -298,6 +298,8 @@ namespace JeepneyRush
                     if (res.snapshot != null) Apply(res.snapshot);
                     if (State != OnlineState.Online) SetState(OnlineState.Online);
                     RunSubmitted?.Invoke(res);
+                    // the run is on the server now: its ghost can follow
+                    if (res.accepted && _ghosts.TryGetValue(r.run_id, out var ghost)) { _ghosts.Remove(r.run_id); yield return SaveGhostRoutine(r.run_id, ghost); }
                 }
             }
             _flushing = false;
@@ -356,6 +358,29 @@ namespace JeepneyRush
         public void SetName(string name, Action<bool, string> done) => Op("jr_set_name", "{\"p_name\":" + Json.Str(name) + "}", (ok, m, _) => done?.Invoke(ok, m));
 
         // ================================================================== Phase 4: gems, purchases, ad rewards
+        // ================================================================== Ghost Race
+        private readonly System.Collections.Generic.Dictionary<string, GhostData> _ghosts = new System.Collections.Generic.Dictionary<string, GhostData>();
+
+        /// <summary>Uploads a run's ghost once the run itself is accepted (kept in memory only; an offline run's ghost is dropped).</summary>
+        public void QueueGhost(string runId, GhostData ghost)
+        {
+            if (!SignedIn || ghost == null || ghost.d == null || ghost.d.Length < 2) return;
+            if (_ghosts.Count > 4) _ghosts.Clear();
+            _ghosts[runId] = ghost;
+        }
+
+        private IEnumerator SaveGhostRoutine(string runId, GhostData g)
+        {
+            string args = "{\"p_run_id\":" + Json.Str(runId) + ",\"p_d\":[" + string.Join(",", g.d) + "],\"p_x\":[" + string.Join(",", g.x) + "]}";
+            string err = null;
+            yield return _client.Rpc("jr_save_ghost", args, (j, e) => err = e);
+            if (err != null) Debug.LogWarning("[Online] ghost not saved: " + err);
+        }
+
+        /// <summary>A rival's ghost on this route in this stat class (found = false if nobody has one yet).</summary>
+        public void GhostPick(EnvironmentKind env, JeepneyClass cls, Action<GhostData, string> done) =>
+            StartCoroutine(Get("jr_ghost_pick", "{\"p_env\":" + (int)env + ",\"p_class\":" + (int)cls + "}", done));
+
         public void BuyCosmetic(string id, Action<bool, string> done) => Op("jr_buy_cosmetic", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
         public void BuyJeepneyWithGems(string id, Action<bool, string> done) => Op("jr_buy_jeepney_gems", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
 
