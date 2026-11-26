@@ -52,6 +52,11 @@ namespace JeepneyRush.EditorTools
             EditorUtility.SetDirty(cfg);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Jeepney Rush] Recorded version code {cfg.lastUploadedVersionCode} as uploaded. Bump the version before the next release.");
+            // once Google Play has published it, tell the game's update check (Supabase ▸ SQL Editor):
+            string sql = $"update public.jr_app_release set latest_code = {cfg.lastUploadedVersionCode}, latest_name = '{PlayerSettings.bundleVersion}', message = '', updated_at = now() where id = 1;";
+            EditorGUIUtility.systemCopyBuffer = sql;
+            Debug.Log("[Jeepney Rush] When the update is live on Google Play, run this in Supabase ▸ SQL Editor (copied to the clipboard):\n" + sql
+                + "\nTo force everyone onto it, also set min_code = " + cfg.lastUploadedVersionCode + " (only when old versions must stop).");
         }
 
         [MenuItem("Jeepney Rush/Release/Remove Obsolete Files", priority = 43)]

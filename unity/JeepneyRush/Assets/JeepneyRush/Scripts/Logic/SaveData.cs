@@ -126,6 +126,8 @@ namespace JeepneyRush.Logic
         public List<string> ownedCosmetics = new List<string>();
         /// <summary>Setup per jeepney (paint, stickers, sign, horn, mudflaps, ornament, lights).</summary>
         public List<JeepneyLook> looks = new List<JeepneyLook>();
+        /// <summary>Newest optional update the player said MAMAYA NA to (asked again only for a newer one).</summary>
+        public int updateDismissedCode;
 
         public bool Owns(string jeepneyId) => ownedJeepneys != null && ownedJeepneys.Contains(jeepneyId);
         public int UpgradeLevel(UpgradeKind k) => upgradeLevels != null && (int)k < upgradeLevels.Length ? upgradeLevels[(int)k] : 0;

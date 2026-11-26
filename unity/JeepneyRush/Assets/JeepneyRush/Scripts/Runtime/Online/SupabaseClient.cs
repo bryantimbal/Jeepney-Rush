@@ -205,6 +205,14 @@ namespace JeepneyRush
 
         // ------------------------------------------------------------------ RPC
         /// <summary>POST /rest/v1/rpc/{fn} with a JSON object of named arguments. Returns the JSON result.</summary>
+        /// <summary>RPC that needs no sign-in (e.g. the app version check, which runs before sign-in).</summary>
+        public IEnumerator RpcPublic(string fn, string argsJson, Action<string, string> done)
+        {
+            string result = null, error = null;
+            yield return Send(Request("POST", "/rest/v1/rpc/" + fn, string.IsNullOrEmpty(argsJson) ? "{}" : argsJson, false), (json, err) => { result = json; error = err; });
+            done(result, error);
+        }
+
         public IEnumerator Rpc(string fn, string argsJson, Action<string, string> done)
         {
             if (!HasSession) { done(null, "no_session"); yield break; }

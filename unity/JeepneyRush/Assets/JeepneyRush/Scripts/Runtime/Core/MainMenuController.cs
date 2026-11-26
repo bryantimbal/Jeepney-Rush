@@ -102,6 +102,7 @@ namespace JeepneyRush
             GraphicsQuality.SetMenuMode(true);
             if (Services.Game.State == GameState.Loading || Services.Game.State == GameState.GameOver) Services.Game.SetState(GameState.MainMenu);
             Services.UI.ShowMainMenu();
+            Services.Updates?.CheckOnce(); // new version on Google Play?
         }
 
         private void OnDestroy()

@@ -15,10 +15,11 @@ namespace JeepneyRush
         public static OnlineService Online { get; internal set; }
         public static AdsService Ads { get; internal set; }
         public static StoreService Store { get; internal set; }
+        public static UpdateChecker Updates { get; internal set; }
 
         internal static void Reset()
         {
-            Game = null; Save = null; Audio = null; Pools = null; Scenes = null; UI = null; Online = null; Ads = null; Store = null;
+            Game = null; Save = null; Audio = null; Pools = null; Scenes = null; UI = null; Online = null; Ads = null; Store = null; Updates = null;
         }
 
         public static bool Ready => Game != null && Save != null && Audio != null && Pools != null && UI != null;

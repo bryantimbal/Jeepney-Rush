@@ -56,6 +56,7 @@ namespace JeepneyRush
             Services.Online = _systems.AddComponent<OnlineService>();
             Services.Ads = _systems.AddComponent<AdsService>();
             Services.Store = _systems.AddComponent<StoreService>();
+            Services.Updates = _systems.AddComponent<UpdateChecker>();
             Services.UI = _systems.AddComponent<UIManager>();
             _systems.AddComponent<Haptics>();
             _systems.AddComponent<Screenshots>();

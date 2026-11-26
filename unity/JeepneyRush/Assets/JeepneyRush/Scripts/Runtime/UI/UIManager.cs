@@ -473,6 +473,9 @@ namespace JeepneyRush
             RefreshMenuTop();
             Show(_menu, true);
             UiKit.PopIn(_menu.Q<Button>());
+            // a required update stays in the way until the player updates
+            var up = Services.Updates;
+            if (up != null && up.Need == Logic.UpdateNeed.Required && up.Server != null) ShowUpdate(up.Need, up.Server);
         }
 
         private void RefreshMenuTop()

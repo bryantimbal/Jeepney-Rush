@@ -381,6 +381,19 @@ namespace JeepneyRush
         public void GhostPick(EnvironmentKind env, JeepneyClass cls, Action<GhostData, string> done) =>
             StartCoroutine(Get("jr_ghost_pick", "{\"p_env\":" + (int)env + ",\"p_class\":" + (int)cls + "}", done));
 
+        /// <summary>Newest release / oldest allowed version from the server (backup update check; no sign-in needed).</summary>
+        public void AppVersion(Action<AppVersionInfo> done) => StartCoroutine(AppVersionRoutine(done));
+
+        private IEnumerator AppVersionRoutine(Action<AppVersionInfo> done)
+        {
+            if (!Configured || _client == null) { done?.Invoke(null); yield break; }
+            string json = null, err = null;
+            yield return _client.RpcPublic("jr_app_version", "{}", (j, e) => { json = j; err = e; });
+            AppVersionInfo v = null;
+            if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
+            done?.Invoke(v);
+        }
+
         public void BuyCosmetic(string id, Action<bool, string> done) => Op("jr_buy_cosmetic", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
         public void BuyJeepneyWithGems(string id, Action<bool, string> done) => Op("jr_buy_jeepney_gems", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
 
