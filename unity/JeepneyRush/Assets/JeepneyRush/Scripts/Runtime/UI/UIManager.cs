@@ -756,6 +756,7 @@ namespace JeepneyRush
             _jamLabel.style.marginTop = 2;
             scoreCol.Add(_jamLabel);
             BuildCareerHud(scoreCol);
+            BuildRidersHud(scoreCol);
             top.Add(scoreCol);
             var right = UiKit.Box();
             right.style.alignItems = Align.FlexEnd;
@@ -1208,6 +1209,8 @@ namespace JeepneyRush
                 l.style.marginBottom = 8;
                 _goRewards.Add(l);
             }
+            string riders = RidersSummary(r);
+            if (riders != null) Line(riders, UiKit.Hex("#B8860B"));
             if (rw != null)
             {
                 if (rw.CoinBonus > 0) Line($"Coin Bonus upgrade: +{rw.CoinBonus} coins", UiKit.Ink);

@@ -26,6 +26,9 @@ namespace JeepneyRush
         public bool Arrived => _arrived;
         private bool _arrived;
         private float _careerHudT;
+        // passenger personalities
+        private float _dodgerT, _riderTalkT, _ridersHudT;
+        private int _dodgerFare, _dodgerCount;
 
         /// <summary>Phase 4: a locked jeepney unlocked for ONE run by a rewarded ad (garage "TRY").</summary>
         public static string TrialJeepney;
@@ -342,7 +345,10 @@ namespace JeepneyRush
             if (!string.IsNullOrEmpty(TrialJeepney)) Services.UI.Float("TRIAL RUN: " + JeepneyCatalog.Get(TrialJeepney).DisplayName.ToUpperInvariant(), UIManager.FloatKind.Info);
             _player.Configure(_cfg);
             _passengers.Init(_cfg, _player.Body);
-            var route = new PassengerRoute(_cfg, new GameRandom(_seed ^ 0x51F0), StopNames.ForEnvironment(_env)); // own seeded stream (see the spawner below)
+            // own seeded streams (see the spawner below); personalities have their own so stop names stay the same per seed
+            var route = new PassengerRoute(_cfg, new GameRandom(_seed ^ 0x51F0), StopNames.ForEnvironment(_env), new GameRandom(_seed ^ 0x2A11E5));
+            route.Env = _env;
+            _dodgerT = 0; _dodgerFare = _dodgerCount = 0; _riderTalkT = 8f; _ridersHudT = 0;
             route.AllowSabit(Sabit.ExtraFor(_env)); // provincial roads: riders may hang on the back
             _passengers.Env = _env;
             _passengers.ResetRun(route);
@@ -462,6 +468,7 @@ namespace JeepneyRush
             _hornCooldown = _cfg.hornCooldown;
             GameEvents.RaiseHonk();
             Haptics.Pulse(10);
+            if (_dodgerT > 0 && !_dying) CatchDodger();
             if (_dying || _traffic == null || Services.Game.State != GameState.Playing) return;
             var car = _traffic.Honk(_player.Lanes.X, _speed);
             if (car != null && _rng.Chance(0.6))
@@ -764,6 +771,7 @@ namespace JeepneyRush
 
             // ---- world + power-up effects
             _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier; // good drivers get better tips
+            if (!_dying) UpdateRiders(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
             else _police.Tick(dt, _player.Lanes.X);
             _coins.MagnetRadius = pu.IsActive(PowerUpKind.Magnet) ? _cfg.magnetRadius : 0f;
@@ -1426,7 +1434,7 @@ namespace JeepneyRush
 
         /// <summary>Does anyone want to get on or off at this stop?</summary>
         private bool _route_HasBusiness(PassengerStopView s) =>
-            s.Stop.Waiting > 0 && _passengers.Route.Count < _passengers.Route.Capacity || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
+            s.Stop.Waiting > 0 && _passengers.Route.Room > 0 || _passengers.Route.AlightingAt(s.Stop.Id) > 0;
 
         /// <summary>
         /// PARA stops: passengers only board / get off once the jeepney has come to a
@@ -1489,12 +1497,20 @@ namespace JeepneyRush
                 Services.UI.Say(Lines.Pick(Lines.Alight, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f));
                 Services.UI.Float($"{r.Alighted} BABA · +{r.Coins}", UIManager.FloatKind.Good);
                 if (r.Streak > 1) Services.UI.Float($"SUNOD-SUNOD x{_passengers.Route.StreakMultiplier:0.##}!", UIManager.FloatKind.Info);
+                RiderReactions(r);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 20 + r.Alighted * 6);
             }
             if (r.Boarded > 0)
             {
                 if (r.Alighted == 0) Services.UI.Float($"+{r.Boarded} SAKAY!", UIManager.FloatKind.Good);
-                Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RandomRiderHead);
+                if (r.Boarder != RiderKind.Regular)
+                {
+                    Services.UI.Say(Riders.Board[(int)r.Boarder], _passengers.RandomRiderHead, r.Boarder == RiderKind.Hurry, 2.4f);
+                    Services.UI.Float(r.Boarder == RiderKind.Balikbayan ? "BALIKBAYAN! WALANG BANGGAAN!" : r.Boarder == RiderKind.Lola ? "LOLA SUMAKAY · DAHAN-DAHAN!"
+                        : r.Boarder == RiderKind.Hurry ? "NAGMAMADALI · BILISAN!" : r.Boarder == RiderKind.Vendor ? "TINDERA + BAYONG (2 UPUAN)"
+                        : Riders.Tag(r.Boarder) + " SUMAKAY", UIManager.FloatKind.Info);
+                }
+                else Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RandomRiderHead);
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
                 // the driver welcomes them, asks for the fare, then announces the departure
                 DriverSay(DriverMoment.Boarding, 0.5f);
@@ -1509,6 +1525,89 @@ namespace JeepneyRush
             }
             GameEvents.RaisePassengers(r);
             return r;
+        }
+
+        /// <summary>Tips, fare dodgers, late / on-time hurried riders – what the personalities do when they get off.</summary>
+        private void RiderReactions(PickupResult r)
+        {
+            var back = (System.Func<Vector3>)(() => _player.transform.position + new Vector3(0, 2.4f, -3.4f));
+            if (r.Dodgers > 0)
+            {
+                _dodgerT = Riders.DodgerWindow;
+                _dodgerFare += r.DodgerFare;
+                _dodgerCount += r.Dodgers;
+                Services.UI.Say(_rng.Chance(0.5) ? "TAKBOOO!" : "BAYAD? ANONG BAYAD?", back, true, 1.8f);
+                Services.UI.Float("HINDI NAGBAYAD! BUSINA!", UIManager.FloatKind.Bad);
+                Services.Audio.Play(Logic.Audio.Sfx.Full, 0.6f);
+            }
+            if (r.Late > 0)
+            {
+                Services.UI.Say("LATE NA 'KO DAHIL SA'YO, KUYA!", back, true, 2f);
+                Rate(RatingEvent.LateRider);
+            }
+            else if (r.OnTime > 0) Services.UI.Say("ABOT AKO! SALAMAT, KUYA!", back, false, 2f);
+            if (r.Tips > 0)
+            {
+                string who = r.Leaver == RiderKind.Lola ? "SALAMAT, IHO. PAGPALAIN KA!" : r.Leaver == RiderKind.Balikbayan ? "SALAMAT! ETO, PASALUBONG KO SA'YO!"
+                    : r.Leaver == RiderKind.Drunk ? "SA'YO NA ANG SUKLI! HIK!" : r.Leaver == RiderKind.Vendor ? "ETO BAYAD SA BAYONG!" : null;
+                if (who != null && r.Late == 0) Services.UI.Say(who, back, false, 2.2f);
+                Services.UI.Float($"TIP +{r.Tips}!", UIManager.FloatKind.Good);
+            }
+        }
+
+        /// <summary>The horn caught the fare dodger in time: they pay up.</summary>
+        private void CatchDodger()
+        {
+            _score.AddCoins(_dodgerFare);
+            _passengers.Route.CaughtDodger(_dodgerCount);
+            Services.UI.Float($"HULI KA! NAGBAYAD DIN · +{_dodgerFare}", UIManager.FloatKind.Good);
+            Services.UI.Say("SORRY PO, ETO NA BAYAD!", () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), false, 2f);
+            Services.Audio.Play(Logic.Audio.Sfx.Coin);
+            _dodgerT = 0; _dodgerFare = _dodgerCount = 0;
+        }
+
+        /// <summary>Per frame: dodger window, personality chatter and the riders line on the HUD.</summary>
+        private void UpdateRiders(float dt)
+        {
+            var route = _passengers.Route;
+            route.Clock = _runTime;
+            route.Night = DayNight.IsNightFor(_runTime);
+            if (_dodgerT > 0 && (_dodgerT -= dt) <= 0)
+            {
+                route.DodgerEscaped(_dodgerCount);
+                Services.UI.Float("NAKATAKAS ANG HINDI NAGBAYAD...", UIManager.FloatKind.Bad);
+                _dodgerFare = _dodgerCount = 0;
+            }
+            if ((_riderTalkT -= dt) <= 0)
+            {
+                _riderTalkT = 9f + (float)_rng.Next() * 6f;
+                var k = route.RandomTalker(_rng);
+                string line = k.HasValue ? Riders.RideLine(k.Value, _rng) : null;
+                if (line != null && Services.Game.State == GameState.Playing) Services.UI.Say(line, _passengers.RandomRiderHead, k == RiderKind.Hurry, 2.4f);
+            }
+            if ((_ridersHudT -= dt) <= 0)
+            {
+                _ridersHudT = 0.25f;
+                Services.UI.SetRiders(RidersHudText(route));
+            }
+        }
+
+        private static readonly System.Text.StringBuilder RidersSb = new System.Text.StringBuilder();
+
+        /// <summary>"LOLA · NAGMAMADALI 12s · TINDERA" – the notable riders on board.</summary>
+        private static string RidersHudText(PassengerRoute route)
+        {
+            RidersSb.Clear();
+            foreach (var p in route.Aboard)
+            {
+                if (p.Kind == RiderKind.Regular || p.Kind == RiderKind.Dodger) continue; // the dodger looks like anyone else
+                if (RidersSb.Length > 0) RidersSb.Append(" · ");
+                RidersSb.Append(Riders.Tag(p.Kind));
+                if (p.Kind == RiderKind.Hurry) RidersSb.Append(' ').Append(Mathf.Max(0, Mathf.CeilToInt(p.Deadline - route.Clock))).Append('s');
+                if (p.Upset) RidersSb.Append(" (GALIT)");
+                if (RidersSb.Length > 60) break;
+            }
+            return RidersSb.ToString();
         }
 
         /// <summary>A rider hanging on the back drops off (fast hump, pothole or a crash).</summary>
@@ -1538,6 +1637,14 @@ namespace JeepneyRush
         /// <summary>Applies a rating event, updates the HUD and shows a small +/- float for big changes.</summary>
         private void Rate(RatingEvent e)
         {
+            // rough driving: a lola on board is shaken (no tip), a crash also upsets the balikbayan
+            if ((e == RatingEvent.Crash || e == RatingEvent.HumpFast) && _passengers != null && _passengers.Route != null)
+            {
+                var route = _passengers.Route;
+                bool lola = route.HasAboard(RiderKind.Lola);
+                if (route.Jolt(e == RatingEvent.Crash) > 0)
+                    Services.UI.Say(lola ? (_rng.Chance(0.5) ? "ARAY KO, ANG BALAKANG KO!" : "IHO, DAHAN-DAHAN NAMAN!") : "GRABE NAMAN, KUYA!", _passengers.RandomRiderHead, true, 2.2f);
+            }
             float d = _rating.Apply(e);
             Services.UI.SetRating(_rating.Display, _rating.Value, _rating.Panicking);
             if (d <= -0.25f) Services.UI.Float($"RATING {d:0.0}", UIManager.FloatKind.Bad);
@@ -1725,6 +1832,7 @@ namespace JeepneyRush
                 Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Passengers = route.PickedUp, Deliveries = route.Delivered,
                 NewBestScore = rewards.NewBestScore, NewBestDistance = rewards.NewBestDistance, BestScore = d.bestScore, BestDistance = d.bestDistance,
                 Rewards = rewards,
+                Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, DodgersEscaped = route.DodgersEscaped + _dodgerCount,
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);

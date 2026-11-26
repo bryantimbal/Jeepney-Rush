@@ -3,7 +3,7 @@ using System;
 namespace JeepneyRush.Logic
 {
     /// <summary>What the riders think of the driver this run (shown as stars, 1.0–5.0).</summary>
-    public enum RatingEvent { Served, Smooth, PoliteCheckpoint, SkippedStop, Crash, HumpFast, RedLight, Ticket, AngryWalkOff }
+    public enum RatingEvent { Served, Smooth, PoliteCheckpoint, SkippedStop, Crash, HumpFast, RedLight, Ticket, AngryWalkOff, LateRider }
 
     /// <summary>
     /// Per-run driver rating, like a ride-hailing app. Starts at ★4.0. Serving stops and smooth
@@ -39,6 +39,7 @@ namespace JeepneyRush.Logic
                 case RatingEvent.RedLight: return -0.3f;
                 case RatingEvent.Ticket: return -0.2f;
                 case RatingEvent.AngryWalkOff: return -0.2f;
+                case RatingEvent.LateRider: return -0.15f;
                 default: return 0f;
             }
         }

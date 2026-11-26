@@ -65,5 +65,7 @@ namespace JeepneyRush
         public int BestScore;
         public float BestDistance;
         public Progress.RunRewards Rewards;
+        /// <summary>Passenger personalities this run: tips, fare dodgers caught / escaped.</summary>
+        public int Tips, DodgersCaught, DodgersEscaped;
     }
 }
