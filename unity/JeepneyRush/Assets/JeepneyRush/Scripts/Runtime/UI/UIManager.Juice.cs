@@ -199,11 +199,29 @@ namespace JeepneyRush
         /// Comic speech bubble that follows a point in the world (a passenger in the jeepney,
         /// the MMDA enforcer…). Angry lines use a red tint.
         /// </summary>
+        private readonly Dictionary<string, float> _saidAt = new Dictionary<string, float>();
+        private readonly Dictionary<VisualElement, Rect> _bubbleRects = new Dictionary<VisualElement, Rect>();
+        private readonly Dictionary<VisualElement, int> _bubbleOrder = new Dictionary<VisualElement, int>();
+        private int _bubbleSerial;
+        /// <summary>The same line isn't said again within this many seconds.</summary>
+        public const float RepeatGap = 10f;
+
         public void Say(string text, Func<Vector3> anchor, bool angry = false, float seconds = 1.8f)
         {
-            if (_bubbles.Count >= 3) { _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
+            if (string.IsNullOrEmpty(text) || anchor == null) return;
+            // no doubles: a line that is on screen, or was said a moment ago, isn't said again
+            foreach (var other in _bubbles) if (other.userData is string t && t == text) return;
+            float now = Time.unscaledTime;
+            if (_saidAt.TryGetValue(text, out float at) && now - at < RepeatGap) return;
+            _saidAt[text] = now;
+            if (_saidAt.Count > 64) _saidAt.Clear();
+            if (_bubbles.Count >= 3) { _bubbleRects.Remove(_bubbles[0]); _bubbleOrder.Remove(_bubbles[0]); _bubbles[0].RemoveFromHierarchy(); _bubbles.RemoveAt(0); }
             var b = UiKit.Box("bubble");
+            b.userData = text;
+            int order = ++_bubbleSerial;
+            _bubbleOrder[b] = order;
             b.style.position = Position.Absolute;
+            b.style.opacity = 0; // shown once its size is known (no jump on the first frame)
             b.style.backgroundImage = UiKit.Tex("ui_bubble");
             b.style.unitySliceLeft = 60;
             b.style.unitySliceRight = 60;
@@ -229,8 +247,8 @@ namespace JeepneyRush
                 if (p == null) { b.style.display = DisplayStyle.None; return; }
                 b.style.display = DisplayStyle.Flex;
                 float w = b.resolvedStyle.width, h = b.resolvedStyle.height;
-                if (float.IsNaN(w) || w <= 0) w = 300;
-                if (float.IsNaN(h) || h <= 0) h = 130;
+                bool sized = !(float.IsNaN(w) || w <= 0 || float.IsNaN(h) || h <= 0);
+                if (!sized) { w = 300; h = 130; }
                 // keep the whole bubble on screen (the driver sits at the left edge of the view)
                 float pw = _fxLayer.resolvedStyle.width, ph = _fxLayer.resolvedStyle.height;
                 if (float.IsNaN(pw) || pw <= 0) pw = 1080;
@@ -238,16 +256,32 @@ namespace JeepneyRush
                 const float margin = 24f;
                 float x = Mathf.Clamp(p.Value.x - 60 + jitter, margin, Mathf.Max(margin, pw - w - margin));
                 float y = Mathf.Clamp(p.Value.y - 150 - k * 40f, margin + 140f, Mathf.Max(margin + 140f, ph - h - margin));
+                // never on top of another bubble: move up above it
+                for (int pass = 0; pass < 3; pass++)
+                {
+                    bool moved = false;
+                    foreach (var kv in _bubbleRects)
+                    {
+                        // only the newer bubble moves out of the way (older ones never jump)
+                        if (kv.Key == b || !_bubbleOrder.TryGetValue(kv.Key, out int ko) || ko > order) continue;
+                        var o = kv.Value;
+                        if (x < o.xMax && x + w > o.xMin && y < o.yMax && y + h > o.yMin) { y = Mathf.Max(margin + 140f, o.yMin - h - 6f); moved = true; }
+                    }
+                    if (!moved) break;
+                }
+                _bubbleRects[b] = new Rect(x, y, w, h);
                 b.style.left = x;
                 b.style.top = y;
                 float pop = k < 0.1f ? Mathf.Lerp(0.3f, 1.1f, k / 0.1f) : k < 0.18f ? Mathf.Lerp(1.1f, 1f, (k - 0.1f) / 0.08f) : 1f;
                 b.style.scale = new Scale(new Vector3(pop, pop, 1));
                 b.style.rotate = new Rotate(tilt + (angry && k < 0.35f ? Mathf.Sin(k * 90f) * 4f * (1f - k / 0.35f) : 0f));
-                b.style.opacity = k > 0.85f ? (1 - k) / 0.15f : 1f;
+                b.style.opacity = !sized ? 0f : k > 0.85f ? (1 - k) / 0.15f : 1f;
             }, () =>
             {
                 b.RemoveFromHierarchy();
                 _bubbles.Remove(b);
+                _bubbleRects.Remove(b);
+                _bubbleOrder.Remove(b);
             });
         }
 
@@ -553,6 +587,9 @@ namespace JeepneyRush
         {
             foreach (var b in _bubbles) b.RemoveFromHierarchy();
             _bubbles.Clear();
+            _bubbleRects.Clear();
+            _bubbleOrder.Clear();
+            _saidAt.Clear();
             _fxLayer.Clear();
             _flyingCoins = 0;
             _lastCombo = -1;

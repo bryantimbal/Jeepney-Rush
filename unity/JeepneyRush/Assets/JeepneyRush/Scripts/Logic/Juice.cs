@@ -176,6 +176,23 @@ namespace JeepneyRush.Logic
             }
         }
 
-        public static string Pick(string[] lines, GameRandom rng) => lines[rng.Int(0, lines.Length - 1)];
+        private static readonly System.Collections.Generic.Dictionary<string[], int[]> Recent = new System.Collections.Generic.Dictionary<string[], int[]>();
+
+        /// <summary>
+        /// A random line from the list that isn't one of the last few picked from it (no "doubles":
+        /// with 6+ lines the last 3 are skipped, with fewer the last one).
+        /// </summary>
+        public static string Pick(string[] lines, GameRandom rng)
+        {
+            if (lines == null || lines.Length == 0) return "";
+            if (lines.Length == 1) return lines[0];
+            int keep = lines.Length >= 6 ? 3 : 1;
+            if (!Recent.TryGetValue(lines, out var recent)) { recent = new[] { -1, -1, -1 }; Recent[lines] = recent; }
+            int pick = rng.Int(0, lines.Length - 1);
+            for (int guard = 0; guard < 12 && Array.IndexOf(recent, pick, 0, keep) >= 0; guard++) pick = rng.Int(0, lines.Length - 1);
+            for (int i = recent.Length - 1; i > 0; i--) recent[i] = recent[i - 1];
+            recent[0] = pick;
+            return lines[pick];
+        }
     }
 }

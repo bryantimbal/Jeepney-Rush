@@ -133,7 +133,7 @@ namespace JeepneyRush.Logic
         public static string RideLine(RiderKind k, GameRandom rng)
         {
             var a = Ride[(int)k];
-            return a.Length == 0 ? null : a[rng.Int(0, a.Length - 1)];
+            return a.Length == 0 ? null : Lines.Pick(a, rng); // (no repeats)
         }
     }
 }

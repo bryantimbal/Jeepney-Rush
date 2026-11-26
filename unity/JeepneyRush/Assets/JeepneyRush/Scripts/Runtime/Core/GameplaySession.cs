@@ -939,7 +939,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Splash, 0.7f, 0.7f);
                 Haptics.Pulse(12);
                 Services.UI.Float("PUTIK!", UIManager.FloatKind.Info);
-                if (_passengers.Route.Count > 0 && _rng.Chance(0.4)) Services.UI.Say(_rng.Chance(0.5) ? "NAPUTIKAN AKO!" : "DAHAN-DAHAN, MAPUTIK!", _passengers.RandomRiderHead);
+                if (_passengers.Route.Count > 0 && _rng.Chance(0.4)) Services.UI.Say(_rng.Chance(0.5) ? "NAPUTIKAN AKO!" : "DAHAN-DAHAN, MAPUTIK!", _passengers.RiderHead());
                 return;
             }
             if (HazardCatalog.IsFlood(h.Kind))
@@ -951,7 +951,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Splash, big ? 1f : 0.8f);
                 Haptics.Pulse(15);
                 Services.UI.Float(big ? "BAHA! LUSONG!" : "BAHA!", UIManager.FloatKind.Info);
-                if (_passengers.Route.Count > 0 && _rng.Chance(0.6)) Services.UI.Say(Lines.Pick(Lines.Flood, _rng), _passengers.RandomRiderHead);
+                if (_passengers.Route.Count > 0 && _rng.Chance(0.6)) Services.UI.Say(Lines.Pick(Lines.Flood, _rng), _passengers.RiderHead());
                 return;
             }
             bool isHump = h.Kind == HazardKind.SpeedHump;
@@ -965,7 +965,7 @@ namespace JeepneyRush
                     _smoothHumps++;
                     _score.AddScore(HumpRules.SmoothBonusScore);
                     Services.UI.Float($"DAHAN-DAHAN! +{HumpRules.SmoothBonusScore}", UIManager.FloatKind.Good);
-                    if (_passengers.Route.Count > 0 && _rng.Chance(0.5)) Services.UI.Say(Lines.Pick(Lines.Smooth, _rng), _passengers.RandomRiderHead);
+                    if (_passengers.Route.Count > 0 && _rng.Chance(0.5)) Services.UI.Say(Lines.Pick(Lines.Smooth, _rng), _passengers.RiderHead());
                     Rate(RatingEvent.Smooth);
                 }
                 return;
@@ -984,7 +984,7 @@ namespace JeepneyRush
             SabitFall(isHump ? "HUMP" : "LUBAK");
             if (route.Count > 0)
             {
-                Services.UI.Say(Lines.Pick(isHump ? Lines.Hump : Lines.Bump, _rng), _passengers.RandomRiderHead, true);
+                Services.UI.Say(Lines.Pick(isHump ? Lines.Hump : Lines.Bump, _rng), _passengers.RiderHead(), true);
                 Services.Audio.Play(Logic.Audio.Sfx.Complain);
                 if (_rng.Chance(0.3) && route.EjectAngry() > 0)
                 {
@@ -1020,7 +1020,7 @@ namespace JeepneyRush
             if (nextZ < 0 || nextZ > 75f || _passengers.Route.AlightingAt(next.Stop.Id) <= 0) return;
             _bellStopId = next.Stop.Id;
             Services.Audio.Play(Logic.Audio.Sfx.Bell, 0.95f);
-            Services.UI.Say(Lines.Pick(Lines.PullCord, _rng), _passengers.RandomRiderHead);
+            Services.UI.Say(Lines.Pick(Lines.PullCord, _rng), _passengers.RiderHead());
             Services.UI.Float("DING-DING! MAY BABABA", UIManager.FloatKind.Info);
         }
 
@@ -1060,7 +1060,7 @@ namespace JeepneyRush
                 else
                 {
                     ui.Float("LUMUWAG NA ANG DAAN!", UIManager.FloatKind.Good);
-                    if (_passengers.Route.Count > 0 && !_dying) ui.Say(Lines.Pick(Lines.JamClear, _rng), _passengers.RandomRiderHead);
+                    if (_passengers.Route.Count > 0 && !_dying) ui.Say(Lines.Pick(Lines.JamClear, _rng), _passengers.RiderHead());
                 }
             }
             if (jammed) ui.SetJam(RushHour ? "RUSH HOUR · MABAGAL" : "TRAFFIC · MABAGAL");
@@ -1077,7 +1077,7 @@ namespace JeepneyRush
             if (_complainT > 0) return;
             _complainT = JamRules.ComplaintInterval(_stuckT) * Random.Range(0.85f, 1.2f);
             _jamComplaints++;
-            ui.Say(Lines.Stuck(_hour, _env, _rng), _passengers.RandomRiderHead, _jamComplaints > 2);
+            ui.Say(Lines.Stuck(_hour, _env, _rng), _passengers.RiderHead(), _jamComplaints > 2);
             Services.Audio.Play(Logic.Audio.Sfx.Complain, 0.8f);
             if (_jamComplaints > JamRules.PatienceComplaints && _rng.Chance(JamRules.WalkOffChance) && _passengers.Route.EjectAngry() > 0)
             {
@@ -1155,7 +1155,7 @@ namespace JeepneyRush
             var route = _passengers.Route;
             if (route.Count > 0)
             {
-                Services.UI.Say(Lines.Pick(Lines.Bump, _rng), _passengers.RandomRiderHead, true);
+                Services.UI.Say(Lines.Pick(Lines.Bump, _rng), _passengers.RiderHead(), true);
                 Services.Audio.Play(Logic.Audio.Sfx.Complain);
                 if (_rng.Chance(0.6) && route.EjectAngry() > 0)
                 {
@@ -1191,7 +1191,7 @@ namespace JeepneyRush
                 Services.UI.Say(Lines.Pick(Lines.Ticket, _rng), () => _enforcer.HeadPosition, true, 2.2f);
                 Services.UI.Float(fine > 0 ? $"TICKET! -{fine} COINS" : "WARNING!", UIManager.FloatKind.Bad);
                 Rate(RatingEvent.Ticket);
-                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA NAMAN!", _passengers.RandomRiderHead, true);
+                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA NAMAN!", _passengers.RiderHead(), true);
             }
         }
 
@@ -1337,7 +1337,7 @@ namespace JeepneyRush
             Rate(RatingEvent.RedLight);
             var head = v.transform;
             Services.UI.Say("PRRRT! PULA NA, BOSS!", () => head.position + new Vector3(SceneryBuilderRoadEdge(), 2.4f, -6.5f), true, 2.2f);
-            if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, PULA NA!", _passengers.RandomRiderHead, true);
+            if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, PULA NA!", _passengers.RiderHead(), true);
         }
 
         private static float SceneryBuilderRoadEdge() => Logic.Geometry.SceneryBuilder.RoadHalfWidth + 0.5f;
@@ -1361,7 +1361,7 @@ namespace JeepneyRush
                 _lowWarned = true;
                 Services.UI.Float("PAUBOS NA ANG GAS!", UIManager.FloatKind.Bad);
                 Services.Audio.Play(Logic.Audio.Sfx.Full, 0.9f);
-                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, MAGPA-GAS KA NA!", _passengers.RandomRiderHead);
+                if (_passengers.Route.Count > 0) Services.UI.Say("KUYA, MAGPA-GAS KA NA!", _passengers.RiderHead());
             }
             // last drops: the engine coughs
             if (!_fuel.Empty && _fuel.Fraction < 0.06f)
@@ -1375,7 +1375,7 @@ namespace JeepneyRush
                 Services.Audio.Play(Logic.Audio.Sfx.Sputter, 1f);
                 Services.Audio.StopEngine();
                 Services.UI.Float("UBOS ANG GAS!", UIManager.FloatKind.Big);
-                if (_passengers.Route.Count > 0) Services.UI.Say("NAKU, NAUBUSAN!", _passengers.RandomRiderHead, true);
+                if (_passengers.Route.Count > 0) Services.UI.Say("NAKU, NAUBUSAN!", _passengers.RiderHead(), true);
             }
             if (_fuel.Empty && Mathf.Abs(_speed) < 0.1f && _stationZone == null)
             {
@@ -1533,12 +1533,12 @@ namespace JeepneyRush
                 if (r.Alighted == 0) Services.UI.Float($"+{r.Boarded} SAKAY!", UIManager.FloatKind.Good);
                 if (r.Boarder != RiderKind.Regular)
                 {
-                    Services.UI.Say(Riders.Board[(int)r.Boarder], _passengers.RandomRiderHead, r.Boarder == RiderKind.Hurry, 2.4f);
+                    Services.UI.Say(Riders.Board[(int)r.Boarder], _passengers.RiderHead(), r.Boarder == RiderKind.Hurry, 2.4f);
                     Services.UI.Float(r.Boarder == RiderKind.Balikbayan ? "BALIKBAYAN! WALANG BANGGAAN!" : r.Boarder == RiderKind.Lola ? "LOLA SUMAKAY · DAHAN-DAHAN!"
                         : r.Boarder == RiderKind.Hurry ? "NAGMAMADALI · BILISAN!" : r.Boarder == RiderKind.Vendor ? "TINDERA + BAYONG (2 UPUAN)"
                         : Riders.Tag(r.Boarder) + " SUMAKAY", UIManager.FloatKind.Info);
                 }
-                else Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RandomRiderHead);
+                else Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RiderHead());
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
                 // the driver welcomes them, asks for the fare, then announces the departure
                 DriverSay(DriverMoment.Boarding, 0.5f);
@@ -1611,7 +1611,7 @@ namespace JeepneyRush
                 _riderTalkT = 9f + (float)_rng.Next() * 6f;
                 var k = route.RandomTalker(_rng);
                 string line = k.HasValue ? Riders.RideLine(k.Value, _rng) : null;
-                if (line != null && Services.Game.State == GameState.Playing) Services.UI.Say(line, _passengers.RandomRiderHead, k == RiderKind.Hurry, 2.4f);
+                if (line != null && Services.Game.State == GameState.Playing) Services.UI.Say(line, _passengers.RiderHead(), k == RiderKind.Hurry, 2.4f);
             }
             if ((_ridersHudT -= dt) <= 0)
             {
@@ -1671,7 +1671,7 @@ namespace JeepneyRush
                 var route = _passengers.Route;
                 bool lola = route.HasAboard(RiderKind.Lola);
                 if (route.Jolt(e == RatingEvent.Crash) > 0)
-                    Services.UI.Say(lola ? (_rng.Chance(0.5) ? "ARAY KO, ANG BALAKANG KO!" : "IHO, DAHAN-DAHAN NAMAN!") : "GRABE NAMAN, KUYA!", _passengers.RandomRiderHead, true, 2.2f);
+                    Services.UI.Say(lola ? (_rng.Chance(0.5) ? "ARAY KO, ANG BALAKANG KO!" : "IHO, DAHAN-DAHAN NAMAN!") : "GRABE NAMAN, KUYA!", _passengers.RiderHead(), true, 2.2f);
             }
             float d = _rating.Apply(e);
             Services.UI.SetRating(_rating.Display, _rating.Value, _rating.Panicking);
@@ -1684,7 +1684,7 @@ namespace JeepneyRush
             if (_dying) return;
             Rate(RatingEvent.SkippedStop);
             if (_rating.SkippedInARow == DriverRating.PanicAfterSkips - 1 && _passengers.Route.Count > 0)
-                Services.UI.Say("KUYA, HUMINTO KA NAMAN!", _passengers.RandomRiderHead, true);
+                Services.UI.Say("KUYA, HUMINTO KA NAMAN!", _passengers.RiderHead(), true);
         }
 
         /// <summary>3+ skipped stops in a row: riders panic, shout and bang on the roof until you serve a stop.</summary>
@@ -1701,7 +1701,7 @@ namespace JeepneyRush
             _panicT -= dt;
             if (_panicT > 0) return;
             _panicT = Random.Range(2.4f, 3.6f);
-            Services.UI.Say(Lines.Pick(Lines.Panic, _rng), _passengers.RandomRiderHead, true);
+            Services.UI.Say(Lines.Pick(Lines.Panic, _rng), _passengers.RiderHead(), true);
             Services.Audio.Play(Logic.Audio.Sfx.RoofBang, 0.9f);
             _camera.AddShake(0.12f);
             Haptics.Pulse(25);

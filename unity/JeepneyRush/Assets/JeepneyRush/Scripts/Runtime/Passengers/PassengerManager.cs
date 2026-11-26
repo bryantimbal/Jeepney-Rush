@@ -449,7 +449,42 @@ namespace JeepneyRush
             UpdateSeats();
         }
 
-        /// <summary>World position of a random seated passenger's head (speech-bubble anchor).</summary>
+        private readonly Dictionary<int, float> _speakingUntil = new Dictionary<int, float>();
+
+        /// <summary>
+        /// Speech-bubble anchor for "a passenger": picks ONE seated rider (preferring one who isn't
+        /// talking already) and follows that rider's head for the whole bubble. (Picking a random
+        /// rider every frame made the bubble jump between heads – the flicker.)
+        /// </summary>
+        public System.Func<Vector3> RiderHead(float seconds = 2.4f)
+        {
+            int n = Mathf.Min(_route != null ? Mathf.Min(_route.Count, _route.SeatCapacity) : 0, _seated.Count);
+            if (n == 0)
+            {
+                if (_route != null && _route.Hanging > 0 && _hangers.Count > 0 && _hangers[0] != null)
+                {
+                    var h = _hangers[0].transform;
+                    return () => h != null ? h.position + new Vector3(0, 2.0f, 0) : _player.position + new Vector3(0, 2.6f, -1f);
+                }
+                return () => _player.position + new Vector3(0, 2.6f, -1f);
+            }
+            int start = Random.Range(0, n), seat = start;
+            for (int i = 0; i < n; i++)
+            {
+                int s = (start + i) % n;
+                if (!_speakingUntil.TryGetValue(s, out float until) || until < Time.time) { seat = s; break; }
+            }
+            _speakingUntil[seat] = Time.time + seconds;
+            var t = _seated[seat] != null ? _seated[seat].transform : null;
+            Vector3 last = t != null ? t.position + new Vector3(0, 1.1f, 0) : _player.position + Vector3.up * 2.6f;
+            return () =>
+            {
+                if (t != null && t.gameObject.activeInHierarchy) last = t.position + new Vector3(0, 1.1f, 0);
+                return last; // the rider got off: the bubble stays where they were
+            };
+        }
+
+        /// <summary>World position of a random seated passenger's head (one-off; bubbles use <see cref="RiderHead"/>).</summary>
         public Vector3 RandomRiderHead()
         {
             int n = Mathf.Min(_route != null ? Mathf.Min(_route.Count, _route.SeatCapacity) : 0, _seated.Count);
