@@ -132,6 +132,8 @@ namespace JeepneyRush.Logic
 
         // the driver at the gas station
         public static readonly string[] GasPrice = { "ANG MAHAL NG GAS!", "TUMAAS NA NAMAN ANG DIESEL!", "WALA NANG KITA SA BOUNDARY!", "KAILAN BA ANG ROLLBACK?!", "PUHUNAN LANG 'TO, WALANG TUBO!", "PANG-ULAM KO NA SANA 'YAN!" };
+        /// <summary>The driver after paying for gas out of the day's fares ({0} = what's left of his kita).</summary>
+        public static readonly string[] GasKita = { "HAY, {0} NA LANG ANG KITA KO!", "NAPUNTA LAHAT SA GASOLINA ANG PAMASAHE!", "PAGOD KA NA, WALA KA PANG KITA...", "PAANO NA ANG BOUNDARY NITO?!", "SA GAS LANG NAPUPUNTA ANG PINAGPAGURAN KO!" };
 
         // Patok jeepney: the music is too loud to hear "PARA!", so riders pull the cord to ring the bell
         public static readonly string[] PullCord = { "*HILA* DING-DING!", "*HILA* BABABA PO!", "DING! DITO LANG PO!" };

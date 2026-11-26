@@ -110,6 +110,10 @@ namespace JeepneyRush.Logic
         public EnvironmentKind Environment;
         /// <summary>Passenger personalities: tip coins, fare dodgers caught, lolas given a smooth ride, hurried riders on time.</summary>
         public int Tips, DodgersCaught, SmoothLolas, OnTime;
+        /// <summary>Passenger money (fares + tips + caught dodgers), part of <see cref="Coins"/>. The career boundary is paid from it.</summary>
+        public int Fares;
+        /// <summary>Spent on diesel this run (already taken out of <see cref="Coins"/>; counts against the earnings).</summary>
+        public int Gas;
         /// <summary>Career shift id (null = free ride).</summary>
         public string Career;
     }

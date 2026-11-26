@@ -839,6 +839,7 @@ namespace JeepneyRush
             _player.SetMirrorRiders(Mathf.Min(_passengers.Route.Count, _passengers.Route.SeatCapacity));
             Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
+            if (!_dying) Services.UI.SetFares(_score.Fares, _score.GasSpent, IsCareer ? Shift.Boundary : -1);
             if (!_dying && IsCareer)
             {
                 if (_score.MaxDistance >= Shift.Length) ArriveAtTerminal();
@@ -1418,7 +1419,7 @@ namespace JeepneyRush
             var s = _stations.Serving;
             if (s != null) s.Done = true;
             _stations.Serving = null;
-            _score.SpendCoins(_quote.Cost);
+            _score.SpendGas(_quote.Cost);
             _refuels++;
             _lowWarned = _fuel.Low;
             Services.Audio.Play(Logic.Audio.Sfx.Purchase);
@@ -1426,9 +1427,12 @@ namespace JeepneyRush
             _fx.GasPuff(_player.transform.position, 0);
             int litres = Mathf.RoundToInt(_quote.Total);
             if (_quote.Credit > 0.5f) Services.UI.Float($"UTANG MUNA! +{litres} L", UIManager.FloatKind.Info);
-            else Services.UI.Float($"FULL TANK! +{litres} L · -{_quote.Cost} COINS", UIManager.FloatKind.Good);
-            // the driver grumbles about the price of diesel
-            Services.UI.Say(Lines.Pick(Lines.GasPrice, _rng), () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)), true, 2.4f);
+            else Services.UI.Float($"FULL TANK! +{litres} L · GAS -{_quote.Cost} SA KITA", UIManager.FloatKind.Bad);
+            // the driver grumbles: the diesel comes out of his earnings
+            string grumble = _quote.Cost > 0 && _rng.Chance(0.6)
+                ? string.Format(Lines.Pick(Lines.GasKita, _rng), Mathf.Max(0, _score.Kita - (IsCareer ? Shift.Boundary : 0)))
+                : Lines.Pick(Lines.GasPrice, _rng);
+            Services.UI.Say(grumble, () => _player.Body.TransformPoint(PassengerManager.DriverSeat + new Vector3(0, 1.1f, 0)), true, 2.6f);
             Services.UI.Float("ARANGKADA! (GAS)", UIManager.FloatKind.Info);
         }
 
@@ -1558,7 +1562,7 @@ namespace JeepneyRush
         /// <summary>The horn caught the fare dodger in time: they pay up.</summary>
         private void CatchDodger()
         {
-            _score.AddCoins(_dodgerFare);
+            _score.AddFare(_dodgerFare);
             _passengers.Route.CaughtDodger(_dodgerCount);
             Services.UI.Float($"HULI KA! NAGBAYAD DIN · +{_dodgerFare}", UIManager.FloatKind.Good);
             Services.UI.Say("SORRY PO, ETO NA BAYAD!", () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), false, 2f);
@@ -1780,7 +1784,7 @@ namespace JeepneyRush
         private string CareerHudText()
         {
             int left = Mathf.Max(0, Mathf.CeilToInt(Shift.Length - _score.MaxDistance));
-            string boundary = _score.Coins >= Shift.Boundary ? "BOUNDARY OK!" : $"BOUNDARY {_score.Coins}/{Shift.Boundary}";
+            string boundary = _score.Fares >= Shift.Boundary ? "BOUNDARY OK!" : $"BOUNDARY {_score.Fares}/{Shift.Boundary}";
             return $"{Shift.To}: {left:N0} m · {boundary}";
         }
 
@@ -1794,7 +1798,7 @@ namespace JeepneyRush
             _endReason = $"TERMINAL NA! {Shift.From} – {Shift.To}";
             Services.UI.SetCareer($"{Shift.To} · TERMINAL NA!");
             Services.UI.Float("TERMINAL NA!", UIManager.FloatKind.Big);
-            Services.UI.Float(_score.Coins >= Shift.Boundary ? "BOUNDARY KUMPLETO!" : "KULANG ANG BOUNDARY…", _score.Coins >= Shift.Boundary ? UIManager.FloatKind.Info : UIManager.FloatKind.Bad);
+            Services.UI.Float(_score.Fares >= Shift.Boundary ? "BOUNDARY KUMPLETO!" : "KULANG ANG BOUNDARY…", _score.Fares >= Shift.Boundary ? UIManager.FloatKind.Info : UIManager.FloatKind.Bad);
             Services.Audio.Play(Logic.Audio.Sfx.LevelUp);
             Haptics.Pulse(60);
             GameEvents.RaiseHonk();
@@ -1812,6 +1816,7 @@ namespace JeepneyRush
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = !_arrived, Environment = _env,
                 Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, SmoothLolas = route.SmoothLolas, OnTime = route.OnTimeCount,
+                Fares = _score.Fares, Gas = _score.GasSpent,
                 Career = Shift?.Id,
             };
             var rewards = Services.Save.RecordRun(summary);
@@ -1834,6 +1839,7 @@ namespace JeepneyRush
                 NewBestScore = rewards.NewBestScore, NewBestDistance = rewards.NewBestDistance, BestScore = d.bestScore, BestDistance = d.bestDistance,
                 Rewards = rewards,
                 Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, DodgersEscaped = route.DodgersEscaped + _dodgerCount,
+                Fares = summary.Fares, Gas = summary.Gas, RoadCoins = _score.RoadCoins,
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);

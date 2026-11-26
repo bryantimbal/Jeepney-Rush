@@ -39,6 +39,9 @@ namespace JeepneyRush.Logic
     {
         public CareerShift Shift;
         public bool Finished, MadeBoundary, GoalMet;
+        /// <summary>Fares collected, diesel paid out of them, the boundary handed to the operator, and what the driver keeps.</summary>
+        public int Fares, Gas, BoundaryPaid;
+        public int TakeHome => Fares - Gas - BoundaryPaid;
         /// <summary>Stars this run earned (bit 1 finish, 2 boundary, 4 goal).</summary>
         public int Mask;
         /// <summary>Stars earned for the first time (bits).</summary>
@@ -52,7 +55,7 @@ namespace JeepneyRush.Logic
     /// <summary>
     /// Career mode (BUHAY TSUPER): from a student permit to Hari ng Kalsada, driving Mang Kanor's
     /// jeepney. Each shift is a biyahe to a terminal on a set route with three stars:
-    /// ★ reach the terminal, ★ also bring home the boundary (coins for the operator),
+    /// ★ reach the terminal, ★ also collect the boundary in FARES (passenger money, not road coins),
     /// ★ also meet the shift's extra goal. Stars unlock the next shift and, in total, the next
     /// license (each license pays a one-time reward). Every NEW star pays coins.
     /// The server (jr_submit_run) applies exactly these rules from the generated catalog.
@@ -73,49 +76,49 @@ namespace JeepneyRush.Logic
         public static readonly CareerShift[] Shifts =
         {
             // ---- Student permit
-            S("c1s1", 0, "Unang Biyahe", EnvironmentKind.Manila, "QUIAPO", "CUBAO", 800, 40, ShiftGoal.Deliveries, 3,
+            S("c1s1", 0, "Unang Biyahe", EnvironmentKind.Manila, "QUIAPO", "CUBAO", 800, 25, ShiftGoal.Deliveries, 3,
               "O, ito ang susi. Quiapo hanggang Cubao lang. Ingatan mo ang jeep ko, ha?"),
-            S("c1s2", 0, "Pasada sa Divisoria", EnvironmentKind.Manila, "DIVISORIA", "RECTO", 1000, 60, ShiftGoal.MaxHits, 1,
+            S("c1s2", 0, "Pasada sa Divisoria", EnvironmentKind.Manila, "DIVISORIA", "RECTO", 1000, 35, ShiftGoal.MaxHits, 1,
               "Masikip sa Divisoria. Dahan-dahan lang, wag kang bubunggo."),
-            S("c1s3", 0, "Probinsya Run", EnvironmentKind.Provincial, "BAYAN", "PALENGKE", 1200, 70, ShiftGoal.Passengers, 10,
+            S("c1s3", 0, "Probinsya Run", EnvironmentKind.Provincial, "BAYAN", "PALENGKE", 1200, 40, ShiftGoal.Passengers, 10,
               "Sa probinsya, lahat kumakaway. Isakay mo silang lahat!"),
-            S("c1s4", 0, "Tricycle Territory", EnvironmentKind.Provincial, "MUNISIPYO", "SIMBAHAN", 1400, 90, ShiftGoal.NearMisses, 5,
+            S("c1s4", 0, "Tricycle Territory", EnvironmentKind.Provincial, "MUNISIPYO", "SIMBAHAN", 1400, 55, ShiftGoal.NearMisses, 5,
               "Ang daming tricycle diyan. Dikit-dikit pero wag tatama!"),
             // ---- Non-pro license
-            S("c2s1", 1, "EDSA Baptism", EnvironmentKind.Edsa, "MONUMENTO", "BALINTAWAK", 1300, 90, ShiftGoal.MaxHits, 2,
+            S("c2s1", 1, "EDSA Baptism", EnvironmentKind.Edsa, "MONUMENTO", "BALINTAWAK", 1300, 55, ShiftGoal.MaxHits, 2,
               "EDSA na 'to, iho. Bus, kotse, motor... Kalma lang."),
-            S("c2s2", 1, "Fiesta sa Bayan", EnvironmentKind.Fiesta, "PLAZA", "SIMBAHAN", 1500, 110, ShiftGoal.Deliveries, 8,
+            S("c2s2", 1, "Fiesta sa Bayan", EnvironmentKind.Fiesta, "PLAZA", "SIMBAHAN", 1500, 65, ShiftGoal.Deliveries, 8,
               "Pista ngayon! Maraming pasahero, maraming barya."),
-            S("c2s3", 1, "Rush Hour", EnvironmentKind.Edsa, "CUBAO", "ORTIGAS", 1700, 130, ShiftGoal.Overtakes, 10,
+            S("c2s3", 1, "Rush Hour", EnvironmentKind.Edsa, "CUBAO", "ORTIGAS", 1700, 80, ShiftGoal.Overtakes, 10,
               "Alas-singko na. Lahat nagmamadali. Ikaw rin!"),
-            S("c2s4", 1, "Pista Express", EnvironmentKind.Fiesta, "PALENGKE", "PLAZA", 1900, 150, ShiftGoal.Streak, 4,
+            S("c2s4", 1, "Pista Express", EnvironmentKind.Fiesta, "PALENGKE", "PLAZA", 1900, 90, ShiftGoal.Streak, 4,
               "Sunod-sunod na baba, sunod-sunod na bayad. Galingan mo!"),
             // ---- Professional license
-            S("c3s1", 2, "Beach Highway", EnvironmentKind.Beach, "RESORT", "PANTALAN", 2000, 160, ShiftGoal.CleanDistance, 1200,
+            S("c3s1", 2, "Beach Highway", EnvironmentKind.Beach, "RESORT", "PANTALAN", 2000, 95, ShiftGoal.CleanDistance, 1200,
               "Maganda ang tanawin, pero sa daan ang mata mo."),
-            S("c3s2", 2, "Colon to IT Park", EnvironmentKind.Cebu, "COLON", "IT PARK", 2100, 180, ShiftGoal.Deliveries, 12,
+            S("c3s2", 2, "Colon to IT Park", EnvironmentKind.Cebu, "COLON", "IT PARK", 2100, 110, ShiftGoal.Deliveries, 12,
               "Cebu na tayo, 'Day! Maraming estudyante at call center agent."),
-            S("c3s3", 2, "Sunset Biyahe", EnvironmentKind.Beach, "PANTALAN", "BAYAN", 2400, 200, ShiftGoal.NearMisses, 15,
+            S("c3s3", 2, "Sunset Biyahe", EnvironmentKind.Beach, "PANTALAN", "BAYAN", 2400, 120, ShiftGoal.NearMisses, 15,
               "Pagabi na. Bilisan pero wag pabaya."),
-            S("c3s4", 2, "Sugbo Hustle", EnvironmentKind.Cebu, "FUENTE", "CARBON", 2600, 230, ShiftGoal.MaxHits, 1,
+            S("c3s4", 2, "Sugbo Hustle", EnvironmentKind.Cebu, "FUENTE", "CARBON", 2600, 140, ShiftGoal.MaxHits, 1,
               "Malinis na biyahe, buong boundary. Kaya mo 'yan."),
             // ---- Operator (prangkisa)
-            S("c4s1", 3, "Rice Terraces", EnvironmentKind.Mountain, "BONTOC", "SAGADA", 2600, 220, ShiftGoal.SmoothHumps, 6,
+            S("c4s1", 3, "Rice Terraces", EnvironmentKind.Mountain, "BONTOC", "SAGADA", 2600, 130, ShiftGoal.SmoothHumps, 6,
               "May sarili ka nang prangkisa! Pero mabato dito, dahan-dahan sa lubak."),
-            S("c4s2", 3, "Prangkisa Day", EnvironmentKind.Edsa, "QUEZON AVE", "GUADALUPE", 2800, 260, ShiftGoal.Deliveries, 16,
+            S("c4s2", 3, "Prangkisa Day", EnvironmentKind.Edsa, "QUEZON AVE", "GUADALUPE", 2800, 155, ShiftGoal.Deliveries, 16,
               "Unang araw ng sarili mong ruta sa EDSA. Patunayan mo!"),
-            S("c4s3", 3, "Mud & Pine", EnvironmentKind.Mountain, "SAGADA", "BAUKO", 3000, 270, ShiftGoal.MaxHits, 1,
+            S("c4s3", 3, "Mud & Pine", EnvironmentKind.Mountain, "SAGADA", "BAUKO", 3000, 160, ShiftGoal.MaxHits, 1,
               "Maputik at madulas. Isang gasgas lang ang pwede."),
-            S("c4s4", 3, "Boundary King", EnvironmentKind.Manila, "BACLARAN", "MONUMENTO", 3200, 320, ShiftGoal.Streak, 5,
+            S("c4s4", 3, "Boundary King", EnvironmentKind.Manila, "BACLARAN", "MONUMENTO", 3200, 190, ShiftGoal.Streak, 5,
               "Buong Maynila, dulo hanggang dulo. Hari ng boundary ang uuwi."),
             // ---- Hari ng Kalsada
-            S("c5s1", 4, "Session Road", EnvironmentKind.Baguio, "BURNHAM", "SESSION RD", 3000, 300, ShiftGoal.CleanDistance, 2000,
+            S("c5s1", 4, "Session Road", EnvironmentKind.Baguio, "BURNHAM", "SESSION RD", 3000, 180, ShiftGoal.CleanDistance, 2000,
               "Malamig sa Baguio, pero mainit ang kalsada. Matarik at paliko-liko."),
-            S("c5s2", 4, "Fog of Kennon", EnvironmentKind.Baguio, "KENNON", "MINES VIEW", 3300, 330, ShiftGoal.MaxHits, 0,
+            S("c5s2", 4, "Fog of Kennon", EnvironmentKind.Baguio, "KENNON", "MINES VIEW", 3300, 200, ShiftGoal.MaxHits, 0,
               "Makapal ang hamog. Walang tatama. Wala."),
-            S("c5s3", 4, "EDSA Legend", EnvironmentKind.Edsa, "BALINTAWAK", "TAFT", 3600, 380, ShiftGoal.Overtakes, 30,
+            S("c5s3", 4, "EDSA Legend", EnvironmentKind.Edsa, "BALINTAWAK", "TAFT", 3600, 230, ShiftGoal.Overtakes, 30,
               "Ang buong EDSA. Ipakita mo kung sino ang hari."),
-            S("c5s4", 4, "Hari ng Kalsada", EnvironmentKind.Fiesta, "SIMBAHAN", "PLAZA", 4000, 420, ShiftGoal.Deliveries, 25,
+            S("c5s4", 4, "Hari ng Kalsada", EnvironmentKind.Fiesta, "SIMBAHAN", "PLAZA", 4000, 250, ShiftGoal.Deliveries, 25,
               "Huling biyahe. Buong bayan nanonood. Arangkada, Hari!"),
         };
 
@@ -202,10 +205,17 @@ namespace JeepneyRush.Logic
         {
             if (s == null || r.Environment != s.Env || r.Distance < s.Length - 0.5f) return 0;
             int m = StarFinish;
-            if (r.Coins >= s.Boundary) m |= StarBoundary;
+            if (r.Fares >= s.Boundary) m |= StarBoundary;
             if (GoalMet(s.Goal, s.Target, GoalValue(s.Goal, r))) m |= StarGoal;
             return m;
         }
+
+        /// <summary>
+        /// What the operator gets: the boundary, out of the fares left after the diesel (never more
+        /// than that, never more than the run's coins – the driver doesn't go into debt).
+        /// </summary>
+        public static int BoundaryPaid(int boundary, int fares, int gas, int coins) =>
+            Math.Max(0, Math.Min(Math.Min(boundary, fares - gas), coins));
 
         /// <summary>Records a career run in the save and pays new stars / a new license. Null for free-ride runs.</summary>
         public static ShiftResult Apply(SaveData d, RunSummary r)
@@ -226,6 +236,15 @@ namespace JeepneyRush.Logic
             res.Finished = (mask & StarFinish) != 0;
             res.MadeBoundary = (mask & StarBoundary) != 0;
             res.GoalMet = (mask & StarGoal) != 0;
+            // the operator takes the boundary out of the fares (all of them if they fall short);
+            // road coins are never touched
+            if (IsUnlocked(i, d.careerMasks))
+            {
+                res.Fares = Math.Max(0, r.Fares);
+                res.Gas = Math.Max(0, r.Gas);
+                res.BoundaryPaid = BoundaryPaid(s.Boundary, res.Fares, res.Gas, r.Coins);
+                d.coins = Math.Max(0, d.coins - res.BoundaryPaid);
+            }
             res.NewMask = mask & ~d.careerMasks[i];
             d.careerMasks[i] |= mask;
             res.StarCoins = Count(res.NewMask) * StarReward(s.Chapter);

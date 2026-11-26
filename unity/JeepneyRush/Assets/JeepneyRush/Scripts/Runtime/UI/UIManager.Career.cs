@@ -180,9 +180,9 @@ namespace JeepneyRush
                 _briefCard.Add(r);
             }
             Goal(Career.StarFinish, $"Reach {s.To} ({s.Length:N0} m)");
-            Goal(Career.StarBoundary, $"Bring home the boundary: {s.Boundary} coins");
+            Goal(Career.StarBoundary, $"Collect the boundary in fares: {s.Boundary}");
             Goal(Career.StarGoal, Career.GoalText(s.Goal, s.Target));
-            var pay = UiKit.Text($"Every new star: +{Career.StarReward(s.Chapter)} coins. Crash before the terminal and the shift doesn't count.", 24, UiKit.Grey, false);
+            var pay = UiKit.Text($"Mang Kanor takes the boundary out of your FARES, after the diesel you buy; whatever is left is your kita. Road coins are all yours (for upgrades and jeepneys). Every new star: +{Career.StarReward(s.Chapter)} coins. Crash before the terminal and the shift doesn't count.", 24, UiKit.Grey, false);
             pay.style.whiteSpace = WhiteSpace.Normal;
             pay.style.marginTop = 6;
             _briefCard.Add(pay);
@@ -257,8 +257,13 @@ namespace JeepneyRush
                 _goCareer.Add(l);
             }
             Check(c.Finished, $"Reached {s.To}");
-            Check(c.MadeBoundary, $"Boundary {s.Boundary} coins");
+            Check(c.MadeBoundary, $"Boundary {s.Boundary} in fares");
             Check(c.GoalMet, Career.GoalText(s.Goal, s.Target));
+            // the money: fares collected, the boundary handed over, what the driver keeps
+            var money = UiKit.Text($"Pamasahe {c.Fares:N0} − gas {c.Gas:N0} − boundary {c.BoundaryPaid:N0} = KITA {c.TakeHome:N0}", 30, c.TakeHome > 0 ? UiKit.Green : UiKit.Red, true);
+            money.style.marginTop = 4;
+            money.style.whiteSpace = WhiteSpace.Normal;
+            _goCareer.Add(money);
             if (c.StarCoins > 0)
             {
                 var l = UiKit.Text($"New stars: +{c.StarCoins} coins", 32, UiKit.Ink, true);

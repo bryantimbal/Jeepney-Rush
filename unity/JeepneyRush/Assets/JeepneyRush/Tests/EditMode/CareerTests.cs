@@ -8,7 +8,7 @@ namespace JeepneyRush.Tests
     {
         private static RunSummary Run(CareerShift s, float dist, int coins, int goalValue = 0)
         {
-            var r = new RunSummary { Career = s.Id, Environment = s.Env, Distance = dist, Coins = coins, Score = 100 };
+            var r = new RunSummary { Career = s.Id, Environment = s.Env, Distance = dist, Coins = coins, Fares = coins, Score = 100 };
             switch (s.Goal)
             {
                 case ShiftGoal.Deliveries: r.Deliveries = goalValue; r.Passengers = goalValue; break;
@@ -126,6 +126,34 @@ namespace JeepneyRush.Tests
             var rep = RunReport.From(Run(s, s.Length, 10), 60, 1, false, 0, "pilipinas");
             Assert.AreEqual("c1s1", rep.career);
             Assert.AreEqual("", RunReport.From(new RunSummary(), 60, 1, false, 0, "pilipinas").career);
+        }
+
+        [Test]
+        public void BoundaryComesFromFaresNotRoadCoins()
+        {
+            var s = Career.Shifts[0];
+            var r = Run(s, s.Length, 0);
+            r.Coins = 500; r.Fares = 0; // all road coins
+            Assert.AreEqual(1, Career.Evaluate(s, r), "no boundary star from road coins");
+            r.Fares = s.Boundary; r.Coins = 500 + s.Boundary;
+            Assert.AreEqual(3, Career.Evaluate(s, r));
+        }
+
+        [Test]
+        public void OperatorGetsTheBoundaryAfterDieselNoDebt()
+        {
+            Assert.AreEqual(25, Career.BoundaryPaid(25, 100, 30, 500));
+            Assert.AreEqual(10, Career.BoundaryPaid(25, 40, 30, 500), "only what's left after diesel");
+            Assert.AreEqual(0, Career.BoundaryPaid(25, 20, 30, 500), "gas ate the fares: nothing left");
+            Assert.AreEqual(5, Career.BoundaryPaid(25, 100, 0, 5), "never more than the run's coins");
+            var d = SaveValidation.Sanitize(new SaveData());
+            var sh = Career.Shifts[0];
+            var run = Run(sh, sh.Length, 0);
+            run.Coins = 200; run.Fares = 60; run.Gas = 20;
+            Progress.Apply(d, run);
+            var res = Career.Apply(SaveValidation.Sanitize(new SaveData { coins = 200 }), run);
+            Assert.AreEqual(sh.Boundary, res.BoundaryPaid);
+            Assert.AreEqual(60 - 20 - sh.Boundary, res.TakeHome);
         }
     }
 }

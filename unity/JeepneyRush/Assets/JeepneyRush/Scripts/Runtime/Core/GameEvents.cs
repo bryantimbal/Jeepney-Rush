@@ -67,5 +67,7 @@ namespace JeepneyRush
         public Progress.RunRewards Rewards;
         /// <summary>Passenger personalities this run: tips, fare dodgers caught / escaped.</summary>
         public int Tips, DodgersCaught, DodgersEscaped;
+        /// <summary>Passenger money (fares) vs coins picked up on the road.</summary>
+        public int Fares, Gas, RoadCoins;
     }
 }

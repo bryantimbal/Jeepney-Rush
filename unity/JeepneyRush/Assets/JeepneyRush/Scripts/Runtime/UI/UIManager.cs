@@ -1209,6 +1209,7 @@ namespace JeepneyRush
                 l.style.marginBottom = 8;
                 _goRewards.Add(l);
             }
+            if (rw == null || rw.Career == null) { string money = MoneySummary(r); if (money != null) Line(money, UiKit.Hex("#1E7B45")); }
             string riders = RidersSummary(r);
             if (riders != null) Line(riders, UiKit.Hex("#B8860B"));
             if (rw != null)

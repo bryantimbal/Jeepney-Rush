@@ -66,6 +66,10 @@ namespace JeepneyRush.Logic
         public string jeepney;
         /// <summary>Career shift id ("" = free ride).</summary>
         public string career = "";
+        /// <summary>Passenger money (part of coins): the career boundary is paid from it.</summary>
+        public int fares;
+        /// <summary>Spent on diesel (already taken out of coins).</summary>
+        public int gas;
         // passenger personalities (missions)
         public int tips;
         public int dodgers_caught;
@@ -80,7 +84,7 @@ namespace JeepneyRush.Logic
             passengers = r.Passengers, deliveries = r.Deliveries, power_ups = r.PowerUps, smooth_humps = r.SmoothHumps,
             wet_distance = r.WetDistance, refuels = r.Refuels, hits = r.Hits, clean_distance = r.CleanDistance,
             best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney, career = r.Career ?? "",
-            tips = r.Tips, dodgers_caught = r.DodgersCaught, smooth_lolas = r.SmoothLolas, on_time = r.OnTime,
+            fares = r.Fares, gas = r.Gas, tips = r.Tips, dodgers_caught = r.DodgersCaught, smooth_lolas = r.SmoothLolas, on_time = r.OnTime,
         };
     }
 
@@ -98,6 +102,8 @@ namespace JeepneyRush.Logic
         public const int MaxFarePerDelivery = 42;   // (fare 5 + group 2) × streak 3 × passenger bonus 2
         /// <summary>Biggest tip per delivery: balikbayan 10 × ★5 rating 1.2 × passenger bonus 2 (rounded up).</summary>
         public const int MaxTipPerDelivery = 25;
+        /// <summary>A full tank at the station price (fuelCapacity 100 × 0.4), with headroom.</summary>
+        public const int MaxGasPerRefuel = 60;
 
         public static string HardViolation(RunReport r)
         {
@@ -139,6 +145,8 @@ namespace JeepneyRush.Logic
             r.gems = Math.Min(r.gems, RoadGems.MaxForDistance(r.distance));
             r.overtakes = Math.Min(r.overtakes, MaxOvertakes(r.distance));
             r.near_misses = Math.Min(r.near_misses, MaxNearMisses(r.distance));
+            r.gas = Math.Max(0, Math.Min(r.gas, r.refuels * MaxGasPerRefuel));
+            r.fares = Math.Max(0, Math.Min(r.fares, r.coins + r.gas));
             r.tips = Math.Max(0, Math.Min(r.tips, r.deliveries * MaxTipPerDelivery));
             r.dodgers_caught = Math.Max(0, Math.Min(r.dodgers_caught, r.deliveries));
             r.smooth_lolas = Math.Max(0, Math.Min(r.smooth_lolas, r.deliveries));

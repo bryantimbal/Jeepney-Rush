@@ -9,16 +9,23 @@ select set_config('request.jwt.claim.sub', :'u', false) \g /dev/null
 create function pg_temp.krun(id text, shift text, env int, dist real, coins int, deliveries int, hits int) returns jsonb language sql as $$
   select public.jr_submit_run(jsonb_build_object('run_id', id, 'seed', 1, 'env', env, 'duration', dist / 10, 'distance', dist, 'coins', coins, 'score', 100,
     'passengers', deliveries, 'deliveries', deliveries, 'power_ups', 0, 'smooth_humps', 0, 'wet_distance', 0, 'refuels', 0, 'hits', hits,
-    'clean_distance', 0, 'best_streak', 0, 'daily', false, 'day_key', 0, 'jeepney', 'pilipinas', 'gems', 0, 'career', shift)) $$;
+    'clean_distance', 0, 'best_streak', 0, 'daily', false, 'day_key', 0, 'jeepney', 'pilipinas', 'gems', 0, 'career', shift,
+    'fares', coins, 'gas', 0)) $$;
+-- a run with road coins and diesel: coins = road + fares - gas
+create function pg_temp.mrun(id text, shift text, env int, dist real, road int, fares int, gas int) returns jsonb language sql as $$
+  select public.jr_submit_run(jsonb_build_object('run_id', id, 'seed', 1, 'env', env, 'duration', dist / 10, 'distance', dist, 'coins', road + fares - gas, 'score', 100,
+    'passengers', 20, 'deliveries', 20, 'power_ups', 0, 'smooth_humps', 0, 'wet_distance', 0, 'refuels', 1, 'hits', 0,
+    'clean_distance', 0, 'best_streak', 0, 'daily', false, 'day_key', 0, 'jeepney', 'pilipinas', 'gems', 0, 'career', shift,
+    'fares', fares, 'gas', gas)) $$;
 grant execute on all functions in schema pg_temp to authenticated;
 do $$ begin
   assert (select count(*) from public.jr_catalog_career) = 20, 'catalog has the 20 shifts';
   assert (select stars_needed from public.jr_catalog_licenses where rank = 1) = 6, 'non-pro license at 6 stars';
-  assert (select boundary from public.jr_catalog_career where id = 'c1s1') = 40, 'c1s1 boundary from C#';
+  assert (select boundary from public.jr_catalog_career where id = 'c1s1') = 25, 'c1s1 boundary from C#';
 end $$;
 set role authenticated;
 do $$ declare r jsonb; c0 int; begin
-  -- c1s1: Manila (0), 800 m, boundary 40, deliver 3. c1s2: Manila, 1000 m, boundary 60, at most 1 hit
+  -- c1s1: Manila (0), 800 m, boundary 25, deliver 3. c1s2: Manila, 1000 m, boundary 35, at most 1 hit
   r := pg_temp.krun('k-locked', 'c1s2', 0, 1000, 60, 0, 0);
   assert (r->'career'->>'locked')::boolean and (r->'career'->>'mask')::int = 0, 'c1s2 locked until c1s1 has a star: ' || (r->'career')::text;
   r := pg_temp.krun('k-crash', 'c1s1', 0, 700, 500, 5, 0);
@@ -26,7 +33,8 @@ do $$ declare r jsonb; c0 int; begin
   c0 := (r->'snapshot'->>'coins')::int;
   r := pg_temp.krun('k-1', 'c1s1', 0, 805, 10, 0, 0);
   assert (r->'career'->>'mask')::int = 1 and (r->'career'->>'star_coins')::int = 40, 'finish star pays 40: ' || (r->'career')::text;
-  assert (r->'snapshot'->>'coins')::int = c0 + 10 + 40 + (r->>'level_reward')::int, 'coins credited';
+  assert (r->'career'->>'boundary_paid')::int = 10, 'short of the boundary: all 10 fares go to the operator';
+  assert (r->'snapshot'->>'coins')::int = c0 + 10 - 10 + 40 + (r->>'level_reward')::int, 'coins credited: ' || (r->'snapshot'->>'coins');
   assert (r->'snapshot'->'career'->>0)::int = 1 and jsonb_array_length(r->'snapshot'->'career') = 20, 'snapshot career array';
   r := pg_temp.krun('k-1', 'c1s1', 0, 805, 10, 0, 0);
   assert (r->>'duplicate')::boolean, 'replayed run id';
@@ -35,6 +43,7 @@ do $$ declare r jsonb; c0 int; begin
   r := pg_temp.krun('k-wrong-route', 'c1s1', 1, 900, 99, 9, 0);
   assert (r->'career'->>'mask')::int = 0, 'wrong route earns nothing';
   r := pg_temp.krun('k-3', 'c1s1', 0, 805, 45, 3, 0);
+  assert (r->'career'->>'boundary_paid')::int = 25, 'boundary 25 out of 45 fares';
   assert (r->'career'->>'mask')::int = 7 and (r->'career'->>'new_mask')::int = 6 and (r->'career'->>'star_coins')::int = 80, 'boundary + goal: ' || (r->'career')::text;
   r := pg_temp.krun('k-4', 'c1s2', 0, 1000, 60, 0, 2);
   assert (r->'career'->>'mask')::int = 3, 'two hits misses the at-most-1-hit goal';
@@ -44,6 +53,16 @@ do $$ declare r jsonb; c0 int; begin
   assert (r->'snapshot'->>'career_rank')::int = 1 and (r->'snapshot'->>'gems')::int = 10, 'rank + gems in snapshot';
   r := pg_temp.krun('k-6', 'c2s1', 4, 1300, 90, 0, 0);
   assert (r->'career'->>'mask')::int = 7, 'chapter 2 open: ' || (r->'career')::text;
+  -- road coins never pay the boundary; diesel comes out of the fares first
+  c0 := (r->'snapshot'->>'coins')::int;
+  r := pg_temp.mrun('k-road', 'c1s1', 0, 805, 500, 0, 0);
+  assert (r->'career'->>'mask')::int & 2 = 0 and (r->'career'->>'boundary_paid')::int = 0, 'road coins are not fares: ' || (r->'career')::text;
+  assert (r->'snapshot'->>'coins')::int = c0 + 500 + (r->>'level_reward')::int, 'all road coins kept';
+  c0 := (r->'snapshot'->>'coins')::int;
+  r := pg_temp.mrun('k-gas', 'c1s1', 0, 805, 100, 40, 30);
+  assert (r->'career'->>'mask')::int & 2 = 2, 'boundary star: 40 fares >= 25';
+  assert (r->'career'->>'boundary_paid')::int = 10, 'only 10 left after 30 of diesel: ' || (r->'career')::text;
+  assert (r->'snapshot'->>'coins')::int = c0 + 100 + 40 - 30 - 10 + (r->>'level_reward')::int, 'road + fares - gas - boundary';
   r := pg_temp.krun('k-7', 'nope', 0, 900, 10, 0, 0);
   assert r->'career'->>'shift' = '', 'unknown shift = free ride';
   r := pg_temp.krun('k-8', '', 0, 900, 10, 0, 0);
