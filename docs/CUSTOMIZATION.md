@@ -9,7 +9,7 @@ jeepney's stat class never change.
 | Windshield banner | GOD BLESS OUR TRIP, SAKAY NA!, BAHALA NA; *HARI NG KALSADA* (earned) |
 | Rear sticker | BAYAD MUNA BAGO BABA, HOW'S MY DRIVING?, Santo Niño, Araw at Tatlong Bituin; *LISENSYADO!* (earned: Non-Pro) |
 | Karatula (sign board) | QUIAPO–CUBAO, BACLARAN–DIVISORIA, MONUMENTO–LAWTON, COLON–IT PARK, BAGUIO–LA TRINIDAD, SPECIAL TRIP |
-| Busina (horn) | Toot-Toot-Toot, Tunog-Pista (original musical tune), Air Horn (patok) |
+| Busina (horn) | La Cucaracha (traditional folk tune), Toot-Toot-Toot, Tunog-Pista (original musical tune), Air Horn (patok) |
 | Mudflap | Red, chrome, MAHAL KITA print |
 | Palamuti (hood ornament, classic jeepneys) | Five horses, eagle, carabao, none; *gold horses* (earned: Operator) |
 | Ilaw (lights) | Fog lights, side marker lights, neon underglow (blue / pink) |
@@ -24,4 +24,4 @@ jeepney's stat class never change.
 Code: `Logic/Customization.cs` (catalog, owning, fitting), `JeepneyBuilder` (paint, banner,
 sticker, sign, mudflap print, ornaments, lights), `SoundBank` (horns), `UIManager.Talyer.cs`.
 Textures: `cos_*` in `scripts/unity-textures.mjs`. Server: `20261126104930_jr_cosmetics.sql`
-and the catalog `20261126104932_jr_catalog.sql`. Tests: `CustomizationTests`, `dev-tests/cosmetics.sql`.
+and the catalogs `20261126104932_jr_catalog.sql`, `20261126105432_jr_catalog.sql` (La Cucaracha). Tests: `CustomizationTests`, `dev-tests/cosmetics.sql`.

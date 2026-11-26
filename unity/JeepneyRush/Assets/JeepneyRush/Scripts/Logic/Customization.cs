@@ -6,7 +6,7 @@ namespace JeepneyRush.Logic
     /// <summary>What a cosmetic item changes.</summary>
     public enum CustomSlot { Paint, Windshield, RearSticker, Sign, Horn, Mudflap, Ornament, Lights }
 
-    public enum HornKind { Classic, TootToot, Musical, AirHorn }
+    public enum HornKind { Classic, TootToot, Musical, AirHorn, Cucaracha }
     public enum OrnamentKind { Horses, FiveHorses, GoldHorses, Eagle, Carabao, None }
     public enum LightsKind { None, FogBar, SideMarkers, Underglow }
 
@@ -146,6 +146,7 @@ namespace JeepneyRush.Logic
             new CosmeticItem { Id = "horn_toot", Slot = CustomSlot.Horn, Name = "Toot-Toot-Toot", Price = 400, Horn = HornKind.TootToot },
             new CosmeticItem { Id = "horn_musical", Slot = CustomSlot.Horn, Name = "Tunog-Pista (musical)", Price = 600, Horn = HornKind.Musical },
             new CosmeticItem { Id = "horn_air", Slot = CustomSlot.Horn, Name = "Air Horn (patok)", Price = 600, Horn = HornKind.AirHorn },
+            new CosmeticItem { Id = "horn_cucaracha", Slot = CustomSlot.Horn, Name = "La Cucaracha", Price = 800, Horn = HornKind.Cucaracha },
             // ---- mudflaps
             new CosmeticItem { Id = "mud_stock", Slot = CustomSlot.Mudflap, Name = "Orihinal (stock)" },
             new CosmeticItem { Id = "mud_red", Slot = CustomSlot.Mudflap, Name = "Pula", Price = 150, MudflapColor = "#B3001B" },
@@ -261,7 +262,7 @@ namespace JeepneyRush.Logic
         }
 
         public static Audio.Sfx HornSound(HornKind k) =>
-            k == HornKind.TootToot ? Audio.Sfx.HornToot : k == HornKind.Musical ? Audio.Sfx.HornMusical : k == HornKind.AirHorn ? Audio.Sfx.HornAir : Audio.Sfx.Horn;
+            k == HornKind.TootToot ? Audio.Sfx.HornToot : k == HornKind.Musical ? Audio.Sfx.HornMusical : k == HornKind.AirHorn ? Audio.Sfx.HornAir : k == HornKind.Cucaracha ? Audio.Sfx.HornCucaracha : Audio.Sfx.Horn;
 
         public static HornKind HornOf(SaveData d, string jeepney)
         {

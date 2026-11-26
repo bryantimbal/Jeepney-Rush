@@ -5,7 +5,7 @@ namespace JeepneyRush.Logic.Audio
 {
     public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik, NearMiss, ComboUp,
         // talyer horns (customization)
-        HornToot, HornMusical, HornAir }
+        HornToot, HornMusical, HornAir, HornCucaracha }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -287,6 +287,24 @@ namespace JeepneyRush.Logic.Audio
                         {
                             var one = TwinHorn(0.3f, tune[i], tune[i] * 1.5f, new[] { (0f, i == tune.Length - 1 ? 0.28f : 0.17f, 1f) }, raw: true);
                             int at = (int)(i * 0.2f * Synth.Rate);
+                            for (int k = 0; k < one.Length && at + k < buf.Length; k++) buf[at + k] += one[k];
+                        }
+                        return Bell(buf);
+                    }
+                case Sfx.HornCucaracha:
+                    {
+                        // "La Cucaracha" (traditional Mexican folk song, public domain) on a musical
+                        // trumpet horn, the way many jeepneys play it: la cu-ca-ra-CHA, la cu-ca-ra-CHA
+                        var song = new (float f, float st, float dur)[]
+                        {
+                            (392f, 0f, 0.11f), (392f, 0.14f, 0.11f), (392f, 0.28f, 0.11f), (523.3f, 0.42f, 0.24f), (659.3f, 0.7f, 0.36f),
+                            (392f, 1.16f, 0.11f), (392f, 1.3f, 0.11f), (392f, 1.44f, 0.11f), (523.3f, 1.58f, 0.24f), (659.3f, 1.86f, 0.5f),
+                        };
+                        var buf = Synth.Buffer(2.45f);
+                        foreach (var (f, st, dur) in song)
+                        {
+                            var one = TwinHorn(dur + 0.05f, f, f * 2.003f, new[] { (0f, dur, 1f) }, raw: true, duty2: 0.18);
+                            int at = (int)(st * Synth.Rate);
                             for (int k = 0; k < one.Length && at + k < buf.Length; k++) buf[at + k] += one[k];
                         }
                         return Bell(buf);

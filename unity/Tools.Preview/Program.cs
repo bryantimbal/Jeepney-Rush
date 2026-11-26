@@ -18,6 +18,14 @@ foreach (var l in JeepneyCatalog.All)
     models.Add(("jeepney_" + l.Id, full));
 }
 models.Add(("wheel", JeepneyBuilder.BuildWheel()));
+// talyer looks for the store / mock-up scenes (body only; scene.html adds the wheels)
+foreach (var (name, id, look) in new[]
+{
+    ("custom_gold", "sanjuan", new JeepneyLook { paint = "paint_ginto", windshield = "ws_hari", rear = "rear_bayad", sign = "sign_especial", mudflap = "mud_chrome", ornament = "orn_gold", lights = "lights_neon_pink" }),
+    ("custom_blue", "pilipinas", new JeepneyLook { paint = "paint_asul", windshield = "ws_godbless", rear = "rear_santonino", sign = "sign_quiapo", mudflap = "mud_mahal", ornament = "orn_eagle", lights = "lights_fog" }),
+    ("custom_black", "manila", new JeepneyLook { paint = "paint_itim", windshield = "ws_sakayna", rear = "rear_howsmy", sign = "sign_cebu", mudflap = "mud_red", ornament = "orn_five", lights = "lights_markers" }),
+})
+    models.Add(("jeepney_" + name, JeepneyBuilder.Build(Customization.Apply(JeepneyCatalog.Get(id), look))));
 foreach (var (name, mesh) in ModelCatalog.Preview()) models.Add((name, mesh));
 {
     // jeepney with passengers seated inside (rotation baked: left bench faces +X, right faces -X)
