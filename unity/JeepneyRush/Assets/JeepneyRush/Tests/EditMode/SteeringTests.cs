@@ -242,5 +242,78 @@ namespace JeepneyRush.Tests
             Assert.AreEqual(-20f, VirtualWheel.DeltaAngle(10f, -10f), 1e-4);
             Assert.AreEqual(20f, VirtualWheel.DeltaAngle(170f, -170f), 1e-4);
         }
+
+        private static readonly SteeringPrefs Buttons = new SteeringPrefs { Sensitivity = 1, MaxInput = 1, ReturnSpeed = 1, LaneStep = true };
+
+        [Test]
+        public void StoppedJeepneyOnlyTurnsItsWheels()
+        {
+            foreach (var prefs in new[] { SteeringPrefs.Default, Buttons })
+            {
+                var m = new SteeringModel(Cfg) { ForwardSpeed = 0f, Prefs = prefs };
+                float x0 = m.X;
+                for (int i = 0; i < 120; i++) m.Tick(-1f, 1f / 60f);       // hold LEFT for 2 s at the stop
+                Assert.AreEqual(x0, m.X, 1e-4, "no lane change while stopped");
+                Assert.Less(m.Wheel, -0.9f, "but the steering wheel / front wheels are turned");
+                for (int i = 0; i < 60; i++) m.Tick(0f, 1f / 60f);
+                Assert.AreEqual(0f, m.Wheel, 0.02f, "released: wheels straighten");
+                Assert.AreEqual(x0, m.X, 1e-4);
+                // creeping forward: only a little sideways movement
+                var c = new SteeringModel(Cfg) { ForwardSpeed = 1.0f, Prefs = SteeringPrefs.Default };
+                for (int i = 0; i < 60; i++) c.Tick(1f, 1f / 60f);
+                Assert.Less(c.X - x0, 1.2f);
+            }
+        }
+
+        [Test]
+        public void ButtonsOnePressIsOneLane()
+        {
+            float Hold(float seconds, int presses)
+            {
+                var m = new SteeringModel(Cfg) { ForwardSpeed = 12f, Prefs = Buttons };
+                for (int p = 0; p < presses; p++)
+                {
+                    for (float t = 0; t < seconds; t += 1f / 60f) m.Tick(1f, 1f / 60f);
+                    for (int i = 0; i < 6; i++) m.Tick(0f, 1f / 60f);       // lift the finger
+                }
+                for (int i = 0; i < 240; i++) m.Tick(0f, 1f / 60f);
+                return m.X;
+            }
+            Assert.AreEqual(Cfg.LaneX(2), Hold(0.08f, 1), 0.06f, "a quick press: one lane");
+            Assert.AreEqual(Cfg.LaneX(2), Hold(3f, 1), 0.06f, "holding: still just one lane");
+            Assert.AreEqual(Cfg.LaneX(2), Hold(0.1f, 2), 0.06f, "two presses from the middle: stops at the last lane");
+            // never overshoots the lane centre by much (straightens smoothly)
+            var m2 = new SteeringModel(Cfg) { ForwardSpeed = 12f, Prefs = Buttons };
+            float maxX = m2.X;
+            for (int i = 0; i < 240; i++) { m2.Tick(i < 5 ? 1f : 0f, 1f / 60f); maxX = Math.Max(maxX, m2.X); }
+            Assert.Less(maxX, Cfg.LaneX(2) + 0.25f);
+            // a press while stopped does nothing to the lane, even after driving off
+            var s = new SteeringModel(Cfg) { ForwardSpeed = 0f, Prefs = Buttons };
+            for (int i = 0; i < 10; i++) s.Tick(1f, 1f / 60f);
+            for (int i = 0; i < 5; i++) s.Tick(0f, 1f / 60f);
+            s.ForwardSpeed = 10f;
+            for (int i = 0; i < 240; i++) s.Tick(0f, 1f / 60f);
+            Assert.AreEqual(Cfg.LaneX(1), s.X, 0.05f);
+            // the spawner plans with the real one-press lane time
+            Assert.GreaterOrEqual(SteeringModel.PlannedLaneTime(Cfg, Buttons), SteeringModel.OneLaneTime(Cfg, 1f, Buttons));
+            Assert.Less(SteeringModel.OneLaneTime(Cfg, 1f, Buttons), Cfg.laneChangeDuration + 0.25f, "one press still changes lane briskly");
+        }
+
+        [Test]
+        public void SlightTiltDoesNotCreepSideways()
+        {
+            float Drift(bool soft)
+            {
+                var m = new SteeringModel(Cfg) { ForwardSpeed = 12f, Prefs = new SteeringPrefs { Sensitivity = 1, MaxInput = 1, ReturnSpeed = 1, SoftAssist = soft } };
+                for (int i = 0; i < 180; i++) m.Tick(0.12f, 1f / 60f);       // hand wobble just past the dead zone, 3 s
+                return Math.Abs(m.X - Cfg.LaneX(1));
+            }
+            Assert.Less(Drift(true), 0.5f, "tilt: a slight tilt stays in the lane");
+            Assert.Greater(Drift(false), Drift(true));
+            // a real tilt still changes lanes
+            var r = new SteeringModel(Cfg) { ForwardSpeed = 12f, Prefs = new SteeringPrefs { Sensitivity = 1, MaxInput = 1, ReturnSpeed = 1, SoftAssist = true } };
+            for (int i = 0; i < 60; i++) r.Tick(0.7f, 1f / 60f);
+            Assert.Greater(r.X - Cfg.LaneX(1), 2f);
+        }
     }
 }

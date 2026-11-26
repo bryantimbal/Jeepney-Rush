@@ -279,7 +279,12 @@ namespace JeepneyRush
             _input.Mode = mode;
             _input.Sensitivity = d.swipeSensitivity;
             _input.ApplyTiltSettings(d);
-            var prefs = new SteeringPrefs { Sensitivity = d.swipeSensitivity, MaxInput = d.maxSteer, ReturnSpeed = d.steerReturn };
+            var prefs = new SteeringPrefs
+            {
+                Sensitivity = d.swipeSensitivity, MaxInput = d.maxSteer, ReturnSpeed = d.steerReturn,
+                LaneStep = mode == SteerMode.Tap,      // buttons: one press = one lane
+                SoftAssist = mode == SteerMode.Tilt,   // tilt: slight wobbles don't creep sideways
+            };
             _player.Lanes.Prefs = prefs;
             _player.Lanes.Assist = d.laneAssist;
             if (_plannedCfg != null) _plannedCfg.laneChangeDuration = SteeringModel.PlannedLaneTime(_cfg, prefs);
@@ -712,6 +717,7 @@ namespace JeepneyRush
             // ---- player: one steering system for buttons / tilt / wheel / keys
             _player.Lanes.Steer = _dying ? 0f : _input.Steer;
             _player.Lanes.Speed01 = Mathf.Clamp01(Mathf.Abs(_speed) / Mathf.Max(1f, _cfg.maxSpeed * _cfg.gasMultiplier));
+            _player.Lanes.ForwardSpeed = _speed; // stopped / at a PARA stop: steering only turns the front wheels
             int turn = _player.Lanes.TurnDirection;
             if (turn != 0 && turn != _lastTurn) GameEvents.RaiseLane(turn); // blinker click as the turn starts
             _lastTurn = turn;

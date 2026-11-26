@@ -18,6 +18,8 @@ namespace JeepneyRush
         public bool Assist { get => _model.Assist; set => _model.Assist = value; }
         /// <summary>Forward speed 0 .. 1 of top speed (lower speeds steer a little tighter).</summary>
         public float Speed01 { get => _model.Speed01; set => _model.Speed01 = value; }
+        /// <summary>Forward speed (m/s): stopped = steering only turns the wheels.</summary>
+        public float ForwardSpeed { get => _model.ForwardSpeed; set => _model.ForwardSpeed = value; }
         public SteeringPrefs Prefs { get => _model.Prefs; set => _model.Prefs = value; }
         /// <summary>Steering wheel position -1 .. 1 (cockpit wheel, HUD wheel).</summary>
         public float Wheel => _model.Wheel;

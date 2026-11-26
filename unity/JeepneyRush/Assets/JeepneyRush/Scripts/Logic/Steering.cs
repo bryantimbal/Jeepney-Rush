@@ -37,6 +37,10 @@ namespace JeepneyRush.Logic
         public float MaxInput;
         /// <summary>0.5 .. 2 – how fast the wheel returns to centre on release.</summary>
         public float ReturnSpeed;
+        /// <summary>Buttons mode: each press moves exactly one lane (holding doesn't keep going).</summary>
+        public bool LaneStep;
+        /// <summary>Tilt mode: small tilts blend with lane keeping so a slight wobble doesn't drift the jeepney.</summary>
+        public bool SoftAssist;
 
         public static SteeringPrefs Default => new SteeringPrefs { Sensitivity = 1f, MaxInput = 1f, ReturnSpeed = 1f };
         public SteeringPrefs Clamped() => new SteeringPrefs
@@ -44,6 +48,8 @@ namespace JeepneyRush.Logic
             Sensitivity = Clamp(Sensitivity, 0.5f, 1.5f, 1f),
             MaxInput = Clamp(MaxInput, 0.7f, 1f, 1f),
             ReturnSpeed = Clamp(ReturnSpeed, 0.5f, 2f, 1f),
+            LaneStep = LaneStep,
+            SoftAssist = SoftAssist,
         };
         private static float Clamp(float v, float lo, float hi, float def) => float.IsNaN(v) || v <= 0 ? def : Math.Max(lo, Math.Min(hi, v));
     }
@@ -83,10 +89,26 @@ namespace JeepneyRush.Logic
         /// <summary>Forward speed 0 (stopped) .. 1 (top speed) – lower speeds steer a little tighter.</summary>
         public float Speed01 = 1f;
         public SteeringPrefs Prefs = SteeringPrefs.Default;
+        /// <summary>
+        /// Forward speed (m/s). Like a real vehicle the jeepney only moves sideways while rolling: at a
+        /// full stop steering just turns the wheels; full sideways response from <see cref="FullSteerSpeed"/>.
+        /// </summary>
+        public float ForwardSpeed = 99f;
+        public const float FullSteerSpeed = 4.2f;
+        /// <summary>Sideways speed never exceeds this fraction of the forward speed (no effect at normal driving speeds).</summary>
+        public const float MaxSlip = 0.8f;
+        /// <summary>Below this forward speed a button press doesn't start a lane change (only the wheels turn).</summary>
+        public const float StepMinSpeed = 1.5f;
+        private float RollFactor => Math.Max(0f, Math.Min(1f, Math.Abs(ForwardSpeed) / FullSteerSpeed));
+        /// <summary>Buttons mode: the lane the jeepney is steering itself to (-1 = none).</summary>
+        public int StepTarget { get; private set; } = -1;
+        private int _prevSign;
+        /// <summary>Tilt: inputs below this blend with lane keeping.</summary>
+        public const float SoftAssistBelow = 0.28f;
 
         public SteeringModel(BalanceConfig cfg) { _cfg = cfg; Reset(); }
 
-        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; _lastDir = 0; }
+        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; _lastDir = 0; StepTarget = -1; _prevSign = 0; }
 
         private float Scale => Math.Max(0.5f, DurationScale);
         private float LaneTime => _cfg.laneChangeDuration * Scale;
@@ -124,6 +146,33 @@ namespace JeepneyRush.Logic
         /// <summary>How far into the next lane (fraction of a lane) a released steer commits to it.</summary>
         public const float CommitFraction = 0.22f;
 
+        /// <summary>
+        /// Buttons mode: a press (not holding) sets the next lane as the target and the jeepney steers
+        /// itself there – full lock, then easing off so it straightens in the lane. Pressed while
+        /// stopped, the button only turns the wheels.
+        /// </summary>
+        private float LaneStepInput(float held, SteeringPrefs p)
+        {
+            int sign = Math.Abs(held) > 0.05f ? Math.Sign(held) : 0;
+            bool pressed = sign != 0 && sign != _prevSign;
+            _prevSign = sign;
+            if (pressed && Math.Abs(ForwardSpeed) >= StepMinSpeed)
+            {
+                int from = StepTarget >= 0 ? StepTarget : (int)Math.Round(X / _cfg.laneSpacing + (_cfg.laneCount - 1) * 0.5f);
+                int to = Math.Max(0, Math.Min(_cfg.laneCount - 1, from + sign));
+                StepTarget = to == from && StepTarget < 0 ? -1 : to;
+            }
+            if (StepTarget < 0 || Math.Abs(ForwardSpeed) < StepMinSpeed)
+                return Math.Abs(ForwardSpeed) < StepMinSpeed ? held : 0f; // stopped: the wheels turn, nothing else
+            float d = _cfg.LaneX(StepTarget) - X;
+            float vmax = Math.Max(0.1f, MaxLateralSpeed * SpeedFactor);
+            if (Math.Abs(d) < 0.05f && Math.Abs(VelocityX) < 0.4f) { StepTarget = -1; _lastDir = 0; return 0f; }
+            // brake the sideways motion in time to stop on the lane centre (the wheel needs RampTime to unwind)
+            float decel = vmax / Math.Max(0.05f, RampTime) * 0.9f;
+            float want = Math.Sign(d) * Math.Min(vmax, (float)Math.Sqrt(2f * decel * Math.Abs(d)));
+            return Math.Max(-1f, Math.Min(1f, want / vmax)) * p.MaxInput;
+        }
+
         private int AssistLane()
         {
             float f = X / _cfg.laneSpacing + (_cfg.laneCount - 1) * 0.5f; // fractional lane index
@@ -150,7 +199,8 @@ namespace JeepneyRush.Logic
             if (dt <= 0) return;
             var p = Prefs.Clamped();
             input = Math.Max(-1f, Math.Min(1f, input)) * p.MaxInput;
-            if (_kick > 0) { _kick -= dt; input = 0; _lastDir = 0; }
+            if (_kick > 0) { _kick -= dt; input = 0; _lastDir = 0; StepTarget = -1; }
+            if (p.LaneStep) input = LaneStepInput(input, p);
             if (Math.Abs(input) > 0.05f) _lastDir = Math.Sign(input);
 
             // ---- the steering wheel: builds up toward the input, returns to centre on release
@@ -161,14 +211,21 @@ namespace JeepneyRush.Logic
 
             float vmax = MaxLateralSpeed * SpeedFactor;
             float target = Wheel * vmax;
-            if (Math.Abs(input) <= 0.02f && Math.Abs(Wheel) < 0.05f && Assist && _kick <= 0)
+            if (Assist && _kick <= 0 && !(p.LaneStep && StepTarget >= 0))
             {
                 // lane keeping: once the jeepney is a little way (CommitFraction) into the next lane in
                 // the direction it was steered, it finishes the lane change (a quick tap = one lane);
                 // otherwise it eases back to the lane it came from
                 int lane = AssistLane();
                 float off = _cfg.LaneX(lane) - X;
-                target = Math.Abs(off) < AssistDeadband ? 0f : Math.Max(-T.assistMaxSpeed, Math.Min(T.assistMaxSpeed, off * T.assistGain));
+                float keep = Math.Abs(off) < AssistDeadband ? 0f : Math.Max(-T.assistMaxSpeed, Math.Min(T.assistMaxSpeed, off * T.assistGain));
+                if (Math.Abs(input) <= 0.02f && Math.Abs(Wheel) < 0.05f) target = keep;
+                // tilt: a slight tilt is mostly lane keeping, a real tilt steers (no slow creep from hand wobble)
+                else if (p.SoftAssist && Math.Abs(input) < SoftAssistBelow)
+                {
+                    float w = Math.Abs(input) / SoftAssistBelow;
+                    target = keep + (target - keep) * w * w;
+                }
             }
 
             // ---- road-edge assist: beyond the outer lane centres the outward speed fades out, so
@@ -183,6 +240,10 @@ namespace JeepneyRush.Logic
                 if (Math.Abs(input) <= 0.02f && X > outerR + 0.05f) target = Math.Min(target, -0.8f * T.edgeAssist);
             }
 
+            // like a real vehicle: no sideways movement without rolling forward (stopped = only the wheels turn)
+            target *= RollFactor;
+            float cap = Math.Abs(ForwardSpeed) * MaxSlip; // it can't slide sideways faster than it rolls
+            target = Math.Max(-cap, Math.Min(cap, target));
             float k = 1f - (float)Math.Exp(-dt / Math.Max(0.01f, T.lateralLag));
             VelocityX += (target - VelocityX) * k;
             X += VelocityX * dt;
@@ -196,7 +257,9 @@ namespace JeepneyRush.Logic
             var m = new SteeringModel(cfg) { DurationScale = durationScale, Assist = false, Speed01 = 1f, Prefs = prefs ?? SteeringPrefs.Default };
             float x0 = m.X, t = 0;
             const float dt = 1f / 240f;
-            while (m.X - x0 < cfg.laneSpacing && t < 5f) { m.Tick(1f, dt); t += dt; }
+            // buttons (one press = one lane): done when it is in the new lane (within the "between lanes" margin)
+            float need = m.Prefs.LaneStep ? cfg.laneSpacing - BetweenLanes : cfg.laneSpacing;
+            while (m.X - x0 < need && t < 5f) { m.Tick(1f, dt); t += dt; }
             return t;
         }
 
