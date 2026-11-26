@@ -69,5 +69,8 @@ namespace JeepneyRush
         public int Tips, DodgersCaught, DodgersEscaped;
         /// <summary>Passenger money (fares) vs coins picked up on the road.</summary>
         public int Fares, Gas, RoadCoins;
+        /// <summary>Game mode of the run, and whether it ended without a crash (time up / shift ended / terminal).</summary>
+        public GameMode Mode;
+        public bool Finished;
     }
 }

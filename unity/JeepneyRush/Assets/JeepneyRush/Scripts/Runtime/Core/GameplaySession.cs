@@ -17,7 +17,14 @@ namespace JeepneyRush
         /// <summary>Set by the menu to play today's Daily Challenge (fixed seed and route).</summary>
         public static DailyChallenge? Challenge;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Challenge = null; TrialJeepney = null; Shift = null; }
+        private static void ResetStatics() { Challenge = null; TrialJeepney = null; Shift = null; PlayMode = GameMode.FreeRide; }
+
+        /// <summary>Set by the menu: Rush Hour / Night Shift / Ghost Race (career and the daily challenge always play free-ride rules).</summary>
+        public static GameMode PlayMode;
+        public GameMode Mode => Shift != null || Challenge.HasValue ? GameMode.FreeRide : PlayMode;
+        /// <summary>The day/night clock for this mode (night shift stays night).</summary>
+        private float ClockAt(float runSeconds) => GameModes.Clock(Mode, runSeconds);
+        private float _modeHudT;
 
         /// <summary>Set by the career screen: this run is a career shift (set route, ends at the terminal).</summary>
         public static CareerShift Shift;
@@ -366,7 +373,9 @@ namespace JeepneyRush
             // (the daily challenge must be the same road for everyone)
             _director = new SpawnDirector(_plannedCfg, new GameRandom(_seed ^ 0x2D1E), _spawner, route, _env, _weather.Schedule.WetnessAt, _jams.At);
             // events are placed ~10 s ahead: they must fit the time of day now AND when the jeepney gets there
-            _director.IsNight = () => DayNight.IsNightFor(_runTime) || DayNight.IsNightFor(_runTime + EventLookaheadSeconds);
+            _director.IsNight = () => DayNight.IsNightFor(ClockAt(_runTime)) || DayNight.IsNightFor(ClockAt(_runTime + EventLookaheadSeconds));
+            _director.DensityScale = GameModes.Density(Mode);
+            _director.ExtraWaiting = GameModes.ExtraWaiting(Mode);
             // road gems: a few per run, capped per day (the server applies the same caps)
             var sd = Services.Save.Data;
             int gemsToday = sd.roadGemsDay == PhilippineTime.DayKey ? sd.roadGemsToday : 0;
@@ -415,6 +424,8 @@ namespace JeepneyRush
             Services.UI.Float(IsDaily ? "DAILY CHALLENGE!" : IsCareer ? $"{Shift.From} – {Shift.To}" : "ARANGKADA!", UIManager.FloatKind.Big);
             if (IsCareer) Services.UI.Float($"BOUNDARY: {Shift.Boundary} COINS · {Career.GoalText(Shift.Goal, Shift.Target).ToUpperInvariant()}", UIManager.FloatKind.Info);
             Services.UI.SetCareer(IsCareer ? CareerHudText() : "");
+            _modeHudT = 0;
+            if (Mode != GameMode.FreeRide) Services.UI.Float(GameModes.Name(Mode) + "!", UIManager.FloatKind.Big);
             GameEvents.RaiseHonk();
         }
 
@@ -538,7 +549,7 @@ namespace JeepneyRush
             WarnEvents(_traffic.Active);
             WarnEvents(_obstacles.Active);
             // night fell after a daytime event was already placed far ahead: it quietly leaves before you see it
-            if (DayNight.IsNightFor(_runTime))
+            if (DayNight.IsNightFor(ClockAt(_runTime)))
             {
                 _traffic.RemoveWhere(h => !h.Hit && !h.Warned && h.transform.localPosition.z > 45f && RoadEvents.EventOf(h.Kind) is RoadEventKind e && RoadEvents.DaytimeOnly(e));
                 _obstacles.RemoveWhere(h => !h.Hit && !h.Warned && h.transform.localPosition.z > 45f && RoadEvents.EventOf(h.Kind) is RoadEventKind e && RoadEvents.DaytimeOnly(e));
@@ -706,7 +717,7 @@ namespace JeepneyRush
             UpdateJam(dt);
 
             // ---- time of day: the run starts in the late afternoon and drives into the night
-            _hour = DayNight.HourAt(_runTime);
+            _hour = DayNight.HourAt(ClockAt(_runTime));
             _weather.SetTimeOfDay(_hour);
             UpdateDayPhase();
 
@@ -771,7 +782,7 @@ namespace JeepneyRush
             }
 
             // ---- world + power-up effects
-            _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier; // good drivers get better tips
+            _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier * GameModes.FareFactor(Mode); // good drivers get better tips; night fares pay more
             if (!_dying) UpdateRiders(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
             else _police.Tick(dt, _player.Lanes.X);
@@ -840,6 +851,7 @@ namespace JeepneyRush
             _player.SetMirrorRiders(Mathf.Min(_passengers.Route.Count, _passengers.Route.SeatCapacity));
             Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
+            if (!_dying && Mode != GameMode.FreeRide) UpdateModeHud(dt);
             if (!_dying) Services.UI.SetFares(_score.Fares, _score.GasSpent, IsCareer ? Shift.Boundary : -1);
             if (!_dying && IsCareer)
             {
@@ -1576,7 +1588,7 @@ namespace JeepneyRush
         {
             var route = _passengers.Route;
             route.Clock = _runTime;
-            route.Night = DayNight.IsNightFor(_runTime);
+            route.Night = DayNight.IsNightFor(ClockAt(_runTime));
             if (_dodgerT > 0 && (_dodgerT -= dt) <= 0)
             {
                 route.DodgerEscaped(_dodgerCount);
@@ -1789,6 +1801,47 @@ namespace JeepneyRush
             return $"{Shift.To}: {left:N0} m · {boundary}";
         }
 
+        /// <summary>Rush Hour clock / Night Shift line on the HUD; the Rush Hour run ends when the clock runs out.</summary>
+        private void UpdateModeHud(float dt)
+        {
+            if (Mode == GameMode.RushHour)
+            {
+                float left = GameModes.TimeLeft(Mode, _runTime);
+                if (left <= 0) { EndModeRun("ORAS NA! TAPOS ANG RUSH HOUR", "ORAS NA!"); return; }
+                if ((_modeHudT -= dt) > 0) return;
+                _modeHudT = 0.2f;
+                int s = Mathf.CeilToInt(left);
+                Services.UI.SetCareer($"RUSH HOUR {s / 60}:{s % 60:00}" + (s <= 10 ? " · BILIS!" : ""));
+            }
+            else if (Mode == GameMode.NightShift)
+            {
+                if ((_modeHudT -= dt) > 0) return;
+                _modeHudT = 0.5f;
+                Services.UI.SetCareer($"NIGHT SHIFT · {DayNight.Clock(_hour)} · +30% PAMASAHE");
+            }
+        }
+
+        /// <summary>Night Shift: the driver calls it a night (pause ▸ UWI NA). The run ends and everything is kept.</summary>
+        public void EndShift()
+        {
+            if (Mode != GameMode.NightShift || _dying) return;
+            Services.Game.Resume();
+            EndModeRun("UWI NA! TAPOS ANG NIGHT SHIFT", "UWI NA!");
+        }
+
+        /// <summary>A mode's run ends without a crash (Rush Hour time up, Night Shift ended): brake to a stop and score it.</summary>
+        private void EndModeRun(string reason, string shout)
+        {
+            _arrived = true;
+            _dying = true;
+            _dyingTime = 0;
+            _input.InputEnabled = false;
+            _endReason = reason;
+            Services.UI.Float(shout, UIManager.FloatKind.Big);
+            Services.Audio.Play(Logic.Audio.Sfx.LevelUp);
+            Haptics.Pulse(60);
+        }
+
         /// <summary>Career: reached the terminal. The jeepney brakes to a stop and the shift is scored.</summary>
         private void ArriveAtTerminal()
         {
@@ -1822,6 +1875,7 @@ namespace JeepneyRush
             };
             var rewards = Services.Save.RecordRun(summary);
             var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);
+            report.mode = GameModes.Key(Mode);
             LastRunId = report.run_id;
             LastEndReason = _endReason;
             LastRating = _rating.Display;
@@ -1841,6 +1895,7 @@ namespace JeepneyRush
                 Rewards = rewards,
                 Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, DodgersEscaped = route.DodgersEscaped + _dodgerCount,
                 Fares = summary.Fares, Gas = summary.Gas, RoadCoins = _score.RoadCoins,
+                Mode = Mode, Finished = _arrived,
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);

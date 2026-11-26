@@ -56,7 +56,7 @@ namespace JeepneyRush.Tests
             public void SpawnIntersection(Intersection x, float z) => Crossings.Add((x, z));
         }
 
-        private static (List<string> hits, int stops, int coins, int passengers, int powerUps, List<string> zoneIntrusions, MockWorld world) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila)
+        private static (List<string> hits, int stops, int coins, int passengers, int powerUps, List<string> zoneIntrusions, MockWorld world) Simulate(int seed, float metres, EnvironmentKind env = EnvironmentKind.Manila, GameMode mode = GameMode.FreeRide)
         {
             var cfg = new BalanceConfig();
             var rng = new GameRandom(seed);
@@ -64,7 +64,11 @@ namespace JeepneyRush.Tests
             var route = new PassengerRoute(cfg, rng, StopNames.ForEnvironment(env));
             var weather = new WeatherSchedule(seed, env);
             var jams = new JamSchedule(seed, env);
-            var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt, jams.At);
+            var director = new SpawnDirector(cfg, rng, world, route, env, weather.WetnessAt, jams.At)
+            {
+                DensityScale = GameModes.Density(mode),
+                ExtraWaiting = GameModes.ExtraWaiting(mode),
+            };
             const float dt = 1f / 30f;
             float distance = 0, speed = -1, brakeHold = 0;
             int lane = 1, from = 1;
@@ -219,6 +223,17 @@ namespace JeepneyRush.Tests
                 }
             }
             return (hits, world.Stops.Count, world.CoinFormations, route.PickedUp, world.PowerUps, intrusions, world);
+        }
+
+        [TestCase(EnvironmentKind.Edsa, 21)] [TestCase(EnvironmentKind.Manila, 22)] [TestCase(EnvironmentKind.Cebu, 23)]
+        [TestCase(EnvironmentKind.Fiesta, 24)] [TestCase(EnvironmentKind.Provincial, 25)]
+        public void RushHourIsBusyButFair(EnvironmentKind env, int seed)
+        {
+            var (hits, stops, coins, passengers, powerUps, intrusions, world) = Simulate(seed, 2500, env, GameMode.RushHour);
+            CollectionAssert.IsEmpty(hits, string.Join(", ", hits));
+            CollectionAssert.IsEmpty(intrusions, "vehicles/obstacles in PARA zones: " + string.Join(", ", intrusions));
+            var (_, _, _, freePassengers, _, _, _) = Simulate(seed, 2500, env);
+            Assert.Greater(passengers, freePassengers, "crowded stops: more riders than a free ride on the same road");
         }
 
         [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]

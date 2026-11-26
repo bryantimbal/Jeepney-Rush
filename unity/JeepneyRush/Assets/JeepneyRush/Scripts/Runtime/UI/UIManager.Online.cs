@@ -15,7 +15,8 @@ namespace JeepneyRush
         private VisualElement _accountBody, _rankList;
         private Label _onlineChip, _rankInfo, _dailyInfo, _goOnline;
         private string _rankBoard = "all", _rankScope = "global";
-        private readonly Button[] _rankBoardBtns = new Button[3];
+        private static readonly string[] RankBoardKeys = { "all", "week", "daily", "rush", "night" };
+        private readonly Button[] _rankBoardBtns = new Button[5];
         private readonly Button[] _rankScopeBtns = new Button[2];
         private readonly Button[] _rankClassBtns = new Button[JeepneyClasses.Count + 1];
         /// <summary>Stat class shown in RANKINGS (-1 = everyone); starts at the class of the jeepney you drive.</summary>
@@ -338,13 +339,14 @@ namespace JeepneyRush
             _ranks = ModalShell("ranks", "RANKINGS", out var card);
             var boards = UiKit.Box();
             boards.style.flexDirection = FlexDirection.Row;
-            string[] bnames = { "ALL-TIME", "WEEKLY", "DAILY" }, bkeys = { "all", "week", "daily" };
-            for (int i = 0; i < 3; i++)
+            string[] bnames = { "ALL-TIME", "WEEKLY", "DAILY", "RUSH", "NIGHT" }, bkeys = RankBoardKeys;
+            for (int i = 0; i < bkeys.Length; i++)
             {
                 string k = bkeys[i];
-                var b = UiKit.Button(bnames[i], () => { _rankBoard = k; LoadRanks(); }, Color.white, UiKit.Ink, 32, 90);
+                var b = UiKit.Button(bnames[i], () => { _rankBoard = k; LoadRanks(); }, Color.white, UiKit.Ink, 24, 86);
                 b.style.flexGrow = 1;
-                b.style.marginRight = i < 2 ? 8 : 0;
+                b.style.flexBasis = 0;
+                b.style.marginRight = i < bkeys.Length - 1 ? 6 : 0;
                 _rankBoardBtns[i] = b;
                 boards.Add(b);
             }
@@ -397,8 +399,8 @@ namespace JeepneyRush
 
         private void LoadRanks()
         {
-            string[] bkeys = { "all", "week", "daily" }, skeys = { "global", "friends" };
-            for (int i = 0; i < 3; i++) _rankBoardBtns[i].style.backgroundColor = bkeys[i] == _rankBoard ? UiKit.Yellow : Color.white;
+            string[] bkeys = RankBoardKeys, skeys = { "global", "friends" };
+            for (int i = 0; i < bkeys.Length; i++) _rankBoardBtns[i].style.backgroundColor = bkeys[i] == _rankBoard ? UiKit.Yellow : Color.white;
             for (int i = 0; i < 2; i++) _rankScopeBtns[i].style.backgroundColor = skeys[i] == _rankScope ? UiKit.Yellow : Color.white;
             if (_rankClass < -1) _rankClass = (int)JeepneyClasses.For(Services.Save.Data.selectedJeepney);
             for (int i = 0; i <= JeepneyClasses.Count; i++)
@@ -410,7 +412,8 @@ namespace JeepneyRush
             }
             _rankList.Clear();
             var o = Services.Online;
-            _rankInfo.text = (_rankBoard == "week" ? "Best score this week (resets Monday, PH time)" : _rankBoard == "daily" ? "Today's Daily Challenge – same road for everyone" : "Best score ever")
+            _rankInfo.text = (_rankBoard == "week" ? "Best score this week (resets Monday, PH time)" : _rankBoard == "daily" ? "Today's Daily Challenge – same road for everyone"
+                    : _rankBoard == "rush" ? "Rush Hour – best 3-minute score this week" : _rankBoard == "night" ? "Night Shift – best score this week" : "Best score ever")
                 + (_rankClass < 0 ? "\nAll jeepneys together" : "\n" + JeepneyClasses.Blurb((JeepneyClass)_rankClass));
             if (!o.Configured) { _rankList.Add(Note("Rankings need the online backend – see ACCOUNT for how to enable it.", 34, UiKit.Ink)); return; }
             if (!o.SignedIn) { _rankList.Add(Note("Sign in (or play as guest) under ACCOUNT to see the rankings.", 34, UiKit.Ink)); return; }
@@ -499,7 +502,13 @@ namespace JeepneyRush
             if (r.rank_daily > 0) parts.Add($"#{r.rank_daily} today");
             if (r.rank_week > 0) parts.Add($"#{r.rank_week} this week");
             if (r.rank_all > 0) parts.Add($"#{r.rank_all} all-time");
-            if (r.class_rank_all > 0 && r.@class >= 0 && r.@class < JeepneyClasses.Count)
+            if (!string.IsNullOrEmpty(r.mode) && r.mode_rank > 0)
+            {
+                var m = GameModes.FromKey(r.mode);
+                _goOnline.text = $"{GameModes.Name(m)} THIS WEEK: #{r.mode_rank}"
+                    + (r.mode_class_rank > 0 && r.@class >= 0 && r.@class < JeepneyClasses.Count ? $" · #{r.mode_class_rank} in {JeepneyClasses.Name((JeepneyClass)r.@class)}" : "");
+            }
+            else if (r.class_rank_all > 0 && r.@class >= 0 && r.@class < JeepneyClasses.Count)
             {
                 // ranks within your jeepney's stat class first: that's who you're really racing
                 parts.Clear();

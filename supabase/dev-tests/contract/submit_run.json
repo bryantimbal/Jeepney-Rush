@@ -1,4 +1,5 @@
 {
+    "mode": "",
     "class": 0,
     "daily": false,
     "career": {
@@ -99,9 +100,9 @@
         "best_clean": 2500,
         "best_score": 20419,
         "career_rank": 0,
-        "friend_code": "7A4T4VD4",
+        "friend_code": "3FPNV5VE",
         "total_coins": 4632,
-        "display_name": "Driver-7A4T",
+        "display_name": "Driver-3FPN",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [
@@ -145,6 +146,7 @@
             "traffic_survivor"
         ]
     },
+    "mode_rank": 0,
     "rank_week": 2,
     "xp_gained": 270,
     "coin_bonus": 20,
@@ -154,5 +156,6 @@
     "class_rank_all": 2,
     "credited_coins": 200,
     "class_rank_week": 2,
+    "mode_class_rank": 0,
     "class_rank_daily": 0
 }

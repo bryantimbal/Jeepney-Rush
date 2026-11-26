@@ -66,6 +66,8 @@ namespace JeepneyRush.Logic
         public string jeepney;
         /// <summary>Career shift id ("" = free ride).</summary>
         public string career = "";
+        /// <summary>Game mode ("" free ride, "rush", "night", "ghost"): mode runs go on their own boards.</summary>
+        public string mode = "";
         /// <summary>Passenger money (part of coins): the career boundary is paid from it.</summary>
         public int fares;
         /// <summary>Spent on diesel (already taken out of coins).</summary>
@@ -218,6 +220,10 @@ namespace JeepneyRush.Logic
         public int class_rank_all;
         public int class_rank_week;
         public int class_rank_daily;
+        /// <summary>Game mode board the run went on ("rush" / "night", "" = the normal boards) and its weekly ranks.</summary>
+        public string mode = "";
+        public int mode_rank;
+        public int mode_class_rank;
         public ServerSnapshot snapshot;
     }
 

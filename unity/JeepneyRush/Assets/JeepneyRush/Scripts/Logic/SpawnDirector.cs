@@ -98,6 +98,9 @@ namespace JeepneyRush.Logic
         private readonly EnvironmentKind _env;
         private readonly bool _twoWay;
         private readonly float _density;
+        /// <summary>Game mode tuning: traffic density multiplier and extra people per stop (Rush Hour / Night Shift).</summary>
+        public float DensityScale = 1f;
+        public int ExtraWaiting;
         private float _planWet;
         /// <summary>Slow traffic can take a long time to reach the player; plan that far ahead.</summary>
         public const float MaxHorizon = 30f;
@@ -238,7 +241,7 @@ namespace JeepneyRush.Logic
                 int g = 0;
                 while ((Overlaps(lane, _nextStopAt - _cfg.stopZoneLength / 2 - 30, _nextStopAt + _cfg.stopZoneLength / 2 + 12)
                         || NearKind(ZoneKind.Station, _nextStopAt - _cfg.stopZoneLength / 2 - StationStopGap, _nextStopAt + _cfg.stopZoneLength / 2 + StationStopGap)) && g++ < 20) _nextStopAt += 40f;
-                var stop = _route.Plan(_nextStopAt, side, lane, _rng.Int(1, 4));
+                var stop = _route.Plan(_nextStopAt, side, lane, Math.Max(1, _rng.Int(1, 4) + ExtraWaiting));
                 _pendingStops.Add(stop);
                 _reservations.Add(new Reservation { Lane = lane, From = stop.At - _cfg.stopZoneLength / 2 - 22, To = stop.At + _cfg.stopZoneLength / 2 + 6, Kind = ZoneKind.Stop });
                 _nextStopAt += _rng.Range(_cfg.stopSpacingMin, _cfg.stopSpacingMax) * Environments.StopSpacingScale(_env);
@@ -366,7 +369,7 @@ namespace JeepneyRush.Logic
             bool early = at < 300;
             bool humps = at >= _cfg.humpMinDistance && Environments.Paved(_env); // no painted humps on a dirt road
             bool mountain = _env == EnvironmentKind.Mountain;
-            float k = _density;
+            float k = _density * DensityScale;
             float wet = _wetness(at);
             float jam = _rowJam;
             if (jam > 0.15f) k *= 1f - 0.5f * jam; // the jam pattern takes over

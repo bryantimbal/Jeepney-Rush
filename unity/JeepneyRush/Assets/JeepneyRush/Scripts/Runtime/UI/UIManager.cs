@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -143,7 +143,12 @@ namespace JeepneyRush
         private void OnState(GameState from, GameState to)
         {
             Show(_pause, to == GameState.Paused);
-            if (to == GameState.Paused) { SyncToggles(); UiKit.PopIn(_pause.Q("card")); }
+            if (to == GameState.Paused)
+            {
+                SyncToggles();
+                if (_pauseEndShift != null) Show(_pauseEndShift, Services.Game.Session != null && Services.Game.Session.Mode == GameMode.NightShift);
+                UiKit.PopIn(_pause.Q("card"));
+            }
             if (to == GameState.MainMenu) ShowMainMenu();
             // banner ads only on menus / game over, never while driving (AdPolicy)
             Services.Ads?.ShowBannerOnMenus(to == GameState.MainMenu || to == GameState.GameOver);
@@ -451,7 +456,7 @@ namespace JeepneyRush
             // Phase 3: online
             var row3 = UiKit.Box();
             row3.style.flexDirection = FlexDirection.Row;
-            Small("DAILY", "ui_m_daily", UiKit.Hex("#FF8C42"), OpenDaily, row3, false, true);
+            Small("MODES", "ui_m_modes", UiKit.Hex("#FF8C42"), OpenModes, row3, false, true); // daily challenge, rush hour, night shift, ghost race
             Small("RANKINGS", "ui_m_rank", UiKit.Hex("#E0A100"), () => OpenRanks(), row3, false, true);
             Small("ACCOUNT", "ui_m_account", UiKit.Hex("#06AED5"), OpenAccount, row3, true, true);
             buttons.Add(row3);
@@ -1096,6 +1101,9 @@ namespace JeepneyRush
             sub.style.marginBottom = 16;
             card.Add(sub);
             card.Add(UiKit.Button("RESUME", () => Services.Game.Resume(), UiKit.Yellow, UiKit.Ink, 64, 160));
+            // Night Shift: call it a night and keep everything
+            _pauseEndShift = UiKit.Button("UWI NA (END SHIFT)", () => Services.Game.Session?.EndShift(), UiKit.Hex("#1D3557"), Color.white, 44, 120);
+            card.Add(_pauseEndShift);
             card.Add(UiKit.Button("RESTART", () => Services.Game.Restart(), Color.white, UiKit.Ink, 48, 128));
             card.Add(UiKit.Button("MAIN MENU", () => Services.Game.GoToMainMenu(), Color.white, UiKit.Ink, 48, 128));
             card.Add(UiKit.Button("CONTROLS", OpenControls, UiKit.Hex("#D8D3FF"), UiKit.Ink, 40, 110));
@@ -1112,6 +1120,7 @@ namespace JeepneyRush
         private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge, _goDelivered, _goReason, _goRating;
         private VisualElement _goRewards;
         private Label _goTitle;
+        private Button _pauseEndShift;
 
         private void BuildGameOver()
         {
@@ -1196,6 +1205,11 @@ namespace JeepneyRush
             Show(_goRating, !string.IsNullOrEmpty(rating));
             _goRewards.Clear();
             ShowCareerResult(r.Rewards?.Career, _goTitle);
+            if (r.Mode != GameMode.FreeRide && (r.Rewards == null || r.Rewards.Career == null))
+            {
+                _goTitle.text = r.Mode == GameMode.RushHour ? (r.Finished ? "ORAS NA!" : "RUSH HOUR") : r.Mode == GameMode.NightShift ? (r.Finished ? "UWI NA!" : "NIGHT SHIFT") : GameModes.Name(r.Mode);
+                _goTitle.style.color = r.Finished ? UiKit.Green : UiKit.Red;
+            }
             PrepareOnlineGameOver();
             PrepareDoubleCoins(r);
             var rw = r.Rewards;

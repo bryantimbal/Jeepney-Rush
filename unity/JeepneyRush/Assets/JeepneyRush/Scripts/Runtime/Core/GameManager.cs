@@ -31,7 +31,7 @@ namespace JeepneyRush
         // ------------------------------------------------------------------ navigation
         public void Play()
         {
-            if (Session == null) { GameplaySession.Challenge = null; GameplaySession.Shift = null; } // free ride from the menu
+            if (Session == null) { GameplaySession.Challenge = null; GameplaySession.Shift = null; GameplaySession.PlayMode = GameMode.FreeRide; } // free ride from the menu
             if (Session != null)
             {
                 Session.StartRun();
@@ -47,6 +47,7 @@ namespace JeepneyRush
         public void PlayDaily(DailyChallenge c)
         {
             GameplaySession.Shift = null;
+            GameplaySession.PlayMode = GameMode.FreeRide;
             GameplaySession.Challenge = c;
             Services.Pools.ReleaseAll();
             SetState(GameState.Loading);
@@ -57,7 +58,20 @@ namespace JeepneyRush
         public void PlayShift(CareerShift shift)
         {
             GameplaySession.Challenge = null;
+            GameplaySession.PlayMode = GameMode.FreeRide;
             GameplaySession.Shift = shift;
+            Time.timeScale = 1f;
+            Services.Pools.ReleaseAll();
+            SetState(GameState.Loading);
+            Services.Scenes.Load(SceneLoader.GameplayScene, p => Services.UI.ShowLoading(p));
+        }
+
+        /// <summary>Plays a game mode (Rush Hour / Night Shift) on the selected route.</summary>
+        public void PlayMode(GameMode mode)
+        {
+            GameplaySession.Challenge = null;
+            GameplaySession.Shift = null;
+            GameplaySession.PlayMode = mode;
             Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             SetState(GameState.Loading);
@@ -68,6 +82,7 @@ namespace JeepneyRush
         {
             GameplaySession.Challenge = null;
             GameplaySession.Shift = null;
+            GameplaySession.PlayMode = GameMode.FreeRide;
             Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene)
