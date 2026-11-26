@@ -70,6 +70,10 @@ namespace JeepneyRush
 
         // ------------------------------------------------------------------ catalog
         public static Model Jeepney(string liveryId) => Get("jeepney_" + liveryId, () => JeepneyBuilder.Build(JeepneyCatalog.Get(liveryId)));
+        /// <summary>A jeepney with its talyer setup (paint, stickers, sign, mudflaps, ornament, lights).</summary>
+        public static Model Jeepney(string liveryId, JeepneyLook look) =>
+            look == null || look.IsStockModel ? Jeepney(liveryId)
+            : Get("jeepney_" + liveryId + "#" + look.ModelKey, () => JeepneyBuilder.Build(Customization.Apply(JeepneyCatalog.Get(liveryId), look)));
         public static Model Wheel() => Get("wheel", () => JeepneyBuilder.BuildWheel());
         public static Model Coin() => Get("coin", PropBuilder.Coin);
         public static Model Person(int i) => Get("person" + i, () => PropBuilder.Person(i));

@@ -125,10 +125,8 @@ namespace JeepneyRush.Logic.Geometry
                     else
                         for (int k = 0; k < 3; k++) b.Box("paint", k == 0 ? L.Accent1 : k == 1 ? L.Body : L.Hood, 0.03f, 0.22f, 0.04f, sx * 1.02f + (k - 1) * 0.03f, 1.95f, 3.3f, new Rot(0, 0, (k - 1) * 0.3f));
                 }
-                // signature horse mascots on the hood
-                Horse(b, -0.4f, 1.2f, 2.86f, 1.2f, C);
-                Horse(b, 0.4f, 1.2f, 2.86f, 1.2f, C);
-                Horse(b, 0f, 1.28f, 2.25f, 0.9f, C);
+                // signature horse mascots on the hood (or the owner's choice of ornament)
+                HoodOrnament(b, L.Ornament, C);
 
                 // ---------------------------------------------------------------- cab
                 b.Box("paint", paint, 2.0f, BeltY - SillY, 0.55f, 0, (BeltY + SillY) / 2, (BodyFrontZ + 1.2f) / 2);
@@ -141,9 +139,14 @@ namespace JeepneyRush.Logic.Geometry
                 b.Box("chrome", C, 0.06f, wsTop - wsBottom, 0.08f, 0, (wsTop + wsBottom) / 2, 1.2f, new Rot(-0.08f, 0, 0));
                 foreach (float sx in new[] { -1f, 1f })
                     b.Box("chrome", C, 0.08f, wsTop - wsBottom + 0.05f, 0.1f, sx * 0.96f, (wsTop + wsBottom) / 2, 1.2f, new Rot(-0.08f, 0, 0));
+                if (L.WindshieldTexture != null) FrontBanner(b, L.WindshieldTexture, wsTop - 0.17f, wsTop - 0.02f, 1.25f, 0.86f);
 
             }
-            else ModernFront(b, L);
+            else
+            {
+                ModernFront(b, L);
+                if (L.WindshieldTexture != null) FrontBanner(b, L.WindshieldTexture, RoofY - 0.44f, RoofY - 0.29f, 3.0f, 0.88f);
+            }
 
             // ---------------------------------------------------------------- passenger body
             float bodyLen = BodyFrontZ - BodyRearZ, bodyMidZ = (BodyFrontZ + BodyRearZ) / 2;
@@ -184,6 +187,13 @@ namespace JeepneyRush.Logic.Geometry
             RearQuad(-1.0f, -dx, SillY, RoofY);
             RearQuad(dx, 1.0f, SillY, RoofY);
             RearQuad(-dx, dx, dy, RoofY);
+            if (L.RearStickerTexture != null)
+            {
+                // sticker on the left rear panel (see-through corners; seen from behind: u grows with x)
+                float x0 = -0.93f, x1 = -0.47f, y0 = 1.0f, y1 = 1.46f, z = BodyRearZ - 0.012f;
+                b.Quad("utexa:" + L.RearStickerTexture, new V3(x1, y0, z), new V3(x0, y0, z), new V3(x0, y1, z), new V3(x1, y1, z), new V3(0, 0, -1),
+                    new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1));
+            }
             // doorway frame
             foreach (float sx in new[] { -1f, 1f }) b.Box("paint", L.Trim, 0.05f, dy - SillY, 0.08f, sx * dx, (dy + SillY) / 2, BodyRearZ - 0.01f);
             b.Box("paint", L.Trim, dx * 2 + 0.05f, 0.05f, 0.08f, 0, dy, BodyRearZ - 0.01f);
@@ -211,6 +221,12 @@ namespace JeepneyRush.Logic.Geometry
                 b.ExtrudeX(fenderKey, lowerFender, rf, rx0, rx1);
                 // mud flaps
                 b.Box("paint", L.Mudflap, 0.34f, 0.34f, 0.04f, sx * 0.93f, 0.36f, RearAxleZ - 0.62f);
+                if (L.MudflapTexture != null)
+                {
+                    float mx = sx * 0.93f, mz = RearAxleZ - 0.62f - 0.022f;
+                    b.Quad("tex:" + L.MudflapTexture, new V3(mx + 0.16f, 0.2f, mz), new V3(mx - 0.16f, 0.2f, mz), new V3(mx - 0.16f, 0.52f, mz), new V3(mx + 0.16f, 0.52f, mz), new V3(0, 0, -1),
+                        new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1));
+                }
                 b.Box("paint", L.Mudflap, 0.34f, 0.3f, 0.04f, sx * 0.93f, 0.36f, FrontAxleZ - 0.66f);
                 // tail lights
                 b.Box("glow", "#FF2020", 0.1f, 0.45f, 0.05f, sx * 0.92f, 1.2f, BodyRearZ - 0.02f);
@@ -262,25 +278,109 @@ namespace JeepneyRush.Logic.Geometry
                 b.Pop();
             }
             if (L.Neon) NeonLights(b, L);
+            ExtraLights(b, L, modern);
             if (L.Fiesta) Banderitas(b, L);
             if (L.SoundSystem) PatokKit(b, L);
             return b.Data;
         }
 
-        internal static void Horse(MeshBuilder b, float x, float y, float z, float s, string chrome)
+        /// <summary>Banner sticker across the top of the windshield, readable from the front.</summary>
+        private static void FrontBanner(MeshBuilder b, string tex, float y0, float y1, float z, float halfWidth)
+        {
+            // seen from the front, -X is on the viewer's right
+            b.Quad("tex:" + tex, new V3(-halfWidth, y0, z), new V3(halfWidth, y0, z), new V3(halfWidth, y1, z), new V3(-halfWidth, y1, z), new V3(0, 0, 1),
+                new V2(1, 0), new V2(0, 0), new V2(0, 1), new V2(1, 1));
+        }
+
+        private static void HoodOrnament(MeshBuilder b, OrnamentKind kind, string chrome)
+        {
+            const string gold = "#E0B23A";
+            switch (kind)
+            {
+                case OrnamentKind.None: return;
+                case OrnamentKind.FiveHorses:
+                    foreach (var (x, y, z, s) in new[] { (-0.5f, 1.2f, 2.9f, 1.1f), (0.5f, 1.2f, 2.9f, 1.1f), (-0.25f, 1.24f, 2.6f, 1.0f), (0.25f, 1.24f, 2.6f, 1.0f), (0f, 1.29f, 2.2f, 0.95f) })
+                        Horse(b, x, y, z, s, chrome);
+                    return;
+                case OrnamentKind.GoldHorses:
+                    Horse(b, -0.4f, 1.2f, 2.86f, 1.25f, gold, "gold");
+                    Horse(b, 0.4f, 1.2f, 2.86f, 1.25f, gold, "gold");
+                    Horse(b, 0f, 1.28f, 2.25f, 1.0f, gold, "gold");
+                    return;
+                case OrnamentKind.Eagle:
+                    b.Push(new V3(0, 1.27f, 2.5f), Rot.None, 1.2f);
+                    b.Box("chrome", chrome, 0.16f, 0.03f, 0.3f, 0, 0.015f, 0);                       // plinth
+                    b.Box("chrome", chrome, 0.12f, 0.22f, 0.14f, 0, 0.14f, 0, new Rot(-0.3f, 0, 0));    // body
+                    b.Sphere("chrome", chrome, 0.06f, 0, 0.28f, 0.07f, 6);                             // head
+                    b.Box("gold", gold, 0.03f, 0.03f, 0.07f, 0, 0.27f, 0.13f);                          // beak
+                    foreach (float sx in new[] { -1f, 1f })
+                        b.Box("chrome", chrome, 0.34f, 0.025f, 0.13f, sx * 0.2f, 0.24f, -0.02f, new Rot(0, 0, sx * 0.45f)); // spread wings
+                    b.Pop();
+                    return;
+                case OrnamentKind.Carabao:
+                    b.Push(new V3(0, 1.27f, 2.5f), Rot.None, 1.2f);
+                    b.Box("chrome", chrome, 0.18f, 0.03f, 0.32f, 0, 0.015f, 0);
+                    b.Box("chrome", chrome, 0.13f, 0.12f, 0.26f, 0, 0.14f, 0);                         // body
+                    b.Box("chrome", chrome, 0.1f, 0.09f, 0.1f, 0, 0.18f, 0.16f);                        // head
+                    foreach (float sx in new[] { -1f, 1f })
+                    {
+                        b.Box("chrome", chrome, 0.16f, 0.025f, 0.03f, sx * 0.1f, 0.25f, 0.15f, new Rot(0, 0, -sx * 0.5f)); // swept-back horns
+                        b.Box("chrome", chrome, 0.03f, 0.08f, 0.03f, sx * 0.05f, 0.05f, 0.09f);        // legs
+                        b.Box("chrome", chrome, 0.03f, 0.08f, 0.03f, sx * 0.05f, 0.05f, -0.09f);
+                    }
+                    b.Pop();
+                    return;
+                default:
+                    Horse(b, -0.4f, 1.2f, 2.86f, 1.2f, chrome);
+                    Horse(b, 0.4f, 1.2f, 2.86f, 1.2f, chrome);
+                    Horse(b, 0f, 1.28f, 2.25f, 0.9f, chrome);
+                    return;
+            }
+        }
+
+        /// <summary>Talyer add-on lights: fog-light pair on the bumper, amber markers along the roof edge, or a neon underglow.</summary>
+        private static void ExtraLights(MeshBuilder b, JeepneyLivery L, bool modern)
+        {
+            string col = L.ExtraLightColor;
+            float front = modern ? 3.08f : 3.42f;
+            switch (L.ExtraLights)
+            {
+                case LightsKind.FogBar:
+                    foreach (float sx in new[] { -0.62f, -0.3f, 0.3f, 0.62f })
+                    {
+                        b.CylinderZ("chrome", L.Chrome, 0.1f, 0.08f, 10, sx, 0.78f, front);
+                        b.CylinderZ("glow", col, 0.08f, 0.02f, 10, sx, 0.78f, front + 0.05f);
+                    }
+                    return;
+                case LightsKind.SideMarkers:
+                    foreach (float sx in new[] { -1.1f, 1.1f })
+                        for (int i = 0; i < 8; i++)
+                            b.Sphere("glow", col, 0.045f, sx, RoofY + 0.1f, BodyFrontZ - 0.2f - i * 0.5f, 6);
+                    return;
+                case LightsKind.Underglow:
+                    foreach (float sx in new[] { -1f, 1f }) b.Box("glow", col, 0.04f, 0.05f, 5.4f, sx * 1.02f, 0.4f, 0f);
+                    b.Box("glow", col, 1.8f, 0.04f, 0.04f, 0, 0.4f, BodyRearZ - 0.06f);
+                    b.Box("bubble", col, 2.4f, 0.01f, 6.2f, 0, 0.03f, 0f); // light pooling on the road
+                    return;
+            }
+        }
+
+        internal static void Horse(MeshBuilder b, float x, float y, float z, float s, string chrome) => Horse(b, x, y, z, s, chrome, "chrome");
+
+        internal static void Horse(MeshBuilder b, float x, float y, float z, float s, string chrome, string mat)
         {
             b.Push(new V3(x, y, z), Rot.None, s);
-            b.Box("chrome", chrome, 0.16f, 0.03f, 0.3f, 0, 0.015f, 0);        // plinth
-            b.Box("chrome", chrome, 0.09f, 0.11f, 0.24f, 0, 0.2f, 0);           // body
-            b.Box("chrome", chrome, 0.07f, 0.2f, 0.08f, 0, 0.32f, 0.11f, new Rot(-0.5f, 0, 0)); // neck
-            b.Box("chrome", chrome, 0.07f, 0.08f, 0.15f, 0, 0.42f, 0.2f, new Rot(-0.2f, 0, 0));  // head
-            b.Box("chrome", chrome, 0.03f, 0.07f, 0.03f, 0, 0.48f, 0.15f);       // ear
+            b.Box(mat, chrome, 0.16f, 0.03f, 0.3f, 0, 0.015f, 0);        // plinth
+            b.Box(mat, chrome, 0.09f, 0.11f, 0.24f, 0, 0.2f, 0);           // body
+            b.Box(mat, chrome, 0.07f, 0.2f, 0.08f, 0, 0.32f, 0.11f, new Rot(-0.5f, 0, 0)); // neck
+            b.Box(mat, chrome, 0.07f, 0.08f, 0.15f, 0, 0.42f, 0.2f, new Rot(-0.2f, 0, 0));  // head
+            b.Box(mat, chrome, 0.03f, 0.07f, 0.03f, 0, 0.48f, 0.15f);       // ear
             foreach (float lx in new[] { -0.03f, 0.03f })
             {
-                b.Box("chrome", chrome, 0.03f, 0.15f, 0.03f, lx, 0.24f, 0.17f, new Rot(0.9f, 0, 0)); // rearing front legs
-                b.Box("chrome", chrome, 0.03f, 0.16f, 0.03f, lx, 0.09f, -0.09f);                     // hind legs
+                b.Box(mat, chrome, 0.03f, 0.15f, 0.03f, lx, 0.24f, 0.17f, new Rot(0.9f, 0, 0)); // rearing front legs
+                b.Box(mat, chrome, 0.03f, 0.16f, 0.03f, lx, 0.09f, -0.09f);                     // hind legs
             }
-            b.Box("chrome", chrome, 0.03f, 0.14f, 0.03f, 0, 0.18f, -0.15f, new Rot(-0.6f, 0, 0)); // tail
+            b.Box(mat, chrome, 0.03f, 0.14f, 0.03f, 0, 0.18f, -0.15f, new Rot(-0.6f, 0, 0)); // tail
             b.Pop();
         }
 

@@ -13,6 +13,9 @@ namespace JeepneyRush
     /// </summary>
     public sealed class AudioManager : MonoBehaviour
     {
+        /// <summary>The horn fitted in the talyer (set when a run starts / in the garage preview).</summary>
+        public Sfx HornSfx = Sfx.Horn;
+
         private readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
         private AudioClip _menuMusic, _engine, _rain, _soundTrip;
         private bool _soundTripOn;
@@ -46,7 +49,7 @@ namespace JeepneyRush
             GameEvents.Landed += () => Play(Sfx.Land, 0.8f);
             GameEvents.LaneChanged += _ => Play(Sfx.Lane, 0.6f);
             GameEvents.Braked += () => Play(Sfx.Brake, 0.7f);
-            GameEvents.Honked += () => Play(Sfx.Horn);
+            GameEvents.Honked += () => Play(HornSfx);
             GameEvents.Hit += (_, __) => Play(Sfx.Crash);
             GameEvents.PassengersServed += r =>
             {

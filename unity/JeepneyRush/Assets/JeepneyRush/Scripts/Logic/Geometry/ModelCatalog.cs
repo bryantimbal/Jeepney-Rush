@@ -6,6 +6,14 @@ namespace JeepneyRush.Logic.Geometry
     /// <summary>Registry of every procedural model (used by the previewer and tests).</summary>
     public static class ModelCatalog
     {
+        private static MeshData CustomJeepney(string id, string paint, string ws, string rear, string sign, string mud, string orn, string lights)
+        {
+            var look = new JeepneyLook { jeepney = id, paint = paint, windshield = ws, rear = rear, sign = sign, mudflap = mud, ornament = orn, lights = lights };
+            var full = JeepneyBuilder.Build(Customization.Apply(JeepneyCatalog.Get(id), look));
+            foreach (var wp in JeepneyBuilder.WheelPositions) MeshOps.Append(full, JeepneyBuilder.BuildWheel(), wp);
+            return full;
+        }
+
         public static IEnumerable<(string name, MeshData mesh)> Preview()
         {
             yield return ("sedan", VehicleBuilder.Sedan("#1D4ED8"));
@@ -26,6 +34,12 @@ namespace JeepneyRush.Logic.Geometry
             yield return ("roadblock", VehicleBuilder.Roadblock());
             yield return ("person", PropBuilder.Person(1));
             yield return ("person_seated", PropBuilder.Person(2, true));
+            // talyer customization: every item at least once, on a classic and a modern jeepney
+            yield return ("custom_classic", CustomJeepney("pilipinas", "paint_asul", "ws_godbless", "rear_santonino", "sign_quiapo", "mud_mahal", "orn_eagle", "lights_fog"));
+            yield return ("custom_classic2", CustomJeepney("sanjuan", "paint_ginto", "ws_hari", "rear_bayad", "sign_especial", "mud_chrome", "orn_gold", "lights_neon_pink"));
+            yield return ("custom_classic3", CustomJeepney("manila", "paint_itim", "ws_sakayna", "rear_howsmy", "sign_cebu", "mud_red", "orn_five", "lights_markers"));
+            yield return ("custom_classic4", CustomJeepney("cebu", "paint_rosas", "ws_bahalana", "rear_araw", "sign_baguio", "mud_red", "orn_carabao", "lights_neon_blue"));
+            yield return ("custom_modern", CustomJeepney("modern", "paint_pulaputi", "ws_bahalana", "rear_lisensyado", "sign_baclaran", "mud_red", "orn_none", "lights_markers"));
             foreach (RiderKind k in Enum.GetValues(typeof(RiderKind)))
             {
                 if (k == RiderKind.Regular) continue;

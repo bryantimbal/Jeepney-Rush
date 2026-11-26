@@ -121,6 +121,11 @@ namespace JeepneyRush.Logic
         public int[] careerMasks = new int[0];
         /// <summary>Highest driver's license already rewarded (index into Career.Licenses).</summary>
         public int careerRank;
+        // ---- Phase B (customization)
+        /// <summary>Cosmetic items bought in the talyer (Customization.All ids).</summary>
+        public List<string> ownedCosmetics = new List<string>();
+        /// <summary>Setup per jeepney (paint, stickers, sign, horn, mudflaps, ornament, lights).</summary>
+        public List<JeepneyLook> looks = new List<JeepneyLook>();
 
         public bool Owns(string jeepneyId) => ownedJeepneys != null && ownedJeepneys.Contains(jeepneyId);
         public int UpgradeLevel(UpgradeKind k) => upgradeLevels != null && (int)k < upgradeLevels.Length ? upgradeLevels[(int)k] : 0;
@@ -176,6 +181,10 @@ namespace JeepneyRush.Logic
             }
             for (int i = 0; i < d.careerMasks.Length; i++) d.careerMasks[i] &= 7;
             d.careerRank = Math.Max(0, Math.Min(Career.Licenses.Length - 1, d.careerRank));
+            d.ownedCosmetics ??= new List<string>();
+            d.ownedCosmetics.RemoveAll(id => Customization.Get(id) == null);
+            d.looks ??= new List<JeepneyLook>();
+            d.looks.RemoveAll(l => l == null || string.IsNullOrEmpty(l.jeepney));
             d.bestScore = NonNeg(d.bestScore);
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;

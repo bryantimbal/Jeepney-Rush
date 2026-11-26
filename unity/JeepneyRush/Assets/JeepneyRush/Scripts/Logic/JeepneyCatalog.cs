@@ -50,7 +50,17 @@ namespace JeepneyRush.Logic
 
         public string SideTexture => $"jeepney_side_{Id}";
         public string RearTexture => $"jeepney_rear_{Id}";
-        public string SignTexture => $"jeepney_sign_{Id}";
+        public string SignTexture => SignTextureOverride ?? $"jeepney_sign_{Id}";
+
+        // ---- customization (set on a copy by Customization.Apply; the catalog entries keep the defaults)
+        public string SignTextureOverride;
+        public OrnamentKind Ornament = OrnamentKind.Horses;
+        public LightsKind ExtraLights = LightsKind.None;
+        public string ExtraLightColor = "#FFF4C2";
+        /// <summary>Banner across the top of the windshield, sticker on the rear panel, print on the rear mudflaps (textures; null = none).</summary>
+        public string WindshieldTexture, RearStickerTexture, MudflapTexture;
+
+        public JeepneyLivery Clone() => (JeepneyLivery)MemberwiseClone();
     }
 
     /// <summary>All jeepneys. The first two are free (Phase 1); the rest are bought in the garage.</summary>

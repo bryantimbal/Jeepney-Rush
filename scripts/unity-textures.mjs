@@ -51,6 +51,74 @@ const textures = await page.evaluate(() => {
   const gloss = (ctx, w, h) => { const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,0.22)'); g.addColorStop(0.35, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,0.18)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
   const save = (name, c) => (out[name] = c.toDataURL('image/png'));
 
+  // -------------------------------------------------- talyer customization: windshield banners, rear stickers, sign boards, mudflap print
+  {
+    const banner = (name, text, bg, fg, edge) => {
+      const [c, x] = cv(512, 64);
+      x.fillStyle = bg; x.fillRect(0, 0, 512, 64); x.fillStyle = edge; x.fillRect(0, 0, 512, 5); x.fillRect(0, 59, 512, 5);
+      x.textAlign = 'center'; x.textBaseline = 'middle'; outlined(x, text, 256, 35, 480, 42, fg, edge, 5);
+      save(name, c);
+    };
+    banner('cos_ws_godbless', 'GOD BLESS OUR TRIP', '#0B2545', '#FFFFFF', '#C8102E');
+    banner('cos_ws_sakayna', 'SAKAY NA!', '#FCD116', '#C8102E', '#1B1033');
+    banner('cos_ws_bahalana', 'BAHALA NA', '#1B1B1B', '#FCD116', '#C8102E');
+    banner('cos_ws_hari', 'HARI NG KALSADA', '#7A5C00', '#FFE08A', '#1B1033');
+    const sticker = (name, draw) => { const [c, x] = cv(256, 256); x.clearRect(0, 0, 256, 256); draw(x); gloss(x, 256, 256); save(name, c); };
+    sticker('cos_rear_bayad', (x) => {
+      x.fillStyle = '#FCD116'; x.beginPath(); x.roundRect(8, 8, 240, 240, 26); x.fill(); x.lineWidth = 10; x.strokeStyle = '#1B1033'; x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      outlined(x, 'BAYAD', 128, 70, 210, 64, '#C8102E', '#1B1033', 6); outlined(x, 'MUNA', 128, 128, 210, 50, '#1B1033', '#FCD116', 2); outlined(x, 'BAGO BABA', 128, 186, 220, 44, '#C8102E', '#1B1033', 5);
+    });
+    sticker('cos_rear_howsmy', (x) => {
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.roundRect(8, 8, 240, 240, 26); x.fill(); x.lineWidth = 10; x.strokeStyle = '#0B2545'; x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      outlined(x, "HOW'S MY", 128, 62, 220, 44, '#0B2545', '#FFFFFF', 2); outlined(x, 'DRIVING?', 128, 116, 220, 50, '#C8102E', '#0B2545', 5);
+      x.fillStyle = '#0B2545'; x.font = `900 30px ${B}`; x.fillText('TEXT: 0917-JEEP', 128, 186);
+    });
+    sticker('cos_rear_santonino', (x) => {
+      x.fillStyle = '#7A0F1A'; x.beginPath(); x.ellipse(128, 128, 116, 122, 0, 0, Math.PI * 2); x.fill(); x.lineWidth = 9; x.strokeStyle = '#E0B23A'; x.stroke();
+      x.fillStyle = '#E0B23A'; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; x.beginPath(); x.moveTo(128, 70); x.lineTo(128 + Math.cos(a) * 52, 70 + Math.sin(a) * 52); x.lineTo(128 + Math.cos(a + 0.12) * 52, 70 + Math.sin(a + 0.12) * 52); x.fill(); }
+      x.fillStyle = '#C68642'; x.beginPath(); x.arc(128, 72, 22, 0, Math.PI * 2); x.fill();                         // face
+      x.fillStyle = '#E0B23A'; x.beginPath(); x.moveTo(108, 52); x.lineTo(114, 34); x.lineTo(122, 48); x.lineTo(128, 30); x.lineTo(134, 48); x.lineTo(142, 34); x.lineTo(148, 52); x.fill(); // crown
+      x.fillStyle = '#C8102E'; x.beginPath(); x.moveTo(98, 100); x.lineTo(158, 100); x.lineTo(176, 214); x.lineTo(80, 214); x.fill(); // red robe
+      x.fillStyle = '#E0B23A'; x.fillRect(88, 200, 80, 10); x.fillRect(124, 100, 8, 100);
+      x.fillStyle = '#E0B23A'; x.beginPath(); x.arc(160, 132, 13, 0, Math.PI * 2); x.fill(); x.fillRect(157, 112, 6, 10); // globus cruciger
+      x.fillStyle = '#FFFFFF'; x.font = `900 22px ${B}`; x.textAlign = 'center'; x.fillText('SANTO NIÑO', 128, 238);
+    });
+    sticker('cos_rear_araw', (x) => {
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(128, 128, 120, 0, Math.PI * 2); x.fill(); x.lineWidth = 8; x.strokeStyle = '#0038A8'; x.stroke();
+      sun(x, 128, 128, 34, '#FCD116');
+      star(x, 128, 34, 18, '#FCD116'); star(x, 48, 186, 18, '#FCD116'); star(x, 208, 186, 18, '#FCD116');
+    });
+    sticker('cos_rear_lisensyado', (x) => {
+      x.fillStyle = '#18C06A'; x.beginPath(); x.roundRect(8, 40, 240, 176, 22); x.fill(); x.lineWidth = 10; x.strokeStyle = '#0B3D2E'; x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      outlined(x, 'LISENSYADO!', 128, 106, 220, 44, '#FFFFFF', '#0B3D2E', 6);
+      x.fillStyle = '#0B3D2E'; x.font = `900 24px ${B}`; x.fillText('PROFESSIONAL DRIVER', 128, 160);
+    });
+    const routeSign = (name, a, b, bg, fg, edge) => {
+      const [c, x] = cv(512, 128);
+      x.fillStyle = bg; x.fillRect(0, 0, 512, 128); x.fillStyle = edge; x.fillRect(0, 0, 512, 10); x.fillRect(0, 118, 512, 10);
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      if (b) { outlined(x, a, 256, 44, 470, 46, fg, edge, 6); outlined(x, b, 256, 92, 470, 46, fg, edge, 6); }
+      else outlined(x, a, 256, 68, 470, 80, fg, edge, 8);
+      save(name, c);
+    };
+    routeSign('cos_sign_quiapo', 'QUIAPO', 'CUBAO', '#FFFFFF', '#C8102E', '#0038A8');
+    routeSign('cos_sign_baclaran', 'BACLARAN', 'DIVISORIA', '#FCD116', '#0B2545', '#C8102E');
+    routeSign('cos_sign_monumento', 'MONUMENTO', 'LAWTON', '#FFFFFF', '#0B6E4F', '#C8102E');
+    routeSign('cos_sign_cebu', 'COLON', 'IT PARK', '#0077B6', '#FFFFFF', '#FCD116');
+    routeSign('cos_sign_baguio', 'BAGUIO', 'LA TRINIDAD', '#1F5C45', '#FFFFFF', '#E0B23A');
+    routeSign('cos_sign_especial', 'SPECIAL TRIP', null, '#C8102E', '#FCD116', '#1B1033');
+    {
+      const [c, x] = cv(128, 128);
+      x.fillStyle = '#141414'; x.fillRect(0, 0, 128, 128);
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = '#E63946'; x.beginPath(); x.moveTo(64, 60); x.bezierCurveTo(64, 46, 40, 40, 36, 56); x.bezierCurveTo(32, 72, 64, 84, 64, 96); x.bezierCurveTo(64, 84, 96, 72, 92, 56); x.bezierCurveTo(88, 40, 64, 46, 64, 60); x.fill();
+      outlined(x, 'MAHAL', 64, 22, 116, 26, '#FFFFFF', '#141414', 2); outlined(x, 'KITA', 64, 112, 116, 24, '#FFFFFF', '#141414', 2);
+      save('cos_mud_mahal', c);
+    }
+  }
   // -------------------------------------------------- jeepney: Pilipinas Classic
   {
     const [c, x] = cv(1024, 256);

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 namespace JeepneyRush.Logic.Audio
 {
-    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik, NearMiss, ComboUp }
+    public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik, NearMiss, ComboUp,
+        // talyer horns (customization)
+        HornToot, HornMusical, HornAir }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -275,6 +277,22 @@ namespace JeepneyRush.Logic.Audio
                 case Sfx.Horn:
                 case Sfx.Start:
                     return Horn();
+                case Sfx.HornToot:   // quick "toot-toot-toot"
+                    return TwinHorn(0.82f, 415.3f, 523.3f, new[] { (0f, 0.1f, 0.9f), (0.16f, 0.1f, 0.9f), (0.32f, 0.22f, 1f) });
+                case Sfx.HornMusical: // an original little fiesta tune on a five-trumpet musical horn
+                    {
+                        float[] tune = { 523.3f, 659.3f, 784f, 659.3f, 880f, 784f };
+                        var buf = Synth.Buffer(1.45f);
+                        for (int i = 0; i < tune.Length; i++)
+                        {
+                            var one = TwinHorn(0.3f, tune[i], tune[i] * 1.5f, new[] { (0f, i == tune.Length - 1 ? 0.28f : 0.17f, 1f) }, raw: true);
+                            int at = (int)(i * 0.2f * Synth.Rate);
+                            for (int k = 0; k < one.Length && at + k < buf.Length; k++) buf[at + k] += one[k];
+                        }
+                        return Bell(buf);
+                    }
+                case Sfx.HornAir:    // deep truck-style air horn (patok)
+                    return TwinHorn(1.0f, 233.1f, 293.7f, new[] { (0f, 0.85f, 1f) }, duty1: 0.45, duty2: 0.5, drive: 3f);
                 case Sfx.Click:
                     b = Synth.Buffer(0.08f);
                     Synth.Tone(b, Synth.Wave.Square, 0, 0.06f, 880, 660, 0.4f, 0.001f, 4000);
@@ -301,9 +319,17 @@ namespace JeepneyRush.Logic.Audio
         /// the diaphragm starts, a nasal bell resonance (~1.1 and ~2.6 kHz formants) and a little
         /// overdrive from the cheap horn relay. Played as the classic short-long "beep-beeep".
         /// </summary>
-        public static float[] Horn()
+        public static float[] Horn() =>
+            TwinHorn(0.78f, 415.3f, 523.3f, new[] { (0f, 0.13f, 0.9f), (0.19f, 0.52f, 1f) });
+
+        /// <summary>
+        /// Twin diaphragm horn (see <see cref="Horn"/>) with any two pitches and blast pattern.
+        /// <paramref name="raw"/> skips the bell filter (used when notes are mixed first).
+        /// </summary>
+        private static float[] TwinHorn(float seconds, float f1, float f2, (float st, float dur, float level)[] blasts,
+            bool raw = false, double duty1 = 0.28, double duty2 = 0.32, float drive = 2.2f)
         {
-            var b = Synth.Buffer(0.78f);
+            var b = Synth.Buffer(seconds);
             void Blast(float st, float dur, float level)
             {
                 int s0 = (int)(st * Synth.Rate), n = (int)(dur * Synth.Rate);
@@ -311,21 +337,25 @@ namespace JeepneyRush.Logic.Audio
                 for (int i = 0; i < n && s0 + i < b.Length; i++)
                 {
                     float t = i / (float)Synth.Rate;
-                    float scoop = 0.94f + 0.06f * Math.Min(1f, t / 0.045f);           // diaphragm spinning up
+                    float scoop = 0.94f + 0.06f * Math.Min(1f, t / 0.045f);
                     pv += 6.5 / Synth.Rate;
-                    float wobble = 1f + 0.004f * (float)Math.Sin(2 * Math.PI * pv);    // slight voltage sag
-                    p1 += 415.3 * scoop * wobble / Synth.Rate;
-                    p2 += 523.3 * scoop * wobble / Synth.Rate;
-                    // narrow pulses = the bright buzzy timbre of a diaphragm horn
-                    float a = Pulse(p1, 0.28) + Pulse(p2, 0.32) * 0.9f;
+                    float wobble = 1f + 0.004f * (float)Math.Sin(2 * Math.PI * pv);
+                    p1 += f1 * scoop * wobble / Synth.Rate;
+                    p2 += f2 * scoop * wobble / Synth.Rate;
+                    float a = Pulse(p1, duty1) + Pulse(p2, duty2) * 0.9f;
                     float env = Math.Min(1f, t / 0.008f) * Math.Min(1f, (dur - t) / 0.025f);
                     b[s0 + i] += a * env * level;
                 }
             }
             float Pulse(double phase, double duty) => (phase - Math.Floor(phase)) < duty ? 1f : -0.38f;
-            Blast(0f, 0.13f, 0.9f);
-            Blast(0.19f, 0.52f, 1f);
-            Synth.Drive(b, 2.2f);
+            foreach (var (st, dur, level) in blasts) Blast(st, dur, level);
+            Synth.Drive(b, drive);
+            return raw ? b : Bell(b);
+        }
+
+        /// <summary>Trumpet bell resonances + low cut, normalised (shared by every horn).</summary>
+        private static float[] Bell(float[] b)
+        {
             // trumpet bell: two resonant band-passes summed, plus a gentle low cut
             var outp = new float[b.Length];
             foreach (var (fc, q, gain) in new[] { (1100f, 3.2f, 1f), (2600f, 4f, 0.55f), (520f, 1.6f, 0.45f) })
