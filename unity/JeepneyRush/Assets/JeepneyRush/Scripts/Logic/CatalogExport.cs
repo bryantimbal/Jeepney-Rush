@@ -85,6 +85,18 @@ namespace JeepneyRush.Logic
             sb.Append("\ndelete from public.jr_catalog_products;\n");
             foreach (var p in Products.All)
                 sb.Append($"insert into public.jr_catalog_products (id, kind, title, coins, gems, jeepneys, ad_free) values ({Q(p.Id)}, {Q(p.Kind == ProductKind.Consumable ? "consumable" : "non_consumable")}, {Q(p.Title)}, {p.Coins}, {p.Gems}, array[{string.Join(", ", Array.ConvertAll(p.Jeepneys, Q))}]::text[], {(p.AdFree ? "true" : "false")});\n");
+            sb.Append("\ndelete from public.jr_catalog_career;\n");
+            for (int i = 0; i < Career.Shifts.Length; i++)
+            {
+                var c = Career.Shifts[i];
+                sb.Append($"insert into public.jr_catalog_career (id, idx, chapter, env, length, boundary, goal, target, title) values ({Q(c.Id)}, {i}, {c.Chapter}, {(int)c.Env}, {c.Length}, {c.Boundary}, {Q(c.Goal.ToString())}, {c.Target}, {Q(c.Title)});\n");
+            }
+            sb.Append("\ndelete from public.jr_catalog_licenses;\n");
+            for (int i = 0; i < Career.Licenses.Length; i++)
+            {
+                var l = Career.Licenses[i];
+                sb.Append($"insert into public.jr_catalog_licenses (rank, name, stars_needed, coins, gems) values ({i}, {Q(l.Name)}, {l.StarsNeeded}, {l.RewardCoins}, {l.RewardGems});\n");
+            }
             sb.Append("\n-- game constants used by the server rules\n");
             sb.Append("delete from public.jr_catalog_constants;\n");
             void C(string key, double v) => sb.Append($"insert into public.jr_catalog_constants (key, value) values ({Q(key)}, {v.ToString("0.######", CultureInfo.InvariantCulture)});\n");
@@ -97,6 +109,8 @@ namespace JeepneyRush.Logic
             C("level_reward_per_level", 100);
             C("ad_daily_bonus_coins", AdPolicy.DailyBonusCoins);
             C("ad_max_double_coins", AdPolicy.MaxDoubleCoins);
+            C("career_star_base", Career.StarReward(0));
+            C("career_star_per_chapter", Career.StarReward(1) - Career.StarReward(0));
             return sb.ToString();
         }
     }

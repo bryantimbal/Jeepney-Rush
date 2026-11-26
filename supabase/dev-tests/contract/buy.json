@@ -11,49 +11,71 @@
             "sanjuan",
             "manila"
         ],
+        "career": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
         "ad_free": false,
-        "day_key": 20261122,
+        "day_key": 20261126,
         "user_id": "11111111-1111-1111-1111-111111111111",
         "missions": [
             {
                 "slot": 0,
-                "text": "Refuel at 3 gas stations",
-                "type": "TotalRefuels",
+                "text": "Reach a x4 delivery streak",
+                "type": "StreakInRun",
                 "period": "daily",
                 "reward": 133,
-                "target": 3
+                "target": 4
             },
             {
                 "slot": 1,
-                "text": "Play 3 runs",
-                "type": "Runs",
+                "text": "Refuel at 5 gas stations",
+                "type": "TotalRefuels",
                 "period": "daily",
-                "reward": 100,
-                "target": 3
-            },
-            {
-                "slot": 2,
-                "text": "Deliver 5 passengers in one run",
-                "type": "DeliveriesInRun",
-                "period": "daily",
-                "reward": 100,
+                "reward": 200,
                 "target": 5
             },
             {
+                "slot": 2,
+                "text": "Drive 1,700 m in one run",
+                "type": "DistanceInRun",
+                "period": "daily",
+                "reward": 191,
+                "target": 1700
+            },
+            {
                 "slot": 0,
-                "text": "Earn 1,600 coins this week",
+                "text": "Earn 1,000 coins this week",
                 "type": "TotalCoins",
                 "period": "weekly",
-                "reward": 833,
-                "target": 1600
+                "reward": 583,
+                "target": 1000
             },
             {
                 "slot": 1,
-                "text": "Deliver 80 passengers this week",
-                "type": "TotalDeliveries",
+                "text": "Use 25 power-ups this week",
+                "type": "TotalPowerUps",
                 "period": "weekly",
                 "reward": 500,
-                "target": 80
+                "target": 25
             }
         ],
         "upgrades": [
@@ -64,12 +86,13 @@
             1,
             0
         ],
-        "week_key": 151,
+        "week_key": 152,
         "best_clean": 2500,
         "best_score": 20419,
-        "friend_code": "WR3TVHCT",
+        "career_rank": 0,
+        "friend_code": "TF7Y8DNG",
         "total_coins": 4632,
-        "display_name": "Driver-WR3T",
+        "display_name": "Driver-TF7Y",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [
@@ -79,9 +102,9 @@
         ],
         "total_refuels": 4,
         "daily_progress": [
-            3,
-            3,
-            5
+            4,
+            4,
+            1700
         ],
         "owned_products": [
         ],
@@ -92,8 +115,8 @@
         ],
         "total_power_ups": 8,
         "weekly_progress": [
-            1600,
-            24
+            1000,
+            8
         ],
         "total_deliveries": 24,
         "total_passengers": 40,

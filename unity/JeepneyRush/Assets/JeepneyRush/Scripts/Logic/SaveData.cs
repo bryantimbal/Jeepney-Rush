@@ -116,6 +116,11 @@ namespace JeepneyRush.Logic
         public bool adFree;
         public List<string> ownedProducts = new List<string>();
         public AdState ads = new AdState();
+        // ---- Phase B (career)
+        /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
+        public int[] careerMasks = new int[0];
+        /// <summary>Highest driver's license already rewarded (index into Career.Licenses).</summary>
+        public int careerRank;
 
         public bool Owns(string jeepneyId) => ownedJeepneys != null && ownedJeepneys.Contains(jeepneyId);
         public int UpgradeLevel(UpgradeKind k) => upgradeLevels != null && (int)k < upgradeLevels.Length ? upgradeLevels[(int)k] : 0;
@@ -163,6 +168,14 @@ namespace JeepneyRush.Logic
             // v1 -> v2: everyone keeps the two free Phase 1 jeepneys
             d.version = SaveData.CurrentVersion;
             d.coins = NonNeg(d.coins);
+            if (d.careerMasks == null || d.careerMasks.Length != Career.Shifts.Length)
+            {
+                var cm = new int[Career.Shifts.Length];
+                if (d.careerMasks != null) Array.Copy(d.careerMasks, cm, Math.Min(cm.Length, d.careerMasks.Length));
+                d.careerMasks = cm;
+            }
+            for (int i = 0; i < d.careerMasks.Length; i++) d.careerMasks[i] &= 7;
+            d.careerRank = Math.Max(0, Math.Min(Career.Licenses.Length - 1, d.careerRank));
             d.bestScore = NonNeg(d.bestScore);
             d.bestDistance = NonNeg(d.bestDistance);
             if (float.IsNaN(d.swipeSensitivity) || d.swipeSensitivity < 0.5f || d.swipeSensitivity > 1.5f) d.swipeSensitivity = 1f;
@@ -236,6 +249,8 @@ namespace JeepneyRush.Logic
             public List<MissionDef> MissionsCompleted = new List<MissionDef>();
             public List<AchievementDef> AchievementsUnlocked = new List<AchievementDef>();
             public List<EnvironmentKind> RoutesUnlocked = new List<EnvironmentKind>();
+            /// <summary>Career shift result (null for free-ride runs).</summary>
+            public ShiftResult Career;
         }
 
         /// <summary>Applies a finished run to the save: bests, coins (+bonus), stats, XP, missions, achievements.</summary>
@@ -284,6 +299,7 @@ namespace JeepneyRush.Logic
             d.coins += res.LevelReward;
 
             if (dayKey != 0) res.MissionsCompleted.AddRange(Missions.ApplyRun(d, r, dayKey, weekKey));
+            res.Career = Logic.Career.Apply(d, r);
             res.AchievementsUnlocked.AddRange(Achievements.Evaluate(d));
             SaveValidation.Sanitize(d);
             return res;

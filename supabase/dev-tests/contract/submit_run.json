@@ -1,6 +1,9 @@
 {
     "class": 0,
     "daily": false,
+    "career": {
+        "shift": ""
+    },
     "clamped": false,
     "accepted": true,
     "rank_all": 2,
@@ -14,6 +17,28 @@
             "pilipinas",
             "sanjuan",
             "manila"
+        ],
+        "career": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
         ],
         "ad_free": false,
         "day_key": 20261126,
@@ -71,9 +96,10 @@
         "week_key": 152,
         "best_clean": 2500,
         "best_score": 20419,
-        "friend_code": "425SHBC9",
+        "career_rank": 0,
+        "friend_code": "TF7Y8DNG",
         "total_coins": 4632,
-        "display_name": "Driver-425S",
+        "display_name": "Driver-TF7Y",
         "is_anonymous": true,
         "best_distance": 5000,
         "daily_claimed": [

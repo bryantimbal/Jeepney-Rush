@@ -64,6 +64,8 @@ namespace JeepneyRush.Logic
         public bool daily;
         public int day_key;
         public string jeepney;
+        /// <summary>Career shift id ("" = free ride).</summary>
+        public string career = "";
         public int client_version = 3;
 
         public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
@@ -72,7 +74,7 @@ namespace JeepneyRush.Logic
             seed = seed, env = (int)r.Environment, duration = duration, score = r.Score, distance = r.Distance, coins = r.Coins, gems = r.Gems, near_misses = r.NearMisses, overtakes = r.Overtakes,
             passengers = r.Passengers, deliveries = r.Deliveries, power_ups = r.PowerUps, smooth_humps = r.SmoothHumps,
             wet_distance = r.WetDistance, refuels = r.Refuels, hits = r.Hits, clean_distance = r.CleanDistance,
-            best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney,
+            best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney, career = r.Career ?? "",
         };
     }
 
@@ -169,6 +171,9 @@ namespace JeepneyRush.Logic
         public bool[] weekly_claimed = new bool[0];
         public string[] achievements_unlocked = new string[0];
         public string[] achievements_claimed = new string[0];
+        /// <summary>Career stars per shift (Career.Shifts order) and the license rank already rewarded.</summary>
+        public int[] career = new int[0];
+        public int career_rank;
     }
 
     /// <summary>Result of <c>submit_run</c>.</summary>
@@ -237,6 +242,11 @@ namespace JeepneyRush.Logic
             d.gems = s.gems;
             d.adFree = s.ad_free;
             d.ownedProducts = new List<string>(s.owned_products ?? new string[0]);
+            if (s.career != null && s.career.Length > 0) // an older server without career mode keeps the local progress
+            {
+                d.careerMasks = Copy(s.career, Career.Shifts.Length);
+                d.careerRank = s.career_rank;
+            }
             SaveValidation.Sanitize(d);
         }
 

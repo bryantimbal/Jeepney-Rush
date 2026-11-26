@@ -108,5 +108,7 @@ namespace JeepneyRush.Logic
         public int BestStreak;
         public bool Crashed;
         public EnvironmentKind Environment;
+        /// <summary>Career shift id (null = free ride).</summary>
+        public string Career;
     }
 }
