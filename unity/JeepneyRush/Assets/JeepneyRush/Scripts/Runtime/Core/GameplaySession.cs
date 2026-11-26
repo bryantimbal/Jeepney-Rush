@@ -1811,6 +1811,7 @@ namespace JeepneyRush
                 NearMisses = _arcade.NearMisses, Overtakes = _arcade.Overtakes,
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
                 CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = !_arrived, Environment = _env,
+                Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, SmoothLolas = route.SmoothLolas, OnTime = route.OnTimeCount,
                 Career = Shift?.Id,
             };
             var rewards = Services.Save.RecordRun(summary);

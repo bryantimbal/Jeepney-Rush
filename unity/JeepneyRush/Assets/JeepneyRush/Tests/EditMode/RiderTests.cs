@@ -168,5 +168,34 @@ namespace JeepneyRush.Tests
             Assert.Less(deliveries * avgTip, 0.5f * d * (1f - 0.21f));
             Assert.Greater(perDelivery, 0);
         }
+
+        [Test]
+        public void PassengerMissionsStartInDecember()
+        {
+            bool IsNew(MissionType t) => t >= MissionType.TotalDodgersCaught;
+            var day = new System.DateTime(2026, 11, 30);
+            for (int k = 0; k < 200; k++)
+                foreach (var m in Missions.Daily(Missions.DayKey(day.AddDays(-k)))) Assert.IsFalse(IsNew(m.Type), "missions of earlier days never change");
+            int seen = 0;
+            for (int k = 1; k <= 60; k++) foreach (var m in Missions.Daily(Missions.DayKey(day.AddDays(k)))) if (IsNew(m.Type)) seen++;
+            Assert.Greater(seen, 10);
+            for (int w = 100; w < Missions.PassengerWeeksFrom; w++) foreach (var m in Missions.Weekly(w)) Assert.IsFalse(IsNew(m.Type));
+        }
+
+        [Test]
+        public void PassengerMissionProgressComesFromTheRun()
+        {
+            var r = new RunSummary { Tips = 12, DodgersCaught = 2, SmoothLolas = 1, OnTime = 3 };
+            Assert.AreEqual(12, Missions.Value(MissionType.TotalTips, r));
+            Assert.AreEqual(2, Missions.Value(MissionType.TotalDodgersCaught, r));
+            Assert.AreEqual(1, Missions.Value(MissionType.TotalSmoothLolas, r));
+            Assert.AreEqual(3, Missions.Value(MissionType.TotalOnTime, r));
+            var rep = RunReport.From(r, 60, 1, false, 0, "pilipinas");
+            rep.passengers = rep.deliveries = 1;
+            rep.tips = 999;
+            RunBounds.Clamp(rep);
+            Assert.AreEqual(RunBounds.MaxTipPerDelivery, rep.tips);
+            Assert.AreEqual(1, rep.dodgers_caught);
+        }
     }
 }

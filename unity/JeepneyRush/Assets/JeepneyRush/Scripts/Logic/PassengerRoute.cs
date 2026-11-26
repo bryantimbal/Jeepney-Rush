@@ -68,6 +68,9 @@ namespace JeepneyRush.Logic
         public int TipsEarned { get; private set; }
         public int DodgersCaught { get; private set; }
         public int DodgersEscaped { get; private set; }
+        /// <summary>Lolas delivered after a smooth ride / hurried riders delivered on time (missions).</summary>
+        public int SmoothLolas { get; private set; }
+        public int OnTimeCount { get; private set; }
         private int _nextId = 1;
         private int _lastName = -1;
 
@@ -172,7 +175,8 @@ namespace JeepneyRush.Logic
                 {
                     int tip = Tip(p);
                     if (tip > 0) { r.Tips += (int)Math.Round(tip * FareMultiplier); r.Tippers++; }
-                    if (p.Kind == RiderKind.Hurry) { if (Clock <= p.Deadline) r.OnTime++; else r.Late++; }
+                    if (p.Kind == RiderKind.Hurry) { if (Clock <= p.Deadline) { r.OnTime++; OnTimeCount++; } else r.Late++; }
+                    if (p.Kind == RiderKind.Lola && !p.Upset) SmoothLolas++;
                     if (Notable(p.Kind) > Notable(r.Leaver)) r.Leaver = p.Kind;
                 }
                 r.Coins += r.Tips;

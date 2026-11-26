@@ -22,5 +22,18 @@ Personalities come from their own seeded stream, so the Daily Challenge road, st
 destinations are unchanged. Tips fit inside the server's coin bound for a run (see the test
 `TipsStayWithinTheServerCoinBound`), so no server change is needed.
 
-Riders still use the existing person models (no new art yet): personalities show through the
-HUD tags, speech bubbles and messages.
+## Models
+`Logic/Geometry/RiderBuilder.cs`: each personality has its own standing and seated model (white
+polo + ID lace + backpack, grey bun + duster + cane, curlers + pamaypay, lanyard + laptop bag,
+sando + towel + bottle, hoodie + cap, apron + bayong, shades + aloha shirt + balikbayan box).
+Seated riders in the jeepney wear their look; the notable rider (or the fare dodger) is the one
+you see getting off. People waiting at a stop are still generic (who they are is decided when
+they board).
+
+## Missions (from 1 December 2026, PH time)
+Daily: catch fare dodgers, earn tips, give lolas a smooth ride, get riders in a hurry there on
+time. Weekly (from week 154, Monday 7 December): earn tips. Earlier days and weeks keep exactly
+the missions they had (`Missions.FromKey`, `jr_catalog_missions.from_key`). The run report carries
+`tips`, `dodgers_caught`, `smooth_lolas` and `on_time`; the server clamps them (tips ≤ 25 per
+delivery, the counts ≤ deliveries). Migration: `20261126102000_jr_passenger_missions.sql` + the
+catalog `20261126102833_jr_catalog.sql` – apply them before 1 December.

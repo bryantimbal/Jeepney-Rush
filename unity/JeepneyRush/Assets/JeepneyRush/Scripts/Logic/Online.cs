@@ -66,6 +66,11 @@ namespace JeepneyRush.Logic
         public string jeepney;
         /// <summary>Career shift id ("" = free ride).</summary>
         public string career = "";
+        // passenger personalities (missions)
+        public int tips;
+        public int dodgers_caught;
+        public int smooth_lolas;
+        public int on_time;
         public int client_version = 3;
 
         public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
@@ -75,6 +80,7 @@ namespace JeepneyRush.Logic
             passengers = r.Passengers, deliveries = r.Deliveries, power_ups = r.PowerUps, smooth_humps = r.SmoothHumps,
             wet_distance = r.WetDistance, refuels = r.Refuels, hits = r.Hits, clean_distance = r.CleanDistance,
             best_streak = r.BestStreak, daily = daily, day_key = dayKey, jeepney = jeepney, career = r.Career ?? "",
+            tips = r.Tips, dodgers_caught = r.DodgersCaught, smooth_lolas = r.SmoothLolas, on_time = r.OnTime,
         };
     }
 
@@ -90,6 +96,8 @@ namespace JeepneyRush.Logic
         public const float MaxDuration = 4 * 3600f;
         public const int MaxCapacity = 15;
         public const int MaxFarePerDelivery = 42;   // (fare 5 + group 2) × streak 3 × passenger bonus 2
+        /// <summary>Biggest tip per delivery: balikbayan 10 × ★5 rating 1.2 × passenger bonus 2 (rounded up).</summary>
+        public const int MaxTipPerDelivery = 25;
 
         public static string HardViolation(RunReport r)
         {
@@ -131,6 +139,10 @@ namespace JeepneyRush.Logic
             r.gems = Math.Min(r.gems, RoadGems.MaxForDistance(r.distance));
             r.overtakes = Math.Min(r.overtakes, MaxOvertakes(r.distance));
             r.near_misses = Math.Min(r.near_misses, MaxNearMisses(r.distance));
+            r.tips = Math.Max(0, Math.Min(r.tips, r.deliveries * MaxTipPerDelivery));
+            r.dodgers_caught = Math.Max(0, Math.Min(r.dodgers_caught, r.deliveries));
+            r.smooth_lolas = Math.Max(0, Math.Min(r.smooth_lolas, r.deliveries));
+            r.on_time = Math.Max(0, Math.Min(r.on_time, r.deliveries));
             r.score = Math.Min(r.score, MaxScore(r.distance, r.coins, r.passengers, r.deliveries, r.smooth_humps, r.near_misses, r.overtakes));
         }
     }

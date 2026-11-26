@@ -108,6 +108,8 @@ namespace JeepneyRush.Logic
         public int BestStreak;
         public bool Crashed;
         public EnvironmentKind Environment;
+        /// <summary>Passenger personalities: tip coins, fare dodgers caught, lolas given a smooth ride, hurried riders on time.</summary>
+        public int Tips, DodgersCaught, SmoothLolas, OnTime;
         /// <summary>Career shift id (null = free ride).</summary>
         public string Career;
     }

@@ -71,7 +71,7 @@ namespace JeepneyRush.Logic
                 {
                     var p = pool[i];
                     bool inRun = p.type <= MissionType.StreakInRun;
-                    sb.Append($"insert into public.jr_catalog_missions (period, idx, type, min_target, max_target, step, text, in_run) values ({Q(period)}, {i}, {Q(p.type.ToString())}, {p.min}, {p.max}, {p.step}, {Q(p.text)}, {(inRun ? "true" : "false")});\n");
+                    sb.Append($"insert into public.jr_catalog_missions (period, idx, type, min_target, max_target, step, text, in_run, from_key) values ({Q(period)}, {i}, {Q(p.type.ToString())}, {p.min}, {p.max}, {p.step}, {Q(p.text)}, {(inRun ? "true" : "false")}, {Missions.FromKey(period == "weekly", i)});\n");
                 }
             }
             Pool("daily", Missions.DailyPool);

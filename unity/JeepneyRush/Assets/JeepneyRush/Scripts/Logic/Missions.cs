@@ -7,6 +7,8 @@ namespace JeepneyRush.Logic
     {
         DistanceInRun, CoinsInRun, PassengersInRun, DeliveriesInRun, CleanDistanceInRun, StreakInRun,
         TotalDistance, TotalCoins, TotalPassengers, TotalDeliveries, TotalPowerUps, TotalSmoothHumps, Runs, TotalWetDistance, TotalRefuels,
+        // passenger personalities (from PassengerMissionsFrom / PassengerWeeksFrom)
+        TotalDodgersCaught, TotalTips, TotalSmoothLolas, TotalOnTime,
     }
 
     public sealed class MissionDef
@@ -40,7 +42,24 @@ namespace JeepneyRush.Logic
             (MissionType.TotalWetDistance, 300, 900, 100, "Drive {0} m in the rain"),
             (MissionType.TotalRefuels, 2, 5, 1, "Refuel at {0} gas stations"),
             (MissionType.Runs, 3, 6, 1, "Play {0} runs"),
+            // ---- passenger missions: only in days from PassengerMissionsFrom (earlier days keep their missions)
+            (MissionType.TotalDodgersCaught, 1, 3, 1, "Catch {0} fare dodgers (honk!)"),
+            (MissionType.TotalTips, 15, 45, 5, "Earn {0} coins in tips"),
+            (MissionType.TotalSmoothLolas, 2, 4, 1, "Give {0} lolas a smooth ride"),
+            (MissionType.TotalOnTime, 2, 5, 1, "Get {0} riders in a hurry there on time"),
         };
+
+        /// <summary>
+        /// New pool entries only take part from these keys on, so the missions of days / weeks that
+        /// already started never change (the server uses jr_catalog_missions.from_key the same way).
+        /// </summary>
+        public const int PassengerMissionsFrom = 20261201, PassengerWeeksFrom = 154;
+        /// <summary>Pool size before the passenger missions.</summary>
+        public const int DailyPoolBefore = 11, WeeklyPoolBefore = 6;
+
+        /// <summary>First day / week key in which pool entry <paramref name="index"/> can appear.</summary>
+        public static int FromKey(bool weekly, int index) =>
+            weekly ? (index >= WeeklyPoolBefore ? PassengerWeeksFrom : 0) : (index >= DailyPoolBefore ? PassengerMissionsFrom : 0);
 
         public static readonly (MissionType type, int min, int max, int step, string text)[] WeeklyPool =
         {
@@ -50,6 +69,7 @@ namespace JeepneyRush.Logic
             (MissionType.TotalDeliveries, 80, 200, 10, "Deliver {0} passengers this week"),
             (MissionType.TotalPowerUps, 25, 60, 5, "Use {0} power-ups this week"),
             (MissionType.TotalWetDistance, 3000, 8000, 500, "Drive {0} m in rain or typhoon this week"),
+            (MissionType.TotalTips, 150, 400, 25, "Earn {0} coins in tips this week"),
         };
 
         public static int DayKey(DateTime local) => local.Year * 10000 + local.Month * 100 + local.Day;
@@ -57,11 +77,11 @@ namespace JeepneyRush.Logic
         /// <summary>Weeks since Monday 1 Jan 2024 (stable, timezone-local).</summary>
         public static int WeekKey(DateTime local) => (int)Math.Floor((local.Date - new DateTime(2024, 1, 1)).TotalDays / 7.0) + 1;
 
-        private static MissionDef[] Generate((MissionType type, int min, int max, int step, string text)[] pool, int count, int seed, float rewardBase)
+        private static MissionDef[] Generate((MissionType type, int min, int max, int step, string text)[] pool, int count, int seed, float rewardBase, bool weekly)
         {
             var rng = new GameRandom(seed * 7919 + 17);
             var idx = new List<int>();
-            for (int i = 0; i < pool.Length; i++) idx.Add(i);
+            for (int i = 0; i < pool.Length; i++) if (FromKey(weekly, i) <= seed) idx.Add(i);
             var result = new MissionDef[count];
             for (int m = 0; m < count; m++)
             {
@@ -76,8 +96,8 @@ namespace JeepneyRush.Logic
             return result;
         }
 
-        public static MissionDef[] Daily(int dayKey) => Generate(DailyPool, DailyCount, dayKey, 100);
-        public static MissionDef[] Weekly(int weekKey) => Generate(WeeklyPool, WeeklyCount, weekKey, 500);
+        public static MissionDef[] Daily(int dayKey) => Generate(DailyPool, DailyCount, dayKey, 100, false);
+        public static MissionDef[] Weekly(int weekKey) => Generate(WeeklyPool, WeeklyCount, weekKey, 500, true);
 
         public static int Value(MissionType t, RunSummary r)
         {
@@ -94,6 +114,10 @@ namespace JeepneyRush.Logic
                 case MissionType.TotalWetDistance: return (int)r.WetDistance;
                 case MissionType.TotalRefuels: return r.Refuels;
                 case MissionType.Runs: return 1;
+                case MissionType.TotalDodgersCaught: return r.DodgersCaught;
+                case MissionType.TotalTips: return r.Tips;
+                case MissionType.TotalSmoothLolas: return r.SmoothLolas;
+                case MissionType.TotalOnTime: return r.OnTime;
             }
             return 0;
         }
