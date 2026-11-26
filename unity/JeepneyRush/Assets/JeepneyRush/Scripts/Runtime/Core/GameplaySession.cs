@@ -6,7 +6,7 @@ namespace JeepneyRush
 {
     /// <summary>
     /// Lives in the Gameplay scene and runs one frame of the game in a fixed order:
-    /// input → speed → player → spawning → world → power-ups → camera/audio → HUD.
+    /// input – speed – player – spawning – world – power-ups – camera/audio – HUD.
     /// Physics triggers (CollisionHandler) report hits, coins, power-ups and PARA zones here.
     /// </summary>
     public sealed class GameplaySession : MonoBehaviour
@@ -17,7 +17,15 @@ namespace JeepneyRush
         /// <summary>Set by the menu to play today's Daily Challenge (fixed seed and route).</summary>
         public static DailyChallenge? Challenge;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Challenge = null; TrialJeepney = null; }
+        private static void ResetStatics() { Challenge = null; TrialJeepney = null; Shift = null; }
+
+        /// <summary>Set by the career screen: this run is a career shift (set route, ends at the terminal).</summary>
+        public static CareerShift Shift;
+        public bool IsCareer => Shift != null;
+        /// <summary>Reached the terminal this run (career).</summary>
+        public bool Arrived => _arrived;
+        private bool _arrived;
+        private float _careerHudT;
 
         /// <summary>Phase 4: a locked jeepney unlocked for ONE run by a rewarded ad (garage "TRY").</summary>
         public static string TrialJeepney;
@@ -167,7 +175,7 @@ namespace JeepneyRush
             Services.Audio.EnsureLoaded(); // when Play is pressed directly in this scene
             _baseCfg = GameBalance.Active;
             _cfg = BuildRunConfig();
-            _env = Challenge.HasValue ? Challenge.Value.Environment : (EnvironmentKind)Services.Save.Data.selectedEnvironment;
+            _env = Challenge.HasValue ? Challenge.Value.Environment : Shift != null ? Shift.Env : (EnvironmentKind)Services.Save.Data.selectedEnvironment;
             Services.Audio.SetRoute(_env);
             EnvironmentSetup.Apply(_env);
             _camera = EnvironmentSetup.EnsureCamera().GetComponent<CameraController>();
@@ -365,6 +373,7 @@ namespace JeepneyRush
             _rating = new DriverRating();
             _police.ResetRun();
             _panicT = 0; _wasPanicking = false; _endReason = null;
+            _arrived = false; _careerHudT = 0;
             Services.UI.SetRating(_rating.Display, _rating.Value, false);
             _combo.Reset();
             _talk.Reset();
@@ -396,7 +405,9 @@ namespace JeepneyRush
             ApplyView(Services.Save.Data.driverView, false);
             Services.Game.SetState(GameState.Starting);
             Services.UI.ShowHud(!save.tutorialDone, !save.controlsTutorialDone);
-            Services.UI.Float(IsDaily ? "DAILY CHALLENGE!" : "ARANGKADA!", UIManager.FloatKind.Big);
+            Services.UI.Float(IsDaily ? "DAILY CHALLENGE!" : IsCareer ? $"{Shift.From} – {Shift.To}" : "ARANGKADA!", UIManager.FloatKind.Big);
+            if (IsCareer) Services.UI.Float($"BOUNDARY: {Shift.Boundary} COINS · {Career.GoalText(Shift.Goal, Shift.Target).ToUpperInvariant()}", UIManager.FloatKind.Info);
+            Services.UI.SetCareer(IsCareer ? CareerHudText() : "");
             GameEvents.RaiseHonk();
         }
 
@@ -621,14 +632,14 @@ namespace JeepneyRush
             if (_dying)
             {
                 _dyingTime += Time.unscaledDeltaTime;
-                if (_dyingTime > 1.1f) { FinishRun(); return; }
+                if (_dyingTime > (_arrived ? 1.8f : 1.1f)) { FinishRun(); return; }
             }
 
             if (state == GameState.Playing && !_dying) GraphicsQuality.Tick(Time.unscaledDeltaTime);
             _runTime += dt;
             if (state == GameState.Starting && _runTime > 1.2f) Services.Game.SetState(GameState.Playing);
 
-            // ---- controls → speed: difficulty curve × gas/brake × crash slow-down × turbo
+            // ---- controls – speed: difficulty curve × gas/brake × crash slow-down × turbo
             var pu = _powerUps.State;
             bool gasHeld = !_dying && _input.GasHeld;
             bool brakeHeld = !_dying && _input.BrakeHeld;
@@ -820,6 +831,11 @@ namespace JeepneyRush
             _player.SetMirrorRiders(Mathf.Min(_passengers.Route.Count, _passengers.Route.SeatCapacity));
             Services.UI.SetSpeedo(kmh, Services.Save.Data.totalDistance + _score.MaxDistance);
             if (!_engineDead) Services.Audio.UpdateEngine(_speed, _player.GasHeld, _player.Braking);
+            if (!_dying && IsCareer)
+            {
+                if (_score.MaxDistance >= Shift.Length) ArriveAtTerminal();
+                else if ((_careerHudT -= dt) <= 0) { _careerHudT = 0.2f; Services.UI.SetCareer(CareerHudText()); }
+            }
             if (!_dying)
             {
                 Services.UI.UpdateHud(this);
@@ -1653,6 +1669,30 @@ namespace JeepneyRush
             Services.Audio.StopEngine();
         }
 
+        /// <summary>Career HUD: metres to the terminal and the boundary collected so far.</summary>
+        private string CareerHudText()
+        {
+            int left = Mathf.Max(0, Mathf.CeilToInt(Shift.Length - _score.MaxDistance));
+            string boundary = _score.Coins >= Shift.Boundary ? "BOUNDARY OK!" : $"BOUNDARY {_score.Coins}/{Shift.Boundary}";
+            return $"{Shift.To}: {left:N0} m · {boundary}";
+        }
+
+        /// <summary>Career: reached the terminal. The jeepney brakes to a stop and the shift is scored.</summary>
+        private void ArriveAtTerminal()
+        {
+            _arrived = true;
+            _dying = true; // same wind-down as the end of a run (input off, brakes on, hits ignored) – without the slow motion
+            _dyingTime = 0;
+            _input.InputEnabled = false;
+            _endReason = $"TERMINAL NA! {Shift.From} – {Shift.To}";
+            Services.UI.SetCareer($"{Shift.To} · TERMINAL NA!");
+            Services.UI.Float("TERMINAL NA!", UIManager.FloatKind.Big);
+            Services.UI.Float(_score.Coins >= Shift.Boundary ? "BOUNDARY KUMPLETO!" : "KULANG ANG BOUNDARY…", _score.Coins >= Shift.Boundary ? UIManager.FloatKind.Info : UIManager.FloatKind.Bad);
+            Services.Audio.Play(Logic.Audio.Sfx.LevelUp);
+            Haptics.Pulse(60);
+            GameEvents.RaiseHonk();
+        }
+
         private void FinishRun()
         {
             _dying = false;
@@ -1663,7 +1703,8 @@ namespace JeepneyRush
                 Score = _score.Score, Distance = _score.MaxDistance, Coins = _score.Coins, Gems = _runGems, Passengers = route.PickedUp,
                 NearMisses = _arcade.NearMisses, Overtakes = _arcade.Overtakes,
                 Deliveries = route.Delivered, PowerUps = _powerUps.State.UsedThisRun, SmoothHumps = _smoothHumps, WetDistance = _wetDistance, Refuels = _refuels, Hits = _hits,
-                CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = true, Environment = _env,
+                CleanDistance = _bestClean, BestStreak = route.BestStreak, Crashed = !_arrived, Environment = _env,
+                Career = Shift?.Id,
             };
             var rewards = Services.Save.RecordRun(summary);
             var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);

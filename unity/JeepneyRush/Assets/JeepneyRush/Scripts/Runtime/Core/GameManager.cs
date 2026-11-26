@@ -31,7 +31,7 @@ namespace JeepneyRush
         // ------------------------------------------------------------------ navigation
         public void Play()
         {
-            if (GameplaySession.Challenge.HasValue && Session == null) GameplaySession.Challenge = null;
+            if (Session == null) { GameplaySession.Challenge = null; GameplaySession.Shift = null; } // free ride from the menu
             if (Session != null)
             {
                 Session.StartRun();
@@ -46,7 +46,19 @@ namespace JeepneyRush
         /// <summary>Plays today's Daily Challenge: same seed and route for every player.</summary>
         public void PlayDaily(DailyChallenge c)
         {
+            GameplaySession.Shift = null;
             GameplaySession.Challenge = c;
+            Services.Pools.ReleaseAll();
+            SetState(GameState.Loading);
+            Services.Scenes.Load(SceneLoader.GameplayScene, p => Services.UI.ShowLoading(p));
+        }
+
+        /// <summary>Plays a career shift (its own route; ends at the terminal).</summary>
+        public void PlayShift(CareerShift shift)
+        {
+            GameplaySession.Challenge = null;
+            GameplaySession.Shift = shift;
+            Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             SetState(GameState.Loading);
             Services.Scenes.Load(SceneLoader.GameplayScene, p => Services.UI.ShowLoading(p));
@@ -55,6 +67,7 @@ namespace JeepneyRush
         public void GoToMainMenu()
         {
             GameplaySession.Challenge = null;
+            GameplaySession.Shift = null;
             Time.timeScale = 1f;
             Services.Pools.ReleaseAll();
             if (SceneManager.GetActiveScene().name == SceneLoader.MainMenuScene)

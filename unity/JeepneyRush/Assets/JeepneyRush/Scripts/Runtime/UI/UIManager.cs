@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -430,8 +430,9 @@ namespace JeepneyRush
             }
             var row1 = UiKit.Box();
             row1.style.flexDirection = FlexDirection.Row;
-            Small("GARAGE", "ui_m_garage", UiKit.Hex("#E63946"), OpenGarage, row1);
-            var missions = Small("MISSIONS", "ui_m_missions", UiKit.Hex("#2A9D8F"), OpenMissions, row1, true);
+            Small("CAREER", "ui_m_career", UiKit.Hex("#F77F00"), OpenCareer, row1, false, true);
+            Small("GARAGE", "ui_m_garage", UiKit.Hex("#E63946"), OpenGarage, row1, false, true);
+            var missions = Small("MISSIONS", "ui_m_missions", UiKit.Hex("#2A9D8F"), OpenMissions, row1, true, true);
             _missionDot = UiKit.Box();
             _missionDot.style.position = Position.Absolute;
             _missionDot.style.right = 10;
@@ -754,6 +755,7 @@ namespace JeepneyRush
             _jamLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
             _jamLabel.style.marginTop = 2;
             scoreCol.Add(_jamLabel);
+            BuildCareerHud(scoreCol);
             top.Add(scoreCol);
             var right = UiKit.Box();
             right.style.alignItems = Align.FlexEnd;
@@ -1108,10 +1110,12 @@ namespace JeepneyRush
         // ======================================================================= game over
         private Label _goScore, _goDist, _goCoins, _goPax, _goBest, _goBadge, _goDelivered, _goReason, _goRating;
         private VisualElement _goRewards;
+        private Label _goTitle;
 
         private void BuildGameOver()
         {
             _gameOver = ModalShell("gameover", "GAME OVER", out var card);
+            _goTitle = card.ElementAt(0) as Label;
             _goBadge = UiKit.Text("NEW BEST!", 46, UiKit.Ink);
             _goBadge.style.backgroundColor = UiKit.Yellow;
             UiKit.Border(_goBadge.style, 5, UiKit.Ink, 20);
@@ -1153,6 +1157,7 @@ namespace JeepneyRush
             card.Add(grid);
             _goBest = UiKit.Text("", 32, UiKit.Grey, false);
             card.Add(_goBest);
+            BuildCareerGameOver(card);
             _goRewards = UiKit.Box("rewards");
             _goRewards.style.marginTop = 8;
             card.Add(_goRewards);
@@ -1163,6 +1168,7 @@ namespace JeepneyRush
             BuildDoubleCoins(card);
             // an interstitial may play here – between runs, never during one (capped by AdPolicy)
             float LastRunSeconds() => Services.Game.Session != null ? Services.Game.Session.LastRunSeconds : 0f;
+            BuildNextShiftButton(card);
             card.Add(UiKit.Button("RESTART", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.Restart(); }), UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("HOME", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }), Color.white, UiKit.Ink, 48, 128));
         }
@@ -1188,12 +1194,13 @@ namespace JeepneyRush
             _goRating.text = string.IsNullOrEmpty(rating) ? "" : $"Driver rating: {rating} / 5";
             Show(_goRating, !string.IsNullOrEmpty(rating));
             _goRewards.Clear();
+            ShowCareerResult(r.Rewards?.Career, _goTitle);
             PrepareOnlineGameOver();
             PrepareDoubleCoins(r);
             var rw = r.Rewards;
             void Line(string text, Color c)
             {
-                if (_goRewards.childCount >= 5) return; // keep the card on screen
+                if (_goRewards.childCount >= (rw != null && rw.Career != null ? 2 : 5)) return; // keep the card on screen (career results take room)
                 var l = UiKit.Text(text, 34, c, false);
                 l.style.backgroundColor = Color.white;
                 UiKit.Border(l.style, 3, UiKit.Hex("#E2DBC6"), 18);
