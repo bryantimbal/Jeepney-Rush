@@ -315,5 +315,55 @@ namespace JeepneyRush.Tests
             for (int i = 0; i < 60; i++) r.Tick(0.7f, 1f / 60f);
             Assert.Greater(r.X - Cfg.LaneX(1), 2f);
         }
+
+        [TestCase(8f)] [TestCase(14f)] [TestCase(22f)]
+        public void ButtonPressChangesOneLaneWithoutWiggle(float speed)
+        {
+            var m = new SteeringModel(Cfg) { Prefs = Buttons, ForwardSpeed = speed, Speed01 = speed / Cfg.maxSpeed };
+            const float dt = 1f / 60f;
+            float x0 = m.X, target = Cfg.LaneX(m.Lane + 1), prevX = x0, maxWheel = 0;
+            for (int i = 0; i < 6; i++) m.Tick(1f, dt);      // short press
+            for (int i = 0; i < 300; i++)
+            {
+                m.Tick(0f, dt);
+                Assert.GreaterOrEqual(m.X, prevX - 1e-4f, "never steers back (no snaking)");
+                Assert.LessOrEqual(m.X, target + 1e-3f, "never overshoots the lane centre");
+                prevX = m.X;
+                maxWheel = System.Math.Max(maxWheel, m.Wheel);
+            }
+            Assert.AreEqual(target, m.X, 1e-3f, "ends exactly on the lane centre");
+            Assert.AreEqual(0f, m.VelocityX, 1e-3f);
+            Assert.AreEqual(0f, m.Wheel, 0.02f, "wheel back to centre");
+            Assert.Greater(maxWheel, 0.2f, "the front wheels turned while changing lanes");
+            // and it stays put afterwards
+            for (int i = 0; i < 120; i++) m.Tick(0f, dt);
+            Assert.AreEqual(target, m.X, 1e-3f);
+        }
+
+        [Test]
+        public void ButtonLaneChangeIsSlowerThanFullLock()
+        {
+            float buttons = SteeringModel.OneLaneTime(Cfg, 1f, Buttons);
+            Assert.Greater(buttons, Cfg.laneChangeDuration, "smooth and slow");
+            Assert.Less(buttons, Cfg.laneChangeDuration * 2f);
+            Assert.AreEqual(SteeringModel.PlannedLaneTime(Cfg, Buttons), buttons + 0.01f, 0.02f, "the spawner plans with the real (slower) time");
+        }
+
+        [Test]
+        public void SecondPressMidChangeStaysSmooth()
+        {
+            var m = new SteeringModel(Cfg) { Prefs = Buttons, ForwardSpeed = 14f, Speed01 = 0.6f };
+            m.Reset();
+            const float dt = 1f / 60f;
+            int start = m.Lane;
+            for (int i = 0; i < 4; i++) m.Tick(-1f, dt);
+            for (int i = 0; i < 12; i++) m.Tick(0f, dt);
+            float v = m.VelocityX;
+            for (int i = 0; i < 4; i++) m.Tick(-1f, dt);     // press again while moving
+            Assert.AreEqual(v, m.VelocityX, 1.5f, "no jolt in sideways speed");
+            for (int i = 0; i < 400; i++) m.Tick(0f, dt);
+            Assert.AreEqual(Cfg.LaneX(System.Math.Max(0, start - 2)), m.X, 1e-3f, "two presses = two lanes");
+        }
+
     }
 }

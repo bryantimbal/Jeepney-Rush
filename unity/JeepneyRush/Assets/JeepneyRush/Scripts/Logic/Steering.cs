@@ -108,7 +108,62 @@ namespace JeepneyRush.Logic
 
         public SteeringModel(BalanceConfig cfg) { _cfg = cfg; Reset(); }
 
-        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; _lastDir = 0; StepTarget = -1; _prevSign = 0; }
+        public void Reset() { X = _cfg.LaneX((_cfg.laneCount - 1) / 2); VelocityX = 0; Wheel = 0; _kick = 0; _lastDir = 0; StepTarget = -1; _prevSign = 0; _stepping = false; }
+
+        // ---- Buttons mode: each lane change follows one planned, smooth curve (minimum-jerk path)
+        // from where the jeepney is to the centre of the target lane. It eases in, eases out and
+        // arrives with no sideways speed, so there is nothing to correct afterwards: no overshoot,
+        // no wiggle, no snaking. The front wheels follow the curve and come back to centre by themselves.
+        /// <summary>Buttons mode: a lane change takes this much longer than full-lock steering (slow and smooth).</summary>
+        public const float ButtonLaneTimeScale = 1.35f;
+        private bool _stepping;
+        private float _sx0, _sV, _c3, _c4, _c5, _tau, _sT;
+
+        private void PlanStep(int to)
+        {
+            _sT = Math.Max(0.2f, LaneTime * ButtonLaneTimeScale);
+            _sx0 = X;
+            float h = _cfg.LaneX(to) - X;
+            _sV = VelocityX * _sT;                   // keep the current sideways speed (a second press mid-change stays smooth)
+            _c3 = 10f * h - 6f * _sV;
+            _c4 = -15f * h + 8f * _sV;
+            _c5 = 6f * h - 3f * _sV;
+            _tau = 0f;
+            _stepping = true;
+        }
+
+        private float PathX(float t) => _sx0 + _sV * t + _c3 * t * t * t + _c4 * t * t * t * t + _c5 * t * t * t * t * t;
+        private float PathSlope(float t) => _sV + 3f * _c3 * t * t + 4f * _c4 * t * t * t + 5f * _c5 * t * t * t * t;
+
+        /// <summary>Advances the planned lane change. The path is followed at the speed the jeepney can
+        /// manage: it pauses when stopped and never slides sideways faster than it rolls.</summary>
+        private void FollowStep(float dt)
+        {
+            float slope = PathSlope(_tau);
+            float rate = RollFactor / _sT;
+            float cap = Math.Abs(ForwardSpeed) * MaxSlip;
+            if (Math.Abs(slope) > 1e-4f) rate = Math.Min(rate, cap / Math.Abs(slope));
+            _tau += rate * dt;
+            if (_tau >= 1f)
+            {
+                X = _cfg.LaneX(StepTarget);
+                VelocityX = 0;
+                Wheel = 0; // already ~0: the curve ends with no sideways speed
+                _stepping = false;
+                StepTarget = -1;
+                _lastDir = 0;
+            }
+            else
+            {
+                X = PathX(_tau);
+                VelocityX = PathSlope(_tau) * rate;
+            }
+            X = Math.Max(MinX, Math.Min(MaxX, X));
+            // the wheel shows the curve: turned in while moving across, straight again in the lane
+            float vmax = Math.Max(0.1f, MaxLateralSpeed * SpeedFactor);
+            // (the curve is already smooth, so the wheel tracks it exactly and is straight the moment the change ends)
+            Wheel = Math.Max(-1f, Math.Min(1f, VelocityX / vmax));
+        }
 
         private float Scale => Math.Max(0.5f, DurationScale);
         private float LaneTime => _cfg.laneChangeDuration * Scale;
@@ -160,8 +215,13 @@ namespace JeepneyRush.Logic
             {
                 int from = StepTarget >= 0 ? StepTarget : (int)Math.Round(X / _cfg.laneSpacing + (_cfg.laneCount - 1) * 0.5f);
                 int to = Math.Max(0, Math.Min(_cfg.laneCount - 1, from + sign));
-                StepTarget = to == from && StepTarget < 0 ? -1 : to;
+                if (to != from || StepTarget >= 0)
+                {
+                    StepTarget = to;
+                    PlanStep(to);
+                }
             }
+            if (_stepping) return 0f; // the planned curve does the steering (FollowStep)
             if (StepTarget < 0 || Math.Abs(ForwardSpeed) < StepMinSpeed)
                 return Math.Abs(ForwardSpeed) < StepMinSpeed ? held : 0f; // stopped: the wheels turn, nothing else
             float d = _cfg.LaneX(StepTarget) - X;
@@ -199,8 +259,14 @@ namespace JeepneyRush.Logic
             if (dt <= 0) return;
             var p = Prefs.Clamped();
             input = Math.Max(-1f, Math.Min(1f, input)) * p.MaxInput;
-            if (_kick > 0) { _kick -= dt; input = 0; _lastDir = 0; StepTarget = -1; }
+            if (_kick > 0) { _kick -= dt; input = 0; _lastDir = 0; StepTarget = -1; _stepping = false; }
             if (p.LaneStep) input = LaneStepInput(input, p);
+            if (p.LaneStep && _stepping && StepTarget >= 0)
+            {
+                _lastDir = Math.Sign(_cfg.LaneX(StepTarget) - _sx0);
+                FollowStep(dt);
+                return;
+            }
             if (Math.Abs(input) > 0.05f) _lastDir = Math.Sign(input);
 
             // ---- the steering wheel: builds up toward the input, returns to centre on release

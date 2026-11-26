@@ -247,7 +247,7 @@ function controls(alpha) {
     x.fillStyle = '#1b1033'; x.font = `900 ${22 * U}px Nunito`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(label, (bx + w / 2) * U, by + h * U / 2);
   };
   if (q.get('ctl') === 'buttons' || q.get('ctl') === 'wheel') { // Buttons / Wheel steering (Settings ▸ Controls)
-    const w = 150, h = 90, gap = 8, x0 = 15, x1 = 540 - 15 - w, yB = H - (15 + h) * U, yT = yB - (h + gap) * U;
+    const w = 150, h = 90, gap = 8, x0 = 15, x1 = W / U - 15 - w, yB = H - (15 + h) * U, yT = yB - (h + gap) * U;
     const arrow = (cx, cy, dir) => { x.strokeStyle = '#fff'; x.lineWidth = 7 * U; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(cx - 20 * U * dir, cy); x.lineTo(cx + 20 * U * dir, cy); x.moveTo(cx + 4 * U * dir, cy - 16 * U); x.lineTo(cx + 20 * U * dir, cy); x.lineTo(cx + 4 * U * dir, cy + 16 * U); x.stroke(); };
     const sbtn = (bx, by, col, label, dir) => { btn(bx, by, w, h, col, ''); if (dir) { arrow((bx + w / 2) * U, by + 30 * U, dir); x.fillStyle = '#fff'; } else x.fillStyle = '#1b1033'; x.font = `900 ${21 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + w / 2) * U, by + (dir ? 66 : 50) * U); };
     const small = (bx, by, col, label, round) => { x.fillStyle = col; x.strokeStyle = '#1b1033'; x.lineWidth = 4 * U; x.beginPath(); x.roundRect(bx * U, by, 70 * U, 70 * U, (round ? 35 : 20) * U); x.fill(); x.stroke(); x.fillStyle = '#1b1033'; x.font = `900 ${13 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + 35) * U, by + 52 * U); };
@@ -258,14 +258,19 @@ function controls(alpha) {
       const ws = 180, wy = H - (15 + ws) * U;
       x.save(); x.globalAlpha = alpha * 0.9; x.translate((x0 + ws / 2) * U, wy + ws * U / 2); x.rotate(-0.45); x.drawImage(wheelImg, -ws * U / 2, -ws * U / 2, ws * U, ws * U); x.restore(); x.globalAlpha = alpha;
       small(x0, wy - (70 + gap) * U, '#FF8A00', 'TURBO');
-    } else {
-      sbtn(x0, yT, '#4A5568', 'LEFT', -1); sbtn(x0, yB, '#4A5568', 'RIGHT', 1);
-      small(x0, yT - (70 + gap) * U, '#FF8A00', 'TURBO');
+    } else { // ◀ LEFT and ▶ RIGHT side by side at the same height
+      const sw = 102, sh = 108, sy = H - (15 + sh) * U;
+      const sb2 = (bx, label, dir) => { x.fillStyle = '#4A5568'; x.strokeStyle = '#1b1033'; x.lineWidth = 5 * U; x.beginPath(); x.roundRect(bx * U, sy, sw * U, sh * U, 22 * U); x.fill(); x.stroke();
+        arrow((bx + sw / 2) * U, sy + 40 * U, dir); x.fillStyle = '#fff'; x.font = `900 ${18 * U}px Nunito`; x.textAlign = 'center'; x.fillText(label, (bx + sw / 2) * U, sy + 80 * U); };
+      sb2(x0, 'LEFT', -1); sb2(x0 + sw + gap, 'RIGHT', 1);
+      small(x0, sy - (70 + gap) * U, '#FF8A00', 'TURBO');
     }
     x.globalAlpha = 1; return;
   }
+  // tilt: TURBO above BRAKE (left) · BUSINA above GAS (right)
   const by = H - 140 * U;
-  btn(18, by, 140, 112, '#ff6b6b', 'BRAKE'); btn(270 - 64, by + 22 * U, 128, 80, '#FCD116', 'BUSINA'); btn(540 - 158, by, 140, 112, '#18C06A', 'GAS');
+  btn(18, by, 122, 122, '#ff6b6b', 'BRAKE'); btn(18, by - 94 * U, 85, 85, '#FF8A00', 'TURBO');
+  btn(W / U - 140, by, 122, 122, '#18C06A', 'GAS'); btn(W / U - 18 - 85, by - 94 * U, 85, 85, '#FCD116', 'BUSINA');
   x.globalAlpha = 1;
 }
 const wheelImg = new Image(); wheelImg.src = '/unity/JeepneyRush/Assets/JeepneyRush/Resources/Textures/ui_wheel.png'; await new Promise(r => { wheelImg.onload = r; wheelImg.onerror = r; });

@@ -14,7 +14,7 @@ namespace JeepneyRush
     public partial class UIManager
     {
         private VisualElement _ctlBottom, _ctlLeft, _ctlRight, _ctlTopRow, _hornCentre, _speedBox;
-        private VisualElement _brakeBtn, _gasBtn, _hornBtn, _steerLeftBtn, _steerRightBtn;
+        private VisualElement _brakeBtn, _gasBtn, _hornBtn, _steerLeftBtn, _steerRightBtn, _steerRow;
         private VisualElement _wheelEl, _wheelImg, _controls;
         private readonly VirtualWheel _vwheel = new VirtualWheel();
         private readonly List<System.Action> _holdReleases = new List<System.Action>();
@@ -105,9 +105,10 @@ namespace JeepneyRush
         // ------------------------------------------------------------------ layouts
         /// <summary>
         /// Thumb controls for the steering mode (mirrored for left-handed players):
-        /// BUTTONS: TURBO above LEFT / RIGHT (left thumb) · BUSINA above GAS above BRAKE (right thumb).
+        /// BUTTONS: TURBO above ◀ LEFT and ▶ RIGHT side by side (left thumb) · BUSINA above GAS above BRAKE (right thumb).
         /// WHEEL: TURBO above the steering wheel · BUSINA, GAS, BRAKE on the right.
-        /// TILT: BRAKE (left) · BUSINA (centre) · GAS (right) – the layout players already know.
+        /// TILT: TURBO above BRAKE (left) · BUSINA above GAS (right).
+        /// The same layout in portrait and landscape; LEFT is always on the left (also for left-handed players).
         /// GEAR D/R only shows while stopped or reversing.
         /// </summary>
         public void ApplyControlLayout(SteerMode mode)
@@ -131,11 +132,14 @@ namespace JeepneyRush
                 Shape(_brakeBtn, 245 * k, 245 * k, 245 * k * 0.24f, 20);
                 _ctlLeft.Add(_boostBtn);
                 _ctlLeft.Add(_brakeBtn);
-                Shape(_hornBtn, 200 * k, 200 * k, 100 * k, 20);
-                _hornCentre.Add(_hornBtn);
+                // right thumb: (GEAR) BUSINA right above GAS
+                Shape(_hornBtn, 170 * k, 170 * k, 85 * k, 20);
+                _hornBtn.style.marginBottom = 12;
                 Shape(_gasBtn, 245 * k, 245 * k, 245 * k * 0.24f, 20);
-                _gearBtn.style.marginBottom = 16;
+                _gearBtn.style.marginBottom = 12;
+                _gearBtn.style.marginLeft = _gearBtn.style.marginRight = 0;
                 _ctlRight.Add(_gearBtn);
+                _ctlRight.Add(_hornBtn);
                 _ctlRight.Add(_gasBtn);
             }
             else
@@ -151,13 +155,22 @@ namespace JeepneyRush
                 }
                 else
                 {
-                    foreach (var b in new[] { _steerLeftBtn, _steerRightBtn }) Shape(b, w, h, 44 * k, 16);
-                    _steerRightBtn.style.marginTop = gap;
-                    _ctlLeft.Add(_steerLeftBtn);
-                    _ctlLeft.Add(_steerRightBtn);
+                    // ◀ LEFT and ▶ RIGHT side by side, at the same height (LEFT always on the left)
+                    _steerRow ??= UiKit.Box("steerRow");
+                    _steerRow.Clear();
+                    _steerRow.style.flexDirection = FlexDirection.Row;
+                    _steerRow.style.alignItems = Align.FlexEnd;
+                    float sw = 205 * k, sh = 215 * k;
+                    foreach (var b in new[] { _steerLeftBtn, _steerRightBtn }) { Shape(b, sw, sh, 40 * k, 16); b.style.marginTop = 0; }
+                    _steerLeftBtn.style.marginRight = gap;
+                    _steerRightBtn.style.marginLeft = 0;
+                    _steerRow.Add(_steerLeftBtn);
+                    _steerRow.Add(_steerRightBtn);
+                    _ctlLeft.Add(_steerRow);
                 }
                 // right thumb: (GEAR) BUSINA above GAS above BRAKE
                 Shape(_hornBtn, small, small, small / 2, 14);
+                _hornBtn.style.marginBottom = 0;
                 _gearBtn.style.marginBottom = 0;
                 _gearBtn.style.marginRight = lefty ? 0 : 12;
                 _gearBtn.style.marginLeft = lefty ? 12 : 0;
