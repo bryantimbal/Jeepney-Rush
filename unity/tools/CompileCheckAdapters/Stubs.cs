@@ -18,6 +18,8 @@ namespace GoogleMobileAds.Api
     public class BannerView
     {
         public BannerView(string adUnitId, AdSize size, AdPosition position) { }
+        public event Action OnBannerAdLoaded;
+        public event Action<LoadAdError> OnBannerAdLoadFailed;
         public void LoadAd(AdRequest r) { }
         public void Show() { }
         public void Hide() { }

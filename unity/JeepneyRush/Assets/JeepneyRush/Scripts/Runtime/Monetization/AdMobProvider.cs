@@ -1,5 +1,6 @@
 #if JR_ADMOB
 using System;
+using System.Threading.Tasks;
 using GoogleMobileAds.Api;
 using UnityEngine;
 
@@ -17,6 +18,17 @@ namespace JeepneyRush
         private InterstitialAd _inter;
         private RewardedAd _rewarded;
         private bool _bannerVisible;
+        // after a failed load (no fill, no network) try again later instead of never: 30 s, 60 s … max 5 min
+        private int _interFails, _rewardedFails, _bannerFails;
+
+        private static int RetrySeconds(int fails) => Math.Min(300, 30 * (1 << Math.Min(4, Math.Max(0, fails - 1))));
+
+        /// <summary>Waits on the main thread (Unity's synchronization context), then runs <paramref name="again"/>.</summary>
+        private static async void Later(int seconds, Action again)
+        {
+            await Task.Delay(seconds * 1000);
+            again();
+        }
 
         public string Name => "AdMob";
 
@@ -35,11 +47,21 @@ namespace JeepneyRush
         public void SetBanner(bool visible)
         {
             _bannerVisible = visible;
+            if (visible && _bannerFails > 0 && _banner == null) return; // a retry is scheduled
             if (visible)
             {
                 if (_banner == null)
                 {
                     _banner = new BannerView(_cfg.Banner, AdSize.Banner, AdPosition.Bottom);
+                    _banner.OnBannerAdLoaded += () => _bannerFails = 0;
+                    _banner.OnBannerAdLoadFailed += error =>
+                    {
+                        Debug.LogWarning("[Ads] banner failed to load: " + error);
+                        var failed = _banner;
+                        _banner = null;
+                        failed?.Destroy();
+                        Later(RetrySeconds(++_bannerFails), () => { if (_banner == null) SetBanner(_bannerVisible); });
+                    };
                     _banner.LoadAd(new AdRequest());
                 }
                 _banner.Show();
@@ -52,7 +74,13 @@ namespace JeepneyRush
         {
             InterstitialAd.Load(_cfg.Interstitial, new AdRequest(), (ad, error) =>
             {
-                if (error != null || ad == null) { Debug.LogWarning("[Ads] interstitial failed to load: " + error); return; }
+                if (error != null || ad == null)
+                {
+                    Debug.LogWarning("[Ads] interstitial failed to load: " + error);
+                    Later(RetrySeconds(++_interFails), LoadInterstitial);
+                    return;
+                }
+                _interFails = 0;
                 _inter = ad;
             });
         }
@@ -75,7 +103,13 @@ namespace JeepneyRush
         {
             RewardedAd.Load(_cfg.Rewarded, new AdRequest(), (ad, error) =>
             {
-                if (error != null || ad == null) { Debug.LogWarning("[Ads] rewarded failed to load: " + error); return; }
+                if (error != null || ad == null)
+                {
+                    Debug.LogWarning("[Ads] rewarded failed to load: " + error);
+                    Later(RetrySeconds(++_rewardedFails), LoadRewarded);
+                    return;
+                }
+                _rewardedFails = 0;
                 _rewarded = ad;
             });
         }
