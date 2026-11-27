@@ -75,6 +75,11 @@ namespace JeepneyRush
             v.Data = data;
             v.Light = new TrafficLightCycle(_cfg, data.Phase);
             v.Crossed = v.Ticketed = false;
+            // after Pools.ReleaseAll these lists can still name cars / walkers now used elsewhere
+            v.Cars.Clear();
+            v.Walkers.Clear();
+            v.WalkerVariants.Clear();
+            v.WalkerDir.Clear();
             v.transform.localPosition = new Vector3(0, 0, unityZ);
             v.transform.localRotation = Quaternion.identity;
             v.LineZBefore = v.StopLineZ;

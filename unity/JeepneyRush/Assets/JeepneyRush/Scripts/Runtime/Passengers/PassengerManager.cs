@@ -218,6 +218,17 @@ namespace JeepneyRush
         public void SpawnStop(PassengerStop stop, float unityZ)
         {
             var v = Services.Pools.Get(StopPool, transform).GetComponent<PassengerStopView>();
+            // A stop returned by Pools.ReleaseAll (quit / restart / new mode) skipped ReleaseStop: it still
+            // carries its old sign (e.g. GUADALUPE from an EDSA run, showing on every Beach stop) and
+            // references to commuters that now belong to someone else. Start clean.
+            for (int c = v.transform.childCount - 1; c >= 0; c--)
+            {
+                var child = v.transform.GetChild(c).gameObject;
+                if (child.name == "Sign") { child.SetActive(false); Destroy(child); }
+            }
+            v.Sign = null;
+            v.Waiting.Clear();
+            v.WaitingVariants.Clear();
             v.Stop = stop;
             v.Done = false;
             v.transform.localPosition = new Vector3(0, 0, unityZ);
