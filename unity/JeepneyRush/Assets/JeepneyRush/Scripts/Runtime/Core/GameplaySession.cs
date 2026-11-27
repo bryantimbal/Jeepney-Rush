@@ -21,11 +21,11 @@ namespace JeepneyRush
 
         /// <summary>Set by the menu: Rush Hour / Night Shift / Ghost Race (career and the daily challenge always play free-ride rules).</summary>
         public static GameMode PlayMode;
-        /// <summary>Ghost Race: the rival's recorded run (same seed and route).</summary>
+        /// <summary>Ghost Race (or a Daily Challenge ghost): the rival's recorded run (same seed and route).</summary>
         public static GhostData Ghost;
-        private bool Racing => Mode == GameMode.Ghost && Ghost != null && Ghost.d != null && Ghost.d.Length > 1;
+        private bool Racing => (Mode == GameMode.Ghost || IsDaily) && Ghost != null && Ghost.d != null && Ghost.d.Length > 1;
         /// <summary>Free rides (and ghost races) record a ghost for others to race.</summary>
-        private bool RecordsGhost => Mode == GameMode.FreeRide && !IsCareer && !IsDaily || Mode == GameMode.Ghost;
+        private bool RecordsGhost => Mode == GameMode.FreeRide && !IsCareer || Mode == GameMode.Ghost; // daily runs too (daily ghosts)
         private readonly GhostRecorder _ghostRec = new GhostRecorder();
         private GameObject _ghostGo;
         public GameMode Mode => Shift != null || Challenge.HasValue ? GameMode.FreeRide : PlayMode;

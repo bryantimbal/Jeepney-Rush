@@ -466,8 +466,36 @@ namespace JeepneyRush
             card.Add(_dailyInfo);
             card.Add(Note("Everyone in the Philippines gets the same road today: the same traffic, stops, weather and lights. Your best score counts on today's ranking."));
             card.Add(UiKit.Button("PLAY TODAY'S ROUTE", () => { CloseModal(); Services.Game.PlayDaily(_dailyToday); }, UiKit.Yellow, UiKit.Ink, 54, 150));
+            _dailyGhosts = UiKit.Stack();
+            card.Add(_dailyGhosts);
             card.Add(UiKit.Button("TODAY'S RANKING", () => { CloseModal(); OpenRanks("daily"); }, Color.white, UiKit.Ink, 44, 120));
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 46, 120));
+        }
+
+        private VisualElement _dailyGhosts;
+        private int _dailyGhostLoad;
+
+        /// <summary>Daily Challenge ghosts: race today's #1 (or the next driver above you) and your best friend today.</summary>
+        private void LoadDailyGhosts()
+        {
+            _dailyGhosts.Clear();
+            var o = Services.Online;
+            if (o == null || !o.SignedIn) return;
+            int load = ++_dailyGhostLoad;
+            var day = _dailyToday;
+            void Add(GhostData g, string label, Color bg)
+            {
+                if (load != _dailyGhostLoad || g == null || !g.found || g.d == null || g.d.Length < 2) return;
+                if (g.seed != day.Seed || g.env != (int)day.Environment) return; // yesterday's ghost after midnight
+                var b = UiKit.Button($"{label}: {g.name} · {g.score:N0}", () => { _modals.Clear(); HideAll(); Services.Game.PlayDaily(day, g); },
+                    bg, Color.white, 32, 104);
+                _dailyGhosts.Add(b);
+            }
+            o.DailyGhostPick("rival", (g, _) =>
+            {
+                if (g != null) Add(g, g.mine > 0 && g.rank > 1 ? $"HABULIN ANG #{g.rank}" : "KARERA VS #1", UiKit.Hex("#7B61FF"));
+                o.DailyGhostPick("friend", (f, __) => { if (f != null && (g == null || f.name != g.name || f.score != g.score)) Add(f, "VS KAIBIGAN", UiKit.Hex("#1877F2")); });
+            });
         }
 
         private void OpenDaily()
@@ -475,7 +503,8 @@ namespace JeepneyRush
             _dailyToday = DailyChallenge.Today;
             ShowDailyInfo();
             OpenModal(_daily);
-            Services.Online.Daily(c => { _dailyToday = c; ShowDailyInfo(); });
+            LoadDailyGhosts();
+            Services.Online.Daily(c => { _dailyToday = c; ShowDailyInfo(); LoadDailyGhosts(); });
         }
 
         private void ShowDailyInfo()

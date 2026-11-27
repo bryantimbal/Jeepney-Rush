@@ -377,6 +377,10 @@ namespace JeepneyRush
             if (err != null) Debug.LogWarning("[Online] ghost not saved: " + err);
         }
 
+        /// <summary>Today's Daily Challenge ghost: who = "top" (today's #1), "rival" (next above you) or "friend".</summary>
+        public void DailyGhostPick(string who, Action<GhostData, string> done) =>
+            StartCoroutine(Get("jr_daily_ghost_pick", "{\"p_who\":" + Json.Str(who) + "}", done));
+
         /// <summary>A rival's ghost on this route in this stat class (found = false if nobody has one yet).</summary>
         public void GhostPick(EnvironmentKind env, JeepneyClass cls, Action<GhostData, string> done) =>
             StartCoroutine(Get("jr_ghost_pick", "{\"p_env\":" + (int)env + ",\"p_class\":" + (int)cls + "}", done));

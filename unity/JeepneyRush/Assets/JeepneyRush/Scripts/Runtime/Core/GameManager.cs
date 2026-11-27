@@ -44,9 +44,10 @@ namespace JeepneyRush
         }
 
         /// <summary>Plays today's Daily Challenge: same seed and route for every player.</summary>
-        public void PlayDaily(DailyChallenge c)
+        public void PlayDaily(DailyChallenge c, GhostData ghost = null)
         {
             GameplaySession.Shift = null;
+            GameplaySession.Ghost = ghost; // race today's #1 / a friend on the same road (null = alone)
             GameplaySession.PlayMode = GameMode.FreeRide;
             GameplaySession.Challenge = c;
             Services.Pools.ReleaseAll();

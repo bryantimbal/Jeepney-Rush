@@ -14,6 +14,8 @@ namespace JeepneyRush.Logic
         public string jeepney;
         public int score;
         public float distance;
+        /// <summary>Daily Challenge ghosts: their rank today and your own best today (0 = none yet).</summary>
+        public int rank, mine;
         /// <summary>Distance driven at each sample, in decimetres (non-decreasing).</summary>
         public int[] d = new int[0];
         /// <summary>Lateral position at each sample, in centimetres.</summary>
