@@ -87,20 +87,20 @@ namespace JeepneyRush.Logic
             // ---- Non-pro license
             S("c2s1", 1, "EDSA Baptism", EnvironmentKind.Edsa, "MONUMENTO", "BALINTAWAK", 1300, 55, ShiftGoal.MaxHits, 2,
               "EDSA na 'to, iho. Bus, kotse, motor... Kalma lang."),
-            S("c2s2", 1, "Fiesta sa Bayan", EnvironmentKind.Fiesta, "PLAZA", "SIMBAHAN", 1500, 65, ShiftGoal.Deliveries, 8,
+            S("c2s2", 1, "Fiesta sa Bayan", EnvironmentKind.Fiesta, "PLAZUELA", "SIMBAHAN", 1500, 65, ShiftGoal.Deliveries, 8,
               "Pista ngayon! Maraming pasahero, maraming barya."),
             S("c2s3", 1, "Rush Hour", EnvironmentKind.Edsa, "CUBAO", "ORTIGAS", 1700, 80, ShiftGoal.Overtakes, 10,
               "Alas-singko na. Lahat nagmamadali. Ikaw rin!"),
-            S("c2s4", 1, "Pista Express", EnvironmentKind.Fiesta, "PALENGKE", "PLAZA", 1900, 90, ShiftGoal.Streak, 4,
+            S("c2s4", 1, "Pista Express", EnvironmentKind.Fiesta, "PALENGKE", "PLAZUELA", 1900, 90, ShiftGoal.Streak, 4,
               "Sunod-sunod na baba, sunod-sunod na bayad. Galingan mo!"),
             // ---- Professional license
-            S("c3s1", 2, "Beach Highway", EnvironmentKind.Beach, "RESORT", "PANTALAN", 2000, 95, ShiftGoal.CleanDistance, 1200,
+            S("c3s1", 2, "Beach Highway", EnvironmentKind.Beach, "RESORT", "PIER", 2000, 95, ShiftGoal.CleanDistance, 1200,
               "Maganda ang tanawin, pero sa daan ang mata mo."),
             S("c3s2", 2, "Colon to IT Park", EnvironmentKind.Cebu, "COLON", "IT PARK", 2100, 110, ShiftGoal.Deliveries, 12,
               "Cebu na tayo, 'Day! Maraming estudyante at call center agent."),
-            S("c3s3", 2, "Sunset Biyahe", EnvironmentKind.Beach, "PANTALAN", "BAYAN", 2400, 120, ShiftGoal.NearMisses, 15,
+            S("c3s3", 2, "Sunset Biyahe", EnvironmentKind.Beach, "PIER", "WHITE BEACH", 2400, 120, ShiftGoal.NearMisses, 15,
               "Pagabi na. Bilisan pero wag pabaya."),
-            S("c3s4", 2, "Sugbo Hustle", EnvironmentKind.Cebu, "FUENTE", "CARBON", 2600, 140, ShiftGoal.MaxHits, 1,
+            S("c3s4", 2, "Sugbo Hustle", EnvironmentKind.Cebu, "FUENTE OSMENA", "CARBON", 2600, 140, ShiftGoal.MaxHits, 1,
               "Malinis na biyahe, buong boundary. Kaya mo 'yan."),
             // ---- Operator (prangkisa)
             S("c4s1", 3, "Rice Terraces", EnvironmentKind.Mountain, "BONTOC", "SAGADA", 2600, 130, ShiftGoal.SmoothHumps, 6,
@@ -112,13 +112,13 @@ namespace JeepneyRush.Logic
             S("c4s4", 3, "Boundary King", EnvironmentKind.Manila, "BACLARAN", "MONUMENTO", 3200, 190, ShiftGoal.Streak, 5,
               "Buong Maynila, dulo hanggang dulo. Hari ng boundary ang uuwi."),
             // ---- Hari ng Kalsada
-            S("c5s1", 4, "Session Road", EnvironmentKind.Baguio, "BURNHAM", "SESSION RD", 3000, 180, ShiftGoal.CleanDistance, 2000,
+            S("c5s1", 4, "Session Road", EnvironmentKind.Baguio, "BURNHAM PARK", "SESSION RD", 3000, 180, ShiftGoal.CleanDistance, 2000,
               "Malamig sa Baguio, pero mainit ang kalsada. Matarik at paliko-liko."),
-            S("c5s2", 4, "Fog of Kennon", EnvironmentKind.Baguio, "KENNON", "MINES VIEW", 3300, 200, ShiftGoal.MaxHits, 0,
+            S("c5s2", 4, "Hamog sa Marcos Highway", EnvironmentKind.Baguio, "MARCOS HWY", "MINES VIEW", 3300, 200, ShiftGoal.MaxHits, 0,
               "Makapal ang hamog. Walang tatama. Wala."),
-            S("c5s3", 4, "EDSA Legend", EnvironmentKind.Edsa, "BALINTAWAK", "TAFT", 3600, 230, ShiftGoal.Overtakes, 30,
+            S("c5s3", 4, "EDSA Legend", EnvironmentKind.Edsa, "BALINTAWAK", "TAFT AVE", 3600, 230, ShiftGoal.Overtakes, 30,
               "Ang buong EDSA. Ipakita mo kung sino ang hari."),
-            S("c5s4", 4, "Hari ng Kalsada", EnvironmentKind.Fiesta, "SIMBAHAN", "PLAZA", 4000, 250, ShiftGoal.Deliveries, 25,
+            S("c5s4", 4, "Hari ng Kalsada", EnvironmentKind.Fiesta, "SIMBAHAN", "PLAZUELA", 4000, 250, ShiftGoal.Deliveries, 25,
               "Huling biyahe. Buong bayan nanonood. Arangkada, Hari!"),
         };
 

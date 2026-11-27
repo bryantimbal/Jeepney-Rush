@@ -51,6 +51,30 @@ namespace JeepneyRush.Tests
         }
 
         [Test]
+        public void ShiftEndsAreStopsOnTheirOwnRoute()
+        {
+            foreach (var s in Career.Shifts)
+            {
+                var names = new List<string>();
+                foreach (int k in StopNames.ForEnvironment(s.Env)) names.Add(StopNames.All[k]);
+                CollectionAssert.Contains(names, s.From, $"{s.Id}: {s.From} is not a stop on {s.Env}");
+                CollectionAssert.Contains(names, s.To, $"{s.Id}: {s.To} is not a stop on {s.Env}");
+                Assert.AreNotEqual(s.From, s.To, s.Id);
+            }
+        }
+
+        [Test]
+        public void StopListsHaveNoDuplicatesWithinARoute()
+        {
+            foreach (EnvironmentKind env in System.Enum.GetValues(typeof(EnvironmentKind)))
+            {
+                var seen = new HashSet<string>();
+                foreach (int k in StopNames.ForEnvironment(env)) Assert.IsTrue(seen.Add(StopNames.All[k]), $"{env}: {StopNames.All[k]} twice");
+                Assert.GreaterOrEqual(seen.Count, 12, $"{env} has too few stops");
+            }
+        }
+
+        [Test]
         public void StarsNeedTheTerminal()
         {
             var s = Career.Shifts[0];
