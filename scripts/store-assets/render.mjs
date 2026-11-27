@@ -36,7 +36,7 @@ export const shots = [
 ];
 const insets = { phone: [960, 1440], tablet7: [1024, 1536], tablet10: [1280, 1920] };
 const jobs = [
-  ['icon', 'mode=icon', 1024, 1024, true],
+  ['icon', 'mode=icon&cam=-5.0,1.3,-8.0,-0.9,1.6,-0.8,48', 1024, 1024, true],
   ['feature', 'mode=hero&cam=-3.2,1.9,-17.5,-6.2,2.0,-4,36', 2048, 1000, false],
 ];
 for (const [dev, [w, h]] of Object.entries(insets)) for (const [name, q] of shots) jobs.push([`${dev}_${name}`, q, w, h, false]);

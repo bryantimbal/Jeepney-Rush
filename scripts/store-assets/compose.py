@@ -99,20 +99,15 @@ def screenshot(dev, key, l1, l2, sub):
 
 
 def icon():
-    bg = rays((1024, 1024), [(31, 63, 191), (200, 16, 46), (31, 63, 191)], n=20, centre=(0.5, 0.58))
-    jeep = Image.open(os.path.join(RAW, 'icon.png')).convert('RGBA')
-    bbox = jeep.getbbox()
-    jeep = jeep.crop(bbox)
-    s = 800 / max(jeep.size)  # keeps clear of the rounded corners Play applies
-    jeep = jeep.resize((int(jeep.width * s), int(jeep.height * s)), Image.LANCZOS)
-    # soft shadow under the jeepney
-    canvas = bg.convert('RGBA')
-    sh = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
-    ImageDraw.Draw(sh).ellipse((170, 760, 870, 880), fill=(0, 0, 0, 120))
-    canvas = Image.alpha_composite(canvas, sh.filter(ImageFilter.GaussianBlur(30)))
-    canvas.alpha_composite(jeep, ((1024 - jeep.width) // 2, 1024 - jeep.height - 120))
-    canvas = canvas.resize((512, 512), Image.LANCZOS)
-    canvas.save(os.path.join(OUT, 'icon-512.png'), optimize=True)
+    """Play icon + Android launcher icons (see icon.py for the design)."""
+    import subprocess, shutil, sys
+    tmp = os.path.join(RAW, 'icon_out')
+    subprocess.run([sys.executable, os.path.join(HERE, 'icon.py'), os.path.join(RAW, 'icon.png'), tmp], check=True)
+    shutil.copy(os.path.join(tmp, 'icon-512.png'), os.path.join(OUT, 'icon-512.png'))
+    unity = os.path.join(ROOT, 'unity', 'JeepneyRush', 'Assets', 'JeepneyRush', 'Art', 'Icon')
+    os.makedirs(unity, exist_ok=True)
+    for f in ('icon-512.png', 'icon_adaptive_bg.png', 'icon_adaptive_fg.png'):
+        shutil.copy(os.path.join(tmp, f), os.path.join(unity, f))
 
 
 def feature():
@@ -139,34 +134,9 @@ def feature():
     hero.convert('RGB').save(os.path.join(OUT, 'feature-graphic-1024x500.png'), optimize=True)
 
 
-def android_icons():
-    """Launcher icons for Unity (Assets/JeepneyRush/Art/Icon):
-    icon-512.png  legacy / round / default icon (full artwork)
-    icon_adaptive_bg.png / icon_adaptive_fg.png  Android 8+ adaptive icon layers (432 dp grid at 1024 px);
-    the jeepney stays inside the central safe circle (66 of 108 dp) so no launcher mask cuts it."""
-    out = os.path.join(ROOT, 'unity', 'JeepneyRush', 'Assets', 'JeepneyRush', 'Art', 'Icon')
-    os.makedirs(out, exist_ok=True)
-    bg = rays((1024, 1024), [(31, 63, 191), (200, 16, 46), (31, 63, 191)], n=20, centre=(0.5, 0.55))
-    bg.save(os.path.join(out, 'icon_adaptive_bg.png'), optimize=True)
-    jeep = Image.open(os.path.join(RAW, 'icon.png')).convert('RGBA')
-    jeep = jeep.crop(jeep.getbbox())
-    safe = int(1024 * 56 / 108)  # inside the 66 dp safe circle, with room for the flag poles
-    s = safe / max(jeep.size)
-    jeep = jeep.resize((int(jeep.width * s), int(jeep.height * s)), Image.LANCZOS)
-    fg = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0))
-    sh = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).ellipse((512 - safe * 0.42, 512 + jeep.height * 0.36, 512 + safe * 0.42, 512 + jeep.height * 0.52), fill=(0, 0, 0, 110))
-    fg = Image.alpha_composite(fg, sh.filter(ImageFilter.GaussianBlur(18)))
-    fg.alpha_composite(jeep, ((1024 - jeep.width) // 2, (1024 - jeep.height) // 2 + 10))
-    fg.save(os.path.join(out, 'icon_adaptive_fg.png'), optimize=True)
-    # full icon (legacy launchers, round icon, Unity default icon): same art as the Play icon
-    Image.open(os.path.join(OUT, 'icon-512.png')).convert('RGB').save(os.path.join(out, 'icon-512.png'), optimize=True)
-
-
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     icon()
-    android_icons()
     feature()
     for dev in DEVICES:
         for key, l1, l2, sub in CAPTIONS:
