@@ -15,7 +15,7 @@ ad IDs during development**, and **purchases validated securely**.
 | **Cosmetic trial** | Garage ▸ a locked jeepney ▸ "TRY 1 RUN · AD": drive it for the next run only (3 trials per day). |
 | **SHOP** (menu) | Coins, gems, jeepney packs, No Ads; localized Play prices; RESTORE PURCHASES (re-syncs the account). A TEST STORE notice appears in development builds. |
 | **Gems** | Premium currency. The gem counter on the menu opens the shop. Fiesta, Neon, Flag and Gold can also be bought with gems (250 / 320 / 350 / 500). |
-| **Store adapter** | Unity IAP 4.x / Google Play Billing (`UnityIapProvider`, `JR_UNITY_IAP`). Purchases stay *pending* until the server granted them. The player's id is attached to the purchase as an obfuscated account id, and the server checks it. |
+| **Store adapter** | Unity IAP 5.x (StoreController API) / Google Play Billing (`UnityIapProvider`, `JR_UNITY_IAP`). Purchases stay *pending* until the server granted them. (Moved from IAP 4.x, which Unity deprecated; IAP 5 attaches no obfuscated account id – the server still refuses a purchase tagged with another player's id.) |
 | **Ads adapter** | Google Mobile Ads 9.x (`AdMobProvider`, `JR_ADMOB`), with test unit ids by default. Rewarded ads carry server-side-verification data. |
 | **Development** | Without the SDKs (or in the Editor): **TEST AD** full-screen screens (rewarded ones must play 5 s to pay out), a **TEST BANNER** strip, and a **TEST PURCHASE** dialog. They are disabled in release builds. |
 

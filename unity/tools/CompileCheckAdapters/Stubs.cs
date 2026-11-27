@@ -1,5 +1,5 @@
 // API stand-ins for compile-checking only (never shipped). Mirrors the public surface used by
-// AdMobProvider.cs (Google Mobile Ads Unity plugin 9.x) and UnityIapProvider.cs (Unity IAP 4.x).
+// AdMobProvider.cs (Google Mobile Ads Unity plugin 9.x) and UnityIapProvider.cs (Unity IAP 5.x).
 using System;
 namespace GoogleMobileAds.Api
 {
@@ -52,41 +52,34 @@ namespace GoogleMobileAds.Api
         public void Destroy() { }
     }
 }
-namespace UnityEngine.Purchasing.Extension
-{
-    public interface IPurchasingModule { }
-    public class PurchaseFailureDescription { public UnityEngine.Purchasing.PurchaseFailureReason reason; public string message; public string productId; }
-}
 namespace UnityEngine.Purchasing
 {
-    using UnityEngine.Purchasing.Extension;
+    // Unity IAP 5.x (StoreController API)
     public enum ProductType { Consumable, NonConsumable, Subscription }
-    public enum PurchaseProcessingResult { Complete, Pending }
-    public enum InitializationFailureReason { PurchasingUnavailable, NoProductsAvailable, AppNotKnown }
     public enum PurchaseFailureReason { PurchasingUnavailable, ExistingPurchasePending, ProductUnavailable, SignatureInvalid, UserCancelled, PaymentDeclined, DuplicateTransaction, Unknown }
-    public class ProductDefinition { public string id; }
+    public class ProductDefinition { public ProductDefinition(string id, ProductType type) { this.id = id; } public string id; }
     public class ProductMetadata { public string localizedPriceString; }
-    public class Product { public ProductDefinition definition; public bool availableToPurchase; public string transactionID; public string receipt; public ProductMetadata metadata; }
-    public class ProductCollection { public Product WithID(string id) => null; }
-    public interface IStoreController { ProductCollection products { get; } void InitiatePurchase(Product p); void ConfirmPendingPurchase(Product p); }
-    public interface IStoreExtension { }
-    public interface IExtensionProvider { T GetExtension<T>() where T : IStoreExtension; }
-    public interface IGooglePlayStoreExtensions : IStoreExtension { void SetObfuscatedAccountId(string id); }
-    public class PurchaseEventArgs { public Product purchasedProduct; }
-    public interface IStoreListener
+    public class Product { public ProductDefinition definition; public bool availableToPurchase; public ProductMetadata metadata; }
+    public class CartItem { public Product Product { get; } }
+    public interface ICart { System.Collections.Generic.IReadOnlyList<CartItem> Items(); }
+    public interface IOrderInfo { string Receipt { get; } string TransactionID { get; } }
+    public abstract class Order { public ICart CartOrdered { get; } public IOrderInfo Info { get; } }
+    public class PendingOrder : Order { }
+    public class FailedOrder : Order { public PurchaseFailureReason FailureReason { get; } public string Details { get; } }
+    public class Orders { public System.Collections.Generic.IReadOnlyList<PendingOrder> PendingOrders { get; } }
+    public class ProductFetchFailed { }
+    public class StoreController
     {
-        void OnInitializeFailed(InitializationFailureReason error);
-        void OnInitializeFailed(InitializationFailureReason error, string message);
-        PurchaseProcessingResult ProcessPurchase(PurchaseEventArgs e);
-        void OnPurchaseFailed(Product product, PurchaseFailureReason reason);
-        void OnInitialized(IStoreController controller, IExtensionProvider extensions);
+        public event System.Action<System.Collections.Generic.List<Product>> OnProductsFetched;
+        public event System.Action<ProductFetchFailed> OnProductsFetchFailed;
+        public event System.Action<Orders> OnPurchasesFetched;
+        public event System.Action<PendingOrder> OnPurchasePending;
+        public event System.Action<FailedOrder> OnPurchaseFailed;
+        public System.Threading.Tasks.Task Connect() => System.Threading.Tasks.Task.CompletedTask;
+        public void FetchProducts(System.Collections.Generic.List<ProductDefinition> products) { }
+        public void FetchPurchases() { }
+        public void PurchaseProduct(Product product) { }
+        public void ConfirmPurchase(PendingOrder order) { }
     }
-    public interface IDetailedStoreListener : IStoreListener { void OnPurchaseFailed(Product product, PurchaseFailureDescription description); }
-    public class StandardPurchasingModule : IPurchasingModule { public static StandardPurchasingModule Instance() => new StandardPurchasingModule(); }
-    public class ConfigurationBuilder
-    {
-        public static ConfigurationBuilder Instance(IPurchasingModule m) => new ConfigurationBuilder();
-        public ConfigurationBuilder AddProduct(string id, ProductType type) => this;
-    }
-    public static class UnityPurchasing { public static void Initialize(IDetailedStoreListener listener, ConfigurationBuilder builder) { } }
+    public static class UnityIAPServices { public static StoreController StoreController() => new StoreController(); }
 }

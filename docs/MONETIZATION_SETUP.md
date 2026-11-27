@@ -10,7 +10,7 @@ store until the steps below are done.
    Then **Assets ▸ Google Mobile Ads ▸ Settings**: set the **Android App ID**. Use the test ID
    `ca-app-pub-3940256099942544~3347511713` until your app is approved.
    Run **Assets ▸ External Dependency Manager ▸ Android Resolver ▸ Resolve**.
-2. **Unity In-App Purchasing 4.x** (4.12 or newer, not 5.x): **Window ▸ Package Manager ▸ Unity Registry ▸ In-App Purchasing ▸ Install**.
+2. **Unity In-App Purchasing 5.x** (5.0 or newer; 4.x is deprecated and no longer works with this code): **Window ▸ Package Manager ▸ Unity Registry ▸ In-App Purchasing ▸ Install**. Do not use its *Configure* / Dashboard setup: the game talks to Google Play directly and the server verifies every purchase.
 3. **Edit ▸ Project Settings ▸ Player ▸ Android ▸ Other Settings ▸ Scripting Define Symbols**: add
    `JR_ADMOB;JR_UNITY_IAP`. This switches on `AdMobProvider.cs` and `UnityIapProvider.cs`.
 4. Run **Jeepney Rush ▸ Setup Project** once. It creates `Resources/MonetizationConfig.asset`.

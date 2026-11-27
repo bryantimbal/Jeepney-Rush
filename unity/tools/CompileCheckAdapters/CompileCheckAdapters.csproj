@@ -2,7 +2,7 @@
   <!--
     Compile-checks the AdMob / Unity IAP adapters (JR_ADMOB, JR_UNITY_IAP) against small API
     stand-ins (Stubs.cs) written from the public docs of Google Mobile Ads Unity 9.x and Unity IAP
-    4.x – the real packages can't be downloaded in CI. It proves the adapters are internally
+    5.x – the real packages can't be downloaded in CI. It proves the adapters are internally
     consistent; the authoritative check is compiling in Unity with the real packages installed.
   -->
   <PropertyGroup>
