@@ -36,6 +36,7 @@ namespace JeepneyRush
             BuildAccount();
             BuildRanks();
             BuildDaily();
+            BuildBarangay();
             HookOnline();
         }
 
@@ -380,8 +381,9 @@ namespace JeepneyRush
             card.Add(classes);
             _rankInfo = Note("", 28);
             card.Add(_rankInfo);
-            var scroll = UiKit.Scroll(900);
-            scroll.style.height = 900;
+            card.Add(UiKit.Button("BARANGAY VS BARANGAY", () => { CloseModal(); OpenBarangay(); }, UiKit.Hex("#2E7D32"), Color.white, 34, 96));
+            var scroll = UiKit.Scroll(800);
+            scroll.style.height = 800;
             _rankList = UiKit.Stack();
             scroll.Add(_rankList);
             card.Add(scroll);

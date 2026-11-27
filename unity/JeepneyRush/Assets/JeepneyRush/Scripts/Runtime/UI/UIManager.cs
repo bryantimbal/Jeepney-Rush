@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }

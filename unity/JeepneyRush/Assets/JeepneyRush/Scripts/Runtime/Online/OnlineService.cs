@@ -394,6 +394,14 @@ namespace JeepneyRush
             done?.Invoke(v);
         }
 
+        // ================================================================== Barangay vs Barangay
+        public void BarangayMine(Action<BarangayMine, string> done) => StartCoroutine(Get("jr_barangay_mine", "{}", done));
+        public void BarangayBoard(Action<BarangayBoard, string> done) => StartCoroutine(Get("jr_barangay_board", "{\"p_limit\":50}", done));
+        public void BarangayCreate(string name, string city, Action<BarangayOp, string> done) =>
+            StartCoroutine(Get("jr_barangay_create", "{\"p_name\":" + Json.Str(name) + ",\"p_city\":" + Json.Str(city) + "}", done));
+        public void BarangayJoin(string code, Action<BarangayOp, string> done) => StartCoroutine(Get("jr_barangay_join", "{\"p_code\":" + Json.Str(code) + "}", done));
+        public void BarangayLeave(Action<BarangayOp, string> done) => StartCoroutine(Get("jr_barangay_leave", "{}", done));
+
         public void BuyCosmetic(string id, Action<bool, string> done) => Op("jr_buy_cosmetic", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
         public void BuyJeepneyWithGems(string id, Action<bool, string> done) => Op("jr_buy_jeepney_gems", "{\"p_id\":" + Json.Str(id) + "}", (ok, m, _) => done?.Invoke(ok, m));
 

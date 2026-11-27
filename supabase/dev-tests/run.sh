@@ -26,7 +26,7 @@ done
 for f in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do PGOPTIONS="-c client_min_messages=warning" "${DB[@]}" -f "$f" >/dev/null; done
 echo "migrate  (re-applied, idempotent)"
 cd "$HERE"
-for t in vectors.sql behaviour.sql monetization.sql account_deletion.sql road_gems.sql arcade_combo.sql stat_classes.sql career.sql passenger_missions.sql cosmetics.sql game_modes.sql ghosts.sql app_version.sql; do
+for t in vectors.sql behaviour.sql monetization.sql account_deletion.sql road_gems.sql arcade_combo.sql stat_classes.sql career.sql passenger_missions.sql cosmetics.sql game_modes.sql ghosts.sql app_version.sql barangays.sql; do
   echo "test     $t"
   "${DB[@]}" -f "$t" 2>&1 | sed 's/^psql:[^ ]* NOTICE:  /         /' | grep -v '^\s*$' | grep -v '^[tf]$'
   [ "${PIPESTATUS[0]}" = "0" ] || { echo "FAILED: $t"; exit 1; }
