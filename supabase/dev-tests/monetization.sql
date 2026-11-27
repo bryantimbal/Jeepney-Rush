@@ -134,7 +134,7 @@ do $$ declare r jsonb; begin
   raise notice 'ok  dev switches (test purchases/ads) and refunds';
 end $$;
 reset role;
-update jr_server_settings set value = 'false';
+update jr_server_settings set value = 'false' where key in ('allow_test_purchases', 'allow_test_rewards');
 
 do $$ begin
   assert (select bool_and(p.coins = coalesce((select sum(amount) from jr_transactions t where t.user_id = p.user_id and t.currency = 'coins'), 0)) from jr_profiles p),

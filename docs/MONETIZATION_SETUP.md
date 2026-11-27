@@ -43,7 +43,7 @@ store until the steps below are done.
 | `jr.adfree` | non-consumable | No banner / between-run ads | ₱149 |
 
    (Unity IAP sets the type when the game starts. On Play, all of these are "managed products".)
-3. **Setup ▸ License testing**: add your Google account, so test purchases are free.
+3. **Setup ▸ License testing**: add your Google account, so test purchases are free. The server grants them (needs migration `20261127130000_jr_play_test_purchases.sql`).
 
 ## 4. Server-side purchase verification
 1. **Play Console ▸ Setup ▸ API access**: link a Google Cloud project and **create a service account**.
@@ -84,8 +84,11 @@ unless you switch them on. Only do this on a development project:
 ```sql
 update jr_server_settings set value = 'true' where key in ('allow_test_purchases', 'allow_test_rewards');
 -- before release:
-update jr_server_settings set value = 'false';
+update jr_server_settings set value = 'false' where key in ('allow_test_purchases', 'allow_test_rewards');
 ```
+**Google Play test purchases** (accounts in Play Console ▸ License testing, Google shows "Test card, always
+approves") don't need either switch: they are checked with Google and granted, and stored with `test = true`.
+To refuse them too (e.g. after launch): `update jr_server_settings set value = 'false' where key = 'allow_play_test_purchases';`
 
 ## 7. Local checks (developers)
 ```bash

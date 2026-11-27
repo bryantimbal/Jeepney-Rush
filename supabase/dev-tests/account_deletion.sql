@@ -65,7 +65,7 @@ do $$ begin
   assert (select coins from jr_profiles where user_id = '99999999-9999-9999-9999-999999999999') = 0, 'no coins from the replay';
   raise notice 'ok  purchase tokens / ad nonces of deleted accounts cannot be replayed';
 end $$;
-update jr_server_settings set value = 'false';
+update jr_server_settings set value = 'false' where key in ('allow_test_purchases', 'allow_test_rewards');
 
 -- signed out: polite refusal
 select set_config('request.jwt.claim.sub', '', false) \g /dev/null
