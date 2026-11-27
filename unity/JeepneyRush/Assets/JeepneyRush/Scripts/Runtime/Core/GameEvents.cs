@@ -74,6 +74,9 @@ namespace JeepneyRush
         public bool Finished;
         /// <summary>Ghost Race: the rival, their score and whether you beat it.</summary>
         public string GhostName;
+        /// <summary>Route and jeepney of the run (score card).</summary>
+        public EnvironmentKind Environment;
+        public string Jeepney;
         public int GhostScore;
         public bool BeatGhost;
     }

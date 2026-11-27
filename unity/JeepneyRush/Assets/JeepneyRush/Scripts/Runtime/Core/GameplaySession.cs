@@ -1944,6 +1944,7 @@ namespace JeepneyRush
                 Tips = route.TipsEarned, DodgersCaught = route.DodgersCaught, DodgersEscaped = route.DodgersEscaped + _dodgerCount,
                 Fares = summary.Fares, Gas = summary.Gas, RoadCoins = _score.RoadCoins,
                 Mode = Mode, Finished = _arrived,
+                Environment = _env, Jeepney = RunJeepney,
                 GhostName = Racing ? Ghost.name : null, GhostScore = Racing ? Ghost.score : 0, BeatGhost = Racing && Ghosts.Beat(Ghost, _score.Score),
             };
             Services.Game.SetState(GameState.GameOver);

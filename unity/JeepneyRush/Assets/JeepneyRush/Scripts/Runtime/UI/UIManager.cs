@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -1186,12 +1186,14 @@ namespace JeepneyRush
             // an interstitial may play here – between runs, never during one (capped by AdPolicy)
             float LastRunSeconds() => Services.Game.Session != null ? Services.Game.Session.LastRunSeconds : 0f;
             BuildNextShiftButton(card);
+            card.Add(UiKit.Button("I-SHARE ANG SCORE", ShareResult, UiKit.Hex("#1877F2"), Color.white, 48, 120));
             card.Add(UiKit.Button("RESTART", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.Restart(); }), UiKit.Yellow, UiKit.Ink, 64, 160));
             card.Add(UiKit.Button("HOME", () => Services.Ads.BetweenRuns(LastRunSeconds(), () => { Show(_gameOver, false); Services.Game.GoToMainMenu(); }), Color.white, UiKit.Ink, 48, 128));
         }
 
         public void ShowGameOver(RunResult r)
         {
+            _lastResult = r;
             ClearJuice();
             Show(_hud, false);
             Show(_gameOver, true);
