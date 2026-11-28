@@ -332,6 +332,19 @@ namespace JeepneyRush
                 list.Clear();
                 if (fl == null) { list.Add(Note(err ?? "Could not load friends.")); return; }
                 if (fl.friends.Length == 0) { list.Add(Note("No friends yet – share your code!")); return; }
+                // gifts: a free tank of gas for each friend once a day; gifts you received wait here
+                var inbox = UiKit.Button("Checking gifts…", () => { }, UiKit.Hex("#FFF1B8"), UiKit.Ink, 28, 84);
+                list.Add(inbox);
+                var sent = new System.Collections.Generic.HashSet<string>();
+                Services.Online.GiftInbox((g, e) =>
+                {
+                    if (g == null) { inbox.style.display = DisplayStyle.None; return; }
+                    foreach (var id in g.sent_today) sent.Add(id);
+                    int n = g.gifts.Length;
+                    inbox.text = n > 0 ? $"{n} FREE GAS FROM FRIENDS · CLAIM (+{n * 60} coins)" : "No gifts yet – send your friends free gas!";
+                    inbox.SetEnabled(n > 0);
+                    inbox.clicked += () => Services.Online.GiftClaim((ok, msg, coins) => { Toast(ok ? $"+{coins} COINS PANG-GAS!" : msg); RefreshMenuTop(); LoadFriends(list); });
+                });
                 foreach (var f in fl.friends)
                 {
                     var row = UiKit.Box();
@@ -346,6 +359,12 @@ namespace JeepneyRush
                     t.style.unityTextAlign = TextAnchor.MiddleLeft;
                     row.Add(t);
                     var id = f.user_id;
+                    var gift = UiKit.Button("GAS", null, UiKit.Hex("#D9F7E3"), UiKit.Ink, 26, 70);
+                    gift.clicked += () => Services.Online.GiftSend(id, (ok, msg, _) => { Toast(ok ? "Free gas sent!" : msg); gift.SetEnabled(false); });
+                    gift.style.width = 110;
+                    gift.style.marginTop = gift.style.marginBottom = 0;
+                    gift.style.marginRight = 8;
+                    row.Add(gift);
                     var x = UiKit.Button("X", () => Services.Online.RemoveFriend(id, (ok, msg) => { if (ok) LoadFriends(list); else Toast(msg); }), UiKit.Hex("#FFE3E3"), UiKit.Red, 30, 70);
                     x.style.width = 90;
                     x.style.marginTop = x.style.marginBottom = 0;

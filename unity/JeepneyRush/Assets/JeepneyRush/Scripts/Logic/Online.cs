@@ -417,6 +417,30 @@ namespace JeepneyRush.Logic
         public ServerSnapshot snapshot;
     }
 
+    [Serializable]
+    public class GiftRow
+    {
+        public string from;
+        public int day_key;
+    }
+
+    /// <summary>Friend gifts waiting for the player (jr_gift_inbox).</summary>
+    [Serializable]
+    public class GiftInbox
+    {
+        public GiftRow[] gifts = new GiftRow[0];
+        public int claimed_today;
+        public string[] sent_today = new string[0];
+    }
+
+    /// <summary>Barangay weekly goal (jr_barangay_goal_status).</summary>
+    [Serializable]
+    public class BarangayGoal
+    {
+        public bool member, claimed;
+        public int target, progress, coins, gems;
+    }
+
     /// <summary>Sticker album from the server (jr_album_status).</summary>
     [Serializable]
     public class AlbumInfo

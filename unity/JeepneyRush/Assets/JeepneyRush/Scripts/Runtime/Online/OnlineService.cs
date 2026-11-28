@@ -388,6 +388,9 @@ namespace JeepneyRush
                 case "no_reward": return "No league reward to claim.";
                 case "nothing": return "Wala pang boundary – come back later.";
                 case "premium": return "Unlock the premium pass first.";
+                case "not_friend": return "Friends only.";
+                case "limit_today": return "10 gifts a day – the rest wait for tomorrow.";
+                case "no_barangay": return "Join a barangay first.";
                 case "busy": return "That jeepney is already driving another route.";
                 case "not_owned": return "You don't own that jeepney.";
                 case "slot": return "Buy another slot first.";
@@ -444,6 +447,13 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== friend gifts + barangay goal
+        public void GiftSend(string friendId, Action<bool, string, int> done) => Op("jr_gift_send", "{\"p_friend\":" + Json.Str(friendId) + "}", done);
+        public void GiftInbox(Action<GiftInbox, string> done) => StartCoroutine(Get("jr_gift_inbox", "{}", done));
+        public void GiftClaim(Action<bool, string, int> done) => Op("jr_gift_claim", "{}", done);
+        public void BarangayGoal(Action<BarangayGoal, string> done) => StartCoroutine(Get("jr_barangay_goal_status", "{}", done));
+        public void BarangayGoalClaim(Action<bool, string, int> done) => Op("jr_barangay_goal_claim", "{}", done);
 
         // ================================================================== sticker album
         public void AlbumStatus(Action<AlbumInfo, string> done) => StartCoroutine(Get("jr_album_status", "{}", done));

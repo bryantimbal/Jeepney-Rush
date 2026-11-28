@@ -93,6 +93,30 @@ namespace JeepneyRush
             _brgyBody.Add(codeRow);
             _brgyBody.Add(Note($"Ang score ng barangay = kabuuan ng {Barangays.TopMembers} pinakamagaling na driver ngayong linggo (resets Monday, PH time). Bilang ang free ride, career, Daily Challenge at Ghost Race (hindi ang Rush Hour at Night Shift).", 26));
 
+            // weekly goal: everyone's passengers count; when reached, every member gets a prize
+            var goalBox = UiKit.Stack();
+            _brgyBody.Add(goalBox);
+            Services.Online.BarangayGoal((g, e) =>
+            {
+                if (g == null || !g.member) return;
+                goalBox.Add(Heading("LINGGUHANG GOAL"));
+                goalBox.Add(Note($"{g.progress:N0} / {g.target:N0} pasahero ngayong linggo (lahat ng kabarangay). Prize: {g.coins} coins + {g.gems} gems bawat isa.", 26, UiKit.Ink));
+                var bar = UiKit.Box();
+                bar.style.height = 22;
+                bar.style.backgroundColor = UiKit.Hex("#E2DBC6");
+                UiKit.Border(bar.style, 0, Color.clear, 11);
+                bar.style.overflow = Overflow.Hidden;
+                bar.style.marginBottom = 10;
+                var fill = UiKit.Box();
+                fill.style.height = Length.Percent(100);
+                fill.style.width = Length.Percent(Mathf.Clamp01(g.progress / (float)Mathf.Max(1, g.target)) * 100f);
+                fill.style.backgroundColor = BrgyGreen;
+                bar.Add(fill);
+                goalBox.Add(bar);
+                if (g.progress >= g.target && !g.claimed)
+                    goalBox.Add(UiKit.Button($"CLAIM · {g.coins} COINS + {g.gems} GEMS", () => Services.Online.BarangayGoalClaim((ok, msg, _) => { Toast(ok ? "Salamat, kabarangay!" : msg); RefreshMenuTop(); LoadBarangay(); }), UiKit.Yellow, UiKit.Ink, 30, 92));
+                else if (g.claimed) goalBox.Add(Note("Prize claimed this week!", 24, UiKit.Green));
+            });
             _brgyBody.Add(Heading($"MGA KABARANGAY ({m.members.Length})"));
             for (int i = 0; i < m.members.Length; i++)
             {
