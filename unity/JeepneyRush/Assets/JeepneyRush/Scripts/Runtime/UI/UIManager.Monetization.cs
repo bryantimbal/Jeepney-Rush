@@ -66,10 +66,24 @@ namespace JeepneyRush
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 46, 120));
         }
 
+        private bool _shopHooked;
+
         private void OpenShop()
         {
+            if (!_shopHooked && Services.Store != null)
+            {
+                // the store connects in the background: redraw an open shop when it's ready, and when sign-in changes
+                _shopHooked = true;
+                Services.Store.StatusChanged += RefreshShopIfOpen;
+                if (Services.Online != null) Services.Online.Changed += RefreshShopIfOpen;
+            }
             RefreshShop();
             if (_modals.Count == 0 || _modals.Peek() != _shop) OpenModal(_shop);
+        }
+
+        private void RefreshShopIfOpen()
+        {
+            if (_shop != null && _modals.Count > 0 && _modals.Peek() == _shop) RefreshShop();
         }
 
         private void RefreshShop()

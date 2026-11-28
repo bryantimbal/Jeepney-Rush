@@ -46,8 +46,17 @@ namespace JeepneyRush
 #endif
             if (_p == null) { Debug.Log("[Store] no store (install Unity IAP + define JR_UNITY_IAP for Google Play billing)"); return; }
             _p.PendingPurchase += (id, token) => Verify(id, token, (ok, msg) => Debug.Log($"[Store] delivered pending {id}: {ok} {msg}"));
-            _p.Init(Products.All, ok => Debug.Log($"[Store] {(ok ? "ready" : "unavailable")} ({_p.Name})"));
+            _p.Init(Products.All, ok =>
+            {
+                Debug.Log($"[Store] {(ok ? "ready" : "unavailable")} ({_p.Name})");
+                _connectDone = true;
+                StatusChanged?.Invoke(); // an open shop redraws (prices from Google Play, buttons enabled)
+            });
         }
+
+        /// <summary>Raised when the store finished connecting (ready or not).</summary>
+        public event Action StatusChanged;
+        private bool _connectDone;
 
         public string PriceOf(ProductDef p) => _p?.Price(p.Id) ?? p.FallbackPrice;
 
@@ -56,7 +65,9 @@ namespace JeepneyRush
         {
             if (!_initRan) Bootstrap.StartServices(); // safety net: the shop was opened before startup finished
             if (_p == null) return WhyNoStore();
-            if (!_p.Ready) return "Connecting to Google Play…";
+            if (!_p.Ready) return _connectDone
+                ? "Google Play isn't available right now. Check your internet and that you're signed in to the Play Store, then reopen the game."
+                : "Connecting to Google Play…";
             var o = Services.Online;
             if (o != null && o.Configured && !o.Authoritative) return "Go online and sign in (ACCOUNT) to buy.";
             if ((o == null || !o.Configured) && !Simulated) return "Purchases need the online server (see docs/SUPABASE_SETUP.md).";
