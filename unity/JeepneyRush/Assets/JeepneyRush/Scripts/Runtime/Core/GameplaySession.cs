@@ -1965,6 +1965,7 @@ namespace JeepneyRush
             int eventTokens = _eventOn ? ChristmasEvent.RunTokens(_runParols, _runCarolers, summary.Distance) : 0;
             int sgNight = _eventOn && EventProgress.Night > 0 && report.mode == "night" && summary.Distance >= ChristmasEvent.SimbangGabiDistance ? EventProgress.Night : 0;
             if (_eventOn && (Services.Online == null || !Services.Online.Configured)) EventProgress.CreditLocal(eventTokens, sgNight); // online: the server credits it
+            if (Services.Online == null || !Services.Online.Configured) PassProgress.AddRunLocal(summary.Distance, summary.Deliveries); // online: from the server's runs
             if (RecordsGhost && Services.Online != null && Services.Online.SignedIn)
                 Services.Online.QueueGhost(report.run_id, _ghostRec.Finish(summary.Distance, _player.Lanes.X));
             LastRunId = report.run_id;

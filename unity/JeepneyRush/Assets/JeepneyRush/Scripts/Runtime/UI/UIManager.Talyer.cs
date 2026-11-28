@@ -108,7 +108,7 @@ namespace JeepneyRush
             string status; Color col;
             if (equipped) { status = "SUOT NA"; col = UiKit.Green; }
             else if (owned) { status = "GAMITIN"; col = UiKit.Blue; }
-            else if (item.Earned) { status = item.IsEvent ? "PASKONG PASADA reward" : Career.Licenses[item.RankNeeded].Name; col = UiKit.Grey; }
+            else if (item.Earned) { status = item.IsEvent ? (item.Id == PasadaPass.PremiumPaint || item.Id == PasadaPass.PremiumBanner ? "PASADA PASS reward" : "PASKONG PASADA reward") : Career.Licenses[item.RankNeeded].Name; col = UiKit.Grey; }
             else { status = $"{item.Price:N0}"; col = d.coins >= item.Price ? UiKit.Ink : UiKit.Red; }
             var st = UiKit.Text(status, 26, col, true);
             st.style.flexShrink = 0;
@@ -147,7 +147,7 @@ namespace JeepneyRush
             Services.Game.Menu?.ShowLivery(j.Id, tryLook);
             if (item.Earned)
             {
-                Float(item.IsEvent ? "Christmas event reward – collect parols in PASKONG PASADA!" : $"Kinikita ito sa career: {Career.Licenses[item.RankNeeded].Name}", FloatKind.Info);
+                Float(item.IsEvent ? (item.Id == PasadaPass.PremiumPaint || item.Id == PasadaPass.PremiumBanner ? "Premium PASADA PASS reward (MODES ▸ PASADA PASS)" : "Christmas event reward – collect parols in PASKONG PASADA!") : $"Kinikita ito sa career: {Career.Licenses[item.RankNeeded].Name}", FloatKind.Info);
                 return;
             }
             if (d.coins < item.Price)

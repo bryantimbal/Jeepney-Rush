@@ -123,12 +123,14 @@ namespace JeepneyRush.Logic
             Paint("paint_itim", "Itim at Chrome", 600, "#16161A", "#2B2D42", "#D9DEE6", "#0B0B0D", "#E6EBF2"),
             Paint("paint_rosas", "Rosas Pista", 450, "#E5568E", "#FFB3C6", "#FFF0F5", "#7B2D52", "#3BCEAC"),
             Paint("paint_ginto", "Gintong Hari", 0, "#C9A227", "#F4D35E", "#FFF8E1", "#7A5C00", "#C8102E", 4),
+            Paint("paint_pasada", "Pasada Pass (premium)", 0, "#0B2545", "#1F3FBF", "#E9F5F2", "#FCD116", "#FCD116", CosmeticItem.EventRank),
             // ---- windshield banner (top of the windshield)
             Tex("ws_none", CustomSlot.Windshield, "Wala (stock)", 0, null),
             Tex("ws_godbless", CustomSlot.Windshield, "GOD BLESS OUR TRIP", 150, "cos_ws_godbless"),
             Tex("ws_sakayna", CustomSlot.Windshield, "SAKAY NA!", 150, "cos_ws_sakayna"),
             Tex("ws_bahalana", CustomSlot.Windshield, "BAHALA NA", 150, "cos_ws_bahalana"),
             Tex("ws_hari", CustomSlot.Windshield, "HARI NG KALSADA", 0, "cos_ws_hari", 4),
+            Tex("ws_pasada", CustomSlot.Windshield, "PASADA PASS (premium)", 0, "cos_ws_pasada", CosmeticItem.EventRank),
             // ---- rear sticker (left rear panel)
             Tex("rear_none", CustomSlot.RearSticker, "Wala (stock)", 0, null),
             Tex("rear_bayad", CustomSlot.RearSticker, "BAYAD MUNA BAGO BABA", 150, "cos_rear_bayad"),

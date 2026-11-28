@@ -20,6 +20,7 @@ namespace JeepneyRush
             card.Add(ModeRow(GameModes.Name(GameMode.RushHour), GameModes.Blurb(GameMode.RushHour), UiKit.Hex("#E63946"), () => PlayModeFromMenu(GameMode.RushHour)));
             card.Add(ModeRow(GameModes.Name(GameMode.NightShift), GameModes.Blurb(GameMode.NightShift), UiKit.Hex("#2E3A87"), () => PlayModeFromMenu(GameMode.NightShift)));
             card.Add(ModeRow(GameModes.Name(GameMode.Ghost), GameModes.Blurb(GameMode.Ghost), UiKit.Hex("#7B61FF"), OpenGhost));
+            card.Add(ModeRow("PASADA PASS", "Monthly pass: every run earns pass XP. 30 tiers of rewards; premium adds more.", UiKit.Hex("#0B2545"), () => { CloseModal(); OpenPass(); }));
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 44, 110));
         }
 

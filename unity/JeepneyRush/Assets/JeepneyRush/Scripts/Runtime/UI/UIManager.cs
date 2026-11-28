@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildStreak, BuildEvent, BuildLeague, BuildFleet, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildStreak, BuildEvent, BuildLeague, BuildFleet, BuildPass, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy, _streak, _event, _league, _fleet })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy, _streak, _event, _league, _fleet, _pass })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }

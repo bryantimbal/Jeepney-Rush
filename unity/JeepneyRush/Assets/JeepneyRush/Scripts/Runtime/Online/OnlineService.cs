@@ -384,6 +384,7 @@ namespace JeepneyRush
                 case "no_event": return "The Christmas event is over.";
                 case "no_reward": return "No league reward to claim.";
                 case "nothing": return "Wala pang boundary – come back later.";
+                case "premium": return "Unlock the premium pass first.";
                 case "busy": return "That jeepney is already driving another route.";
                 case "not_owned": return "You don't own that jeepney.";
                 case "slot": return "Buy another slot first.";
@@ -440,6 +441,11 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== Pasada Pass
+        public void PassStatus(Action<PassInfo, string> done) => StartCoroutine(Get("jr_pass_status", "{}", done));
+        public void PassBuyPremium(Action<bool, string, int> done) => Op("jr_pass_buy_premium", "{}", done);
+        public void PassClaim(int tier, bool premium, Action<bool, string, int> done) => Op("jr_pass_claim", "{\"p_tier\":" + tier + ",\"p_premium\":" + Json.Bool(premium) + "}", done);
 
         // ================================================================== operator mode
         public void FleetStatus(Action<FleetInfo, string> done) => StartCoroutine(Get("jr_fleet_status", "{}", done));

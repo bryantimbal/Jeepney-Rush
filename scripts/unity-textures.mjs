@@ -63,6 +63,7 @@ const textures = await page.evaluate(() => {
     banner('cos_ws_sakayna', 'SAKAY NA!', '#FCD116', '#C8102E', '#1B1033');
     banner('cos_ws_bahalana', 'BAHALA NA', '#1B1B1B', '#FCD116', '#C8102E');
     banner('cos_ws_hari', 'HARI NG KALSADA', '#7A5C00', '#FFE08A', '#1B1033');
+    banner('cos_ws_pasada', 'PASADA PASS', '#0B2545', '#FCD116', '#1F3FBF');
     const sticker = (name, draw) => { const [c, x] = cv(256, 256); x.clearRect(0, 0, 256, 256); draw(x); gloss(x, 256, 256); save(name, c); };
     sticker('cos_rear_bayad', (x) => {
       x.fillStyle = '#FCD116'; x.beginPath(); x.roundRect(8, 8, 240, 240, 26); x.fill(); x.lineWidth = 10; x.strokeStyle = '#1B1033'; x.stroke();

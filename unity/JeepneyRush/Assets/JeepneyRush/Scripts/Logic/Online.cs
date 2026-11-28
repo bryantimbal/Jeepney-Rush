@@ -415,6 +415,15 @@ namespace JeepneyRush.Logic
         public ServerSnapshot snapshot;
     }
 
+    /// <summary>Pasada Pass from the server (jr_pass_status).</summary>
+    [Serializable]
+    public class PassInfo
+    {
+        public int season, xp, tier, days_left;
+        public bool premium;
+        public long claimed_free, claimed_premium;
+    }
+
     [Serializable]
     public class FleetSlot
     {

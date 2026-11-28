@@ -130,6 +130,10 @@ namespace JeepneyRush.Logic
         public List<string> fleetJeepneys = new List<string>();
         public List<long> fleetSince = new List<long>();
         public int fleetBought;
+        // ---- Pasada Pass (offline; online the server computes it)
+        public int passSeason, passXp;
+        public bool passPremium;
+        public long passClaimedFree, passClaimedPremium;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
         public int[] careerMasks = new int[0];
