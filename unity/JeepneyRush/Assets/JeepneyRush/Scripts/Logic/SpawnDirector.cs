@@ -21,6 +21,8 @@ namespace JeepneyRush.Logic
         void SpawnGem(int lane, float z);
         /// <summary>A parol token (Christmas event).</summary>
         void SpawnParol(int lane, float z);
+        /// <summary>A sticker-album postcard (at most one a run).</summary>
+        void SpawnPostcard(int lane, float z);
         void SpawnStation(GasStation station, float z);
         void SpawnIntersection(Intersection intersection, float z);
     }
@@ -95,6 +97,10 @@ namespace JeepneyRush.Logic
         /// <summary>Christmas event: parol tokens this run may place (0 = no event).</summary>
         public int ParolBudget;
         public int ParolsPlaced { get; private set; }
+        /// <summary>Sticker album: place a postcard once the road passes <see cref="PostcardAt"/> (budget 0 or 1).</summary>
+        public int PostcardBudget;
+        public float PostcardAt = Album.MinDistance + 200f;
+        public int PostcardsPlaced { get; private set; }
         private float _nextParolAt = ChristmasEvent.FirstParolAt;
         private GameRandom _parolRng;
         private readonly float[] _traffic;
@@ -616,7 +622,7 @@ namespace JeepneyRush.Logic
         }
 
         /// <summary>A gem or a TURBO booster in a clear lane (like power-ups: never behind a blocker or in a stop's lane).</summary>
-        private bool TryPlaceExtra(float z, float distance, float speed, bool gem, bool parol = false)
+        private bool TryPlaceExtra(float z, float distance, float speed, bool gem, bool parol = false, bool postcard = false)
         {
             _blockers.Clear();
             _sink.CollectBlockers(_blockers);
@@ -627,7 +633,8 @@ namespace JeepneyRush.Logic
             {
                 int l = (start + i) % _cfg.laneCount;
                 if (!LaneOccupancy.LaneClear(_intervals, l, t - 0.5f, t + 0.5f) || Reserved(l, distance - z, 3)) continue;
-                if (parol) { _sink.SpawnParol(l, z); ParolsPlaced++; }
+                if (postcard) { _sink.SpawnPostcard(l, z); PostcardsPlaced++; }
+                else if (parol) { _sink.SpawnParol(l, z); ParolsPlaced++; }
                 else if (gem) { _sink.SpawnGem(l, z); GemsPlaced++; }
                 else { _sink.SpawnPowerUp(PowerUpKind.Turbo, l, z); BoostsPlaced++; }
                 return true;
@@ -678,6 +685,8 @@ namespace JeepneyRush.Logic
 
         private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool hump)
         {
+            // sticker album: one postcard, past the minimum distance
+            if (PostcardsPlaced < PostcardBudget && Cursor - gap >= PostcardAt) TryPlaceExtra(rowZ - gap * 0.4f, distance, speed, false, true, true);
             // Christmas event: parol tokens a third of a gap ahead (their own random stream)
             if (ParolsPlaced < ParolBudget && Cursor - gap >= _nextParolAt && TryPlaceExtra(rowZ - gap * 0.35f, distance, speed, false, true))
                 _nextParolAt = Cursor + _parolRng.Range(ChristmasEvent.ParolSpacingMin, ChristmasEvent.ParolSpacingMax);

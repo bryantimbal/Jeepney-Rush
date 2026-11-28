@@ -405,6 +405,10 @@ namespace JeepneyRush
             _eventOn = EventProgress.Active;
             _director.ParolBudget = _eventOn ? ChristmasEvent.MaxParolsPerRun : 0;
             _runParols = _runCarolers = 0;
+            // sticker album: half the runs may find a postcard (decided by the run's seed)
+            _runPostcard = -1;
+            _director.PostcardBudget = new GameRandom(_seed ^ 0x5C0A2D).Next() < Album.Chance ? 1 : 0;
+            if (_director.PostcardBudget > 0 && Services.Online != null && Services.Online.SignedIn) AlbumProgress.Status((_, __) => { }); // know which cards are missing
             _contract.Reset(); _stopsServed = 0; _contractHudT = 0; _contractFailShown = false;
             Services.UI.SetContract("");
             _decor.Begin(_eventOn);
@@ -1343,11 +1347,19 @@ namespace JeepneyRush
 
         private FestiveDecor _decor;
         private bool _eventOn;
-        private int _runParols, _runCarolers;
+        private int _runParols, _runCarolers, _runPostcard = -1;
 
         private void OnGemTouched(Gem g)
         {
             if (_dying || !_coins.Collect(g)) return;
+            if (g.IsPostcard)
+            {
+                _runPostcard = Album.Pick(_env, AlbumProgress.Owns, _rng);
+                _fx.Confetti(g.transform.position + Vector3.up * 0.5f, 30);
+                Services.Audio.Play(Logic.Audio.Sfx.CoinRush, 0.9f, 1.1f);
+                Services.UI.Float($"POSTCARD: {Album.Name(_runPostcard).ToUpperInvariant()}!", UIManager.FloatKind.Big);
+                return;
+            }
             if (g.IsParol)
             {
                 _runParols++;
@@ -2034,6 +2046,8 @@ namespace JeepneyRush
             report.mode = GameModes.Key(Mode);
             report.parols = _runParols;
             report.carolers = _runCarolers;
+            report.postcard = _runPostcard;
+            if (_runPostcard >= 0 && (Services.Online == null || !Services.Online.Configured)) AlbumProgress.AddLocal(_runPostcard); // online: the server checks it
             int eventTokens = _eventOn ? ChristmasEvent.RunTokens(_runParols, _runCarolers, summary.Distance) : 0;
             int sgNight = _eventOn && EventProgress.Night > 0 && report.mode == "night" && summary.Distance >= ChristmasEvent.SimbangGabiDistance ? EventProgress.Night : 0;
             if (_eventOn && (Services.Online == null || !Services.Online.Configured)) EventProgress.CreditLocal(eventTokens, sgNight); // online: the server credits it

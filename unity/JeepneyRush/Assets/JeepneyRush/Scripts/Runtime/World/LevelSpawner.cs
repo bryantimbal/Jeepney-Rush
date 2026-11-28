@@ -60,6 +60,7 @@ namespace JeepneyRush
         public void SpawnPowerUp(PowerUpKind kind, int lane, float z) => _powerUps.Spawn(kind, lane, -z);
         public void SpawnGem(int lane, float z) => _coins.SpawnGem(lane, -z);
         public void SpawnParol(int lane, float z) => _coins.SpawnParol(lane, -z);
+        public void SpawnPostcard(int lane, float z) => _coins.SpawnPostcard(lane, -z);
 
         public void SpawnStation(GasStation station, float z) { if (Stations != null) Stations.Spawn(station, -z); }
 

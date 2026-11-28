@@ -79,6 +79,8 @@ namespace JeepneyRush.Logic
         public int on_time;
         /// <summary>Christmas event: parol tokens picked up and caroler groups carried (the server caps them).</summary>
         public int parols, carolers;
+        /// <summary>Sticker album: the postcard picked up this run (-1 = none).</summary>
+        public int postcard = -1;
         public int client_version = 3;
 
         public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
@@ -413,6 +415,14 @@ namespace JeepneyRush.Logic
         public int reward;
         public string friend;
         public ServerSnapshot snapshot;
+    }
+
+    /// <summary>Sticker album from the server (jr_album_status).</summary>
+    [Serializable]
+    public class AlbumInfo
+    {
+        public int[] cards = new int[0];
+        public int[] sets = new int[0];
     }
 
     /// <summary>Pasada Pass from the server (jr_pass_status).</summary>

@@ -136,6 +136,9 @@ namespace JeepneyRush.Logic
         // ---- driver look (worn items; owned ones are in ownedCosmetics) and the konduktor
         public string driverShirt = "", driverHat = "", driverExtra = "";
         public bool konduktorOff;
+        // ---- sticker album (offline; online the server keeps it)
+        public List<int> albumCards = new List<int>();
+        public List<int> albumSets = new List<int>();
         public long passClaimedFree, passClaimedPremium;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
@@ -207,6 +210,8 @@ namespace JeepneyRush.Logic
             d.ownedCosmetics ??= new List<string>();
             d.fleetJeepneys ??= new List<string>();
             d.fleetSince ??= new List<long>();
+            d.albumCards ??= new List<int>();
+            d.albumSets ??= new List<int>();
             d.ownedCosmetics.RemoveAll(id => Customization.Get(id) == null);
             d.looks ??= new List<JeepneyLook>();
             d.looks.RemoveAll(l => l == null || string.IsNullOrEmpty(l.jeepney));

@@ -10,7 +10,7 @@ namespace JeepneyRush
     /// </summary>
     public sealed class CoinManager : MonoBehaviour
     {
-        private const string PoolKey = "coin", GemPool = "gem", ParolPool = "parol";
+        private const string PoolKey = "coin", GemPool = "gem", ParolPool = "parol", PostcardPool = "postcard";
         private readonly List<Coin> _coins = new List<Coin>();
         private readonly List<Gem> _gems = new List<Gem>();
         private BalanceConfig _cfg;
@@ -22,6 +22,7 @@ namespace JeepneyRush
             if (!Services.Pools.Has(PoolKey)) Services.Pools.Register(PoolKey, Coin.Create, 60);
             if (!Services.Pools.Has(GemPool)) Services.Pools.Register(GemPool, Gem.Create, 2);
             if (!Services.Pools.Has(ParolPool)) Services.Pools.Register(ParolPool, Gem.CreateParol, 2);
+            if (!Services.Pools.Has(PostcardPool)) Services.Pools.Register(PostcardPool, Gem.CreatePostcard, 1);
         }
 
         public void SpawnFormation(CoinFormation f, int lane, int lane2, float unityZ, int count, float spacing)
@@ -63,6 +64,16 @@ namespace JeepneyRush
         public void SpawnParol(int lane, float unityZ)
         {
             var g = Services.Pools.Get(ParolPool, transform).GetComponent<Gem>();
+            g.Collected = false;
+            g.transform.localPosition = new Vector3(_cfg.LaneX(lane), 1.5f, unityZ);
+            g.Visual.localScale = Vector3.one;
+            _gems.Add(g);
+        }
+
+        /// <summary>A sticker-album postcard, floating like a gem.</summary>
+        public void SpawnPostcard(int lane, float unityZ)
+        {
+            var g = Services.Pools.Get(PostcardPool, transform).GetComponent<Gem>();
             g.Collected = false;
             g.transform.localPosition = new Vector3(_cfg.LaneX(lane), 1.5f, unityZ);
             g.Visual.localScale = Vector3.one;

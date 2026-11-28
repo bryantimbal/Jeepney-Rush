@@ -331,6 +331,9 @@ namespace JeepneyRush
                     // Christmas event: the server counts the run's parols / Simbang Gabi night (once per run)
                     if ((res.accepted || res.duplicate) && (r.parols > 0 || r.carolers > 0 || r.mode == "night"))
                         yield return _client.Rpc("jr_event_claim_run", "{\"p_run_id\":" + Json.Str(r.run_id) + "}", (j, e) => { if (e != null) Debug.LogWarning("[Online] event credit: " + e); else EventChanged?.Invoke(); });
+                    // sticker album: the server checks the postcard belongs to this run's route
+                    if ((res.accepted || res.duplicate) && r.postcard >= 0)
+                        yield return _client.Rpc("jr_album_claim_run", "{\"p_run_id\":" + Json.Str(r.run_id) + "}", (j, e) => { if (e != null) Debug.LogWarning("[Online] album: " + e); else AlbumProgress.Invalidate(); });
                 }
             }
             _flushing = false;
@@ -441,6 +444,10 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== sticker album
+        public void AlbumStatus(Action<AlbumInfo, string> done) => StartCoroutine(Get("jr_album_status", "{}", done));
+        public void AlbumClaimSet(int set, Action<bool, string, int> done) => Op("jr_album_claim_set", "{\"p_set\":" + set + "}", done);
 
         // ================================================================== Pasada Pass
         public void PassStatus(Action<PassInfo, string> done) => StartCoroutine(Get("jr_pass_status", "{}", done));

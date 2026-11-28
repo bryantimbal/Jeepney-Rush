@@ -124,6 +124,19 @@ namespace JeepneyRush.Logic.Geometry
         }
 
         /// <summary>Road gem: a faceted violet diamond with a bright core, spinning over the lane (~0.9 m tall).</summary>
+        /// <summary>Sticker-album postcard pickup: a big glowing postcard with a stamp and a heart.</summary>
+        public static MeshData Postcard()
+        {
+            var b = new MeshBuilder();
+            b.Box("glow", "#FFF8E1", 1.0f, 0.68f, 0.04f, 0, 0, 0);
+            b.Box("glow", "#1F3FBF", 0.94f, 0.08f, 0.05f, 0, 0.26f, 0);
+            b.Box("glow", "#C8102E", 0.2f, 0.24f, 0.06f, 0.33f, 0.12f, 0);   // stamp
+            b.Box("glow", "#FCD116", 0.14f, 0.16f, 0.065f, 0.33f, 0.12f, 0);
+            for (int i = 0; i < 3; i++) b.Box("paint", "#9AA3B2", 0.5f, 0.025f, 0.05f, -0.15f, -0.05f - i * 0.1f, 0); // lines
+            b.Sphere("bubble", "#BDE0FE", 0.75f, 0, 0, 0, 10);
+            return b.Data;
+        }
+
         /// <summary>Parol token (Christmas event): a glowing five-point lantern star with tassels.</summary>
         public static MeshData ParolToken()
         {
