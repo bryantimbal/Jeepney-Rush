@@ -382,6 +382,7 @@ namespace JeepneyRush
                 case "streak_cant_save": return "This streak can't be saved any more.";
                 case "not_enough_gems": return "Kulang ang gems.";
                 case "no_event": return "The Christmas event is over.";
+                case "no_reward": return "No league reward to claim.";
                 case "tokens": return "Kulang pa ang parols.";
                 case "nights": return "Complete all 9 Simbang Gabi nights first.";
                 default: return reason;
@@ -434,6 +435,10 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== weekly leagues
+        public void LeagueStatus(Action<LeagueInfo, string> done) => StartCoroutine(Get("jr_league_status", "{}", done));
+        public void LeagueClaim(Action<bool, string, int> done) => Op("jr_league_claim", "{}", done);
 
         // ================================================================== Christmas event
         public event Action EventChanged;

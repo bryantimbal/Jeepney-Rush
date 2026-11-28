@@ -405,7 +405,16 @@ namespace JeepneyRush
             card.Add(classes);
             _rankInfo = Note("", 28);
             card.Add(_rankInfo);
-            card.Add(UiKit.Button("BARANGAY VS BARANGAY", () => { CloseModal(); OpenBarangay(); }, UiKit.Hex("#2E7D32"), Color.white, 34, 96));
+            var social = UiKit.Box();
+            social.style.flexDirection = FlexDirection.Row;
+            var leagueBtn = UiKit.Button("WEEKLY LEAGUE", () => { CloseModal(); OpenLeague(); }, UiKit.Hex("#E0B23A"), UiKit.Ink, 30, 96);
+            var brgyBtn = UiKit.Button("BARANGAY", () => { CloseModal(); OpenBarangay(); }, UiKit.Hex("#2E7D32"), Color.white, 30, 96);
+            leagueBtn.style.flexGrow = brgyBtn.style.flexGrow = 1;
+            leagueBtn.style.flexBasis = brgyBtn.style.flexBasis = 0;
+            leagueBtn.style.marginRight = 8;
+            social.Add(leagueBtn);
+            social.Add(brgyBtn);
+            card.Add(social);
             var scroll = UiKit.Scroll(800);
             scroll.style.height = 800;
             _rankList = UiKit.Stack();

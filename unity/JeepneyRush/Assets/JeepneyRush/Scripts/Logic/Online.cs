@@ -415,6 +415,31 @@ namespace JeepneyRush.Logic
         public ServerSnapshot snapshot;
     }
 
+    [Serializable]
+    public class LeagueRow
+    {
+        public int rank, level, score;
+        public string display_name;
+        public bool is_me;
+    }
+
+    [Serializable]
+    public class LeagueLast
+    {
+        public int week, tier, result_tier, rank, reward;
+        public bool claimed;
+    }
+
+    /// <summary>Weekly league from the server (jr_league_status).</summary>
+    [Serializable]
+    public class LeagueInfo
+    {
+        public bool joined;
+        public int week, tier, days_left, rank, players;
+        public LeagueRow[] rows = new LeagueRow[0];
+        public LeagueLast last;
+    }
+
     /// <summary>Christmas event progress from the server (jr_event_status).</summary>
     [Serializable]
     public class EventInfo
