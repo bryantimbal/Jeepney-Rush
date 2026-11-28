@@ -375,6 +375,9 @@ namespace JeepneyRush
                 case "wrong_account": return "This purchase was made for another account.";
                 case "already_today": return "Daily bonus already claimed today.";
                 case "run_not_found": return "That run can't be doubled any more.";
+                case "streak_not_claimed": return "Claim today's reward first (or it was already doubled).";
+                case "streak_cant_save": return "This streak can't be saved any more.";
+                case "not_enough_gems": return "Kulang ang gems.";
                 default: return reason;
             }
         }
@@ -425,6 +428,20 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== login streak
+        public void StreakStatus(Action<StreakInfo, string> done) => StartCoroutine(Get("jr_streak_status", "{}", done));
+        public void StreakClaim(Action<StreakClaimResult, string> done) => StartCoroutine(StreakClaimRoutine(done));
+
+        private IEnumerator StreakClaimRoutine(Action<StreakClaimResult, string> done)
+        {
+            StreakClaimResult r = null; string err = null;
+            yield return Get<StreakClaimResult>("jr_streak_claim", "{}", (x, e) => { r = x; err = e; });
+            if (r?.snapshot != null) Apply(r.snapshot);
+            done?.Invoke(r, err ?? (r != null && !r.ok ? ReasonText(r.reason) : null));
+        }
+
+        public void StreakSaveWithGems(Action<bool, string> done) => Op("jr_streak_save_gems", "{}", (ok, m, _) => done?.Invoke(ok, m));
 
         // ================================================================== Barangay vs Barangay
         public void BarangayMine(Action<BarangayMine, string> done) => StartCoroutine(Get("jr_barangay_mine", "{}", done));

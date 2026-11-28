@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildStreak, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy, _streak })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -476,6 +476,7 @@ namespace JeepneyRush
             // a required update stays in the way until the player updates
             var up = Services.Updates;
             if (up != null && up.Need == Logic.UpdateNeed.Required && up.Server != null) ShowUpdate(up.Need, up.Server);
+            else MaybeShowStreak(); // daily login reward (once a day)
         }
 
         private void RefreshMenuTop()

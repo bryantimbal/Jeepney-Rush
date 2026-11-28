@@ -54,6 +54,8 @@ Deno.test("SSV: DER -> raw conversion handles short and padded integers", () => 
 Deno.test("SSV: custom data", () => {
   assertEquals(parseCustomData("doublecoins:abc:n1"), { kind: "doublecoins", ref: "abc", nonce: "n1" });
   assertEquals(parseCustomData("dailybonus::n2"), { kind: "dailybonus", ref: null, nonce: "n2" });
+  assertEquals(parseCustomData("streakdouble::n3"), { kind: "streakdouble", ref: null, nonce: "n3" });
+  assertEquals(parseCustomData("streaksave::n4"), { kind: "streaksave", ref: null, nonce: "n4" });
   assertEquals(parseCustomData("dailybonus"), { kind: "dailybonus", ref: null, nonce: null });
   assertEquals(parseCustomData("hack:1"), null);
   assertEquals(parseCustomData(null), null);

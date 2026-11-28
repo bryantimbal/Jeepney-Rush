@@ -71,7 +71,7 @@ export function parseCustomData(s: string | null): { kind: string; ref: string |
   if (!s) return null;
   const parts = s.split(":");
   const kind = parts[0].toLowerCase();
-  if (!["revive", "doublecoins", "dailybonus", "trial"].includes(kind)) return null;
+  if (!["revive", "doublecoins", "dailybonus", "trial", "streakdouble", "streaksave"].includes(kind)) return null;
   const ref = parts[1] ?? "", nonce = parts[2] ?? "";
   return { kind, ref: ref === "" ? null : ref, nonce: nonce === "" ? null : nonce };
 }

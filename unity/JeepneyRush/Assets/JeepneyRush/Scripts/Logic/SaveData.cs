@@ -121,6 +121,8 @@ namespace JeepneyRush.Logic
         public bool adFree;
         public List<string> ownedProducts = new List<string>();
         public AdState ads = new AdState();
+        // ---- login streak (offline; online the server keeps it): day numbers since 1 Jan 2024 PH
+        public int streakLast = -1, streakCount, streakSaveWeek, streakDoubled = -1;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
         public int[] careerMasks = new int[0];

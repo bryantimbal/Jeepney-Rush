@@ -42,7 +42,7 @@ namespace JeepneyRush.Logic
         public static ProductDef Get(string id) => Array.Find(All, p => p.Id == id);
     }
 
-    public enum RewardedKind { Revive, DoubleCoins, DailyBonus, Trial }
+    public enum RewardedKind { Revive, DoubleCoins, DailyBonus, Trial, StreakDouble, StreakSave }
 
     /// <summary>Per-player ad bookkeeping (saved locally; rewards themselves are granted by the server).</summary>
     [Serializable]

@@ -413,6 +413,23 @@ namespace JeepneyRush.Logic
         public ServerSnapshot snapshot;
     }
 
+    /// <summary>Login streak status from the server (jr_streak_status).</summary>
+    [Serializable]
+    public class StreakInfo
+    {
+        public bool claimed, doubled, can_save, broken;
+        public int day, streak, save_gems = 10;
+    }
+
+    [Serializable]
+    public class StreakClaimResult
+    {
+        public bool ok;
+        public string reason;
+        public int day, streak, reward, gems;
+        public ServerSnapshot snapshot;
+    }
+
     [Serializable]
     public class DailyInfo
     {
