@@ -9,7 +9,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>9.0</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <DefineConstants>UNITY_2021_3_OR_NEWER;UNITY_ANDROID;JR_ADMOB;JR_UNITY_IAP</DefineConstants>
+    <DefineConstants>UNITY_2021_3_OR_NEWER;UNITY_ANDROID;JR_ADMOB;JR_UNITY_IAP;JR_NOTIFICATIONS</DefineConstants>
     <NoWarn>CS1701;CS1702;CS0618;CS0067</NoWarn>
     <Nullable>disable</Nullable>
   </PropertyGroup>

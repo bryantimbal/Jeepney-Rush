@@ -478,6 +478,7 @@ namespace JeepneyRush
             var up = Services.Updates;
             if (up != null && up.Need == Logic.UpdateNeed.Required && up.Server != null) ShowUpdate(up.Need, up.Server);
             else MaybeShowStreak(); // daily login reward (once a day)
+            if (Services.Save.Data.runs > 0) NotificationService.AskPermissionOnce(); // after the first run, not on the very first screen
         }
 
         private void RefreshMenuTop()
@@ -634,6 +635,7 @@ namespace JeepneyRush
             card.Add(Toggle("Sound effects", () => d().sfx, v => { d().sfx = v; Services.Audio.ApplySettings(); }));
             card.Add(Toggle("Patok sound trip", () => d().soundTrip, v => d().soundTrip = v));
             card.Add(Toggle("Vibration", () => d().vibration, v => { d().vibration = v; if (v) Haptics.Pulse(80); })); // a test buzz when switched on
+            card.Add(Toggle("Reminders", () => !d().notificationsOff, v => d().notificationsOff = !v));
             card.Add(Segmented("Screen", new[] { "Portrait", "Landscape", "Auto-rotate" }, () => d().orientation, i =>
             {
                 d().orientation = i;

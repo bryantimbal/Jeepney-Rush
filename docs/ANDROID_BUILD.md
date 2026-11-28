@@ -52,3 +52,14 @@ Take phone screenshots on a device, or use `SHOTS=1 npm run test:e2e` for 405×7
 captures as a starting point. Play needs at least 2 screenshots, 320–3840 px.
 The full release checklist (privacy policy, data safety form, content rating,
 testing tracks) is part of Phase 5 in `docs/ROADMAP.md`.
+
+## Reminders (local notifications)
+The game can remind players: tomorrow's Daily Challenge (9 AM), a login streak at risk (7 PM, only if
+today's reward is unclaimed), a full Operator fleet, Simbang Gabi nights (16–24 Dec) and the barangay's last
+day of the week (Sunday). At most one per hour, all cancelled as soon as the game is opened again.
+Players can turn them off in Settings ▸ Reminders. To switch them on in a build:
+1. **Window ▸ Package Manager ▸ Unity Registry ▸ Mobile Notifications** (`com.unity.mobile.notifications`, 2.x) ▸ Install.
+2. **Player ▸ Android ▸ Scripting Define Symbols**: add `JR_NOTIFICATIONS` (next to `JR_ADMOB;JR_UNITY_IAP`).
+3. Build. On Android 13+ the game asks for the notification permission once, after the player's first run.
+Without the package and the define the reminders are simply off (nothing else changes).
+"Your barangay was overtaken" needs a real server push (Firebase Cloud Messaging); it is not included.

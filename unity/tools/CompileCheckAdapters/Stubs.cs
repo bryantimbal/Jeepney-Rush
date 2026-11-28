@@ -85,3 +85,20 @@ namespace UnityEngine.Purchasing
     }
     public static class UnityIAPServices { public static StoreController StoreController() => new StoreController(); }
 }
+
+namespace Unity.Notifications.Android
+{
+    // Mobile Notifications 2.x (stand-ins for the compile check)
+    public enum Importance { None, Low, Default, High }
+    public struct AndroidNotificationChannel { public AndroidNotificationChannel(string id, string name, string description, Importance importance) { } }
+    public struct AndroidNotification { public AndroidNotification(string title, string text, System.DateTime fireTime) { } }
+    public static class AndroidNotificationCenter
+    {
+        public static bool Initialize() => true;
+        public static void RegisterNotificationChannel(AndroidNotificationChannel c) { }
+        public static void SendNotificationWithExplicitID(AndroidNotification n, string channelId, int id) { }
+        public static void CancelAllScheduledNotifications() { }
+        public static void CancelAllDisplayedNotifications() { }
+    }
+    public class PermissionRequest { }
+}

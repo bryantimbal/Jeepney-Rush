@@ -50,8 +50,12 @@ namespace JeepneyRush
         private void GetStreak(Action<StreakStatus?> done)
         {
             if (StreakOnline)
-                Services.Online.StreakStatus((i, e) => done(i == null ? (StreakStatus?)null : new StreakStatus
-                    { Claimed = i.claimed, Day = i.day, Streak = i.streak, CanSave = i.can_save, Broken = i.broken, Doubled = i.doubled }));
+                Services.Online.StreakStatus((i, e) =>
+                {
+                    if (i != null) { NotificationService.StreakClaimedToday = i.claimed; NotificationService.Streak = i.streak; } // for the evening reminder
+                    done(i == null ? (StreakStatus?)null : new StreakStatus
+                        { Claimed = i.claimed, Day = i.day, Streak = i.streak, CanSave = i.can_save, Broken = i.broken, Doubled = i.doubled });
+                });
             else
             {
                 var d = Services.Save.Data;

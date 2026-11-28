@@ -64,6 +64,7 @@ namespace JeepneyRush
         {
             _brgyBody.Clear();
             if (m == null) { _brgyBody.Add(Note(err ?? "Could not load. (Is the barangay server update applied?)", 34, UiKit.Red)); return; }
+            NotificationService.InBarangay = m.found;
             if (!m.found) { ShowBarangayJoin(m); return; }
 
             var head = UiKit.Box();

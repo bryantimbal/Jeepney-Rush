@@ -59,6 +59,7 @@ namespace JeepneyRush
             Services.Updates = _systems.AddComponent<UpdateChecker>();
             Services.UI = _systems.AddComponent<UIManager>();
             _systems.AddComponent<Haptics>();
+            _systems.AddComponent<NotificationService>();
             _systems.AddComponent<Screenshots>();
             _systems.AddComponent<BackButtonListener>();
             GraphicsQuality.Apply(Services.Save.Data.graphicsQuality);

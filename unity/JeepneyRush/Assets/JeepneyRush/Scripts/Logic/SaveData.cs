@@ -136,6 +136,8 @@ namespace JeepneyRush.Logic
         // ---- driver look (worn items; owned ones are in ownedCosmetics) and the konduktor
         public string driverShirt = "", driverHat = "", driverExtra = "";
         public bool konduktorOff;
+        /// <summary>Local reminders switched off (Settings) / permission already asked.</summary>
+        public bool notificationsOff, notificationsAsked;
         // ---- sticker album (offline; online the server keeps it)
         public List<int> albumCards = new List<int>();
         public List<int> albumSets = new List<int>();

@@ -43,6 +43,10 @@ namespace JeepneyRush
             }
             int total = 0;
             foreach (var s in f.fleet) total += s.pending;
+            // reminder when the boundary is full: the earliest slot reaches the cap
+            float least = float.MaxValue;
+            foreach (var s in f.fleet) least = Mathf.Min(least, s.hours);
+            NotificationService.FleetFullAtUtc = f.fleet.Length > 0 ? System.DateTime.UtcNow.AddHours(-least) : (System.DateTime?)null;
             _fleetBody.Add(Note($"Your drivers earn boundary while you're away (up to {Operator.CapHours} hours, then they wait for you). Better jeepneys earn more.", 26));
             var collect = UiKit.Button(total > 0 ? $"COLLECT BOUNDARY · +{total:N0}" : "NO BOUNDARY YET", () => FleetProgress.Collect((ok, msg, coins) =>
             {
