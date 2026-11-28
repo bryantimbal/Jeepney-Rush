@@ -405,6 +405,8 @@ namespace JeepneyRush
             _eventOn = EventProgress.Active;
             _director.ParolBudget = _eventOn ? ChristmasEvent.MaxParolsPerRun : 0;
             _runParols = _runCarolers = 0;
+            _contract.Reset(); _stopsServed = 0; _contractHudT = 0; _contractFailShown = false;
+            Services.UI.SetContract("");
             _decor.Begin(_eventOn);
             if (_eventOn && Mode == GameMode.NightShift && EventProgress.Night > 0)
                 Services.UI.Float($"SIMBANG GABI · GABI {EventProgress.Night} · {ChristmasEvent.SimbangGabiDistance / 1000f:0.#} KM", UIManager.FloatKind.Big);
@@ -812,6 +814,7 @@ namespace JeepneyRush
             _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier * GameModes.FareFactor(Mode) // good drivers get better tips; night fares pay more
                 * JeepneyPerks.FareFactor(JeepneyCatalog.Get(RunJeepney), _passengers.Route.Night); // Night Owl: +10 % after dark
             if (!_dying) UpdateRiders(dt);
+            if (!_dying) UpdateContract(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
             else _police.Tick(dt, _player.Lanes.X);
             _coins.MagnetRadius = pu.IsActive(PowerUpKind.Magnet) ? _cfg.magnetRadius : 0f;
@@ -990,6 +993,7 @@ namespace JeepneyRush
                 return;
             }
             // too fast: everyone bounces off their seat
+            if (isHump) _contract.OnRoughHump(); // ...and the lechon
             float hard = isHump ? 0.4f : 0.3f;
             _player.Bump(hard);
             _camera.AddShake(isHump ? 0.4f : 0.3f);
@@ -1152,6 +1156,7 @@ namespace JeepneyRush
             bool sideSwipe = _player.Lanes.Changing && Mathf.Abs(z) < h.Def.HalfLength + _cfg.playerHalfLength - 1.4f;
             if (!c.TryDamage()) return;
             _hits++;
+            _contract.OnCrash();
             if (_arcade.Chain >= 3) Services.UI.Float("COMBO BROKEN", UIManager.FloatKind.Bad);
             _arcade.Break();
             _cleanDistance = 0;
@@ -1277,6 +1282,62 @@ namespace JeepneyRush
             if (NextStationAhead(out float stz) && stz >= 0) best = Mathf.Min(best, stz);
             foreach (var x in _crossings.Items) { float z = x.transform.localPosition.z; if (z > 0) best = Mathf.Min(best, z); }
             return best;
+        }
+
+        // ---- special passengers (contracts)
+        private readonly ContractRun _contract = new ContractRun();
+        private int _stopsServed;
+        private float _contractHudT;
+        private bool _contractFailShown;
+
+        private void ServeContract(PickupResult r)
+        {
+            if (r.Alighted <= 0 && r.Boarded <= 0) return;
+            _stopsServed++;
+            int outcome = _contract.OnStopServed(_score.Distance, _runTime, out var done);
+            if (outcome > 0)
+            {
+                int coins = ContractRun.Reward(done);
+                _score.AddCoins(coins);
+                _score.AddScore(ContractRun.ScoreBonus);
+                Services.UI.Float($"CONTRACT DONE! +{coins} · +{ContractRun.ScoreBonus}", UIManager.FloatKind.Big);
+                Services.UI.Say(done == ContractKind.Hospital ? "SALAMAT KUYA! NINONG KA NA NI BABY!" : done == ContractKind.Pakyaw ? "SULIT ANG PAKYAW! SALAMAT KUYA!"
+                    : done == ContractKind.Lechon ? "BUO PA ANG LECHON! ANG GALING MO, KUYA!" : "SAKTO SA ORAS! ABAY KA NA SA SUSUNOD, KUYA!", _passengers.RiderHead(), false, 2.6f);
+                Services.Audio.Play(Logic.Audio.Sfx.CoinRush);
+                _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 40);
+                Rate(RatingEvent.Smooth);
+            }
+            else if (outcome < 0)
+            {
+                if (!_contractFailShown) Services.UI.Float("CONTRACT FAILED · " + (_contract.FailReason ?? ""), UIManager.FloatKind.Bad);
+            }
+            if (!_contract.Active && r.Boarded > 0)
+            {
+                var k = _contract.Roll(_rng, _stopsServed, DayNight.IsNightFor(ClockAt(_runTime)));
+                if (k != ContractKind.None)
+                {
+                    _contract.Start(k, _score.Distance, _runTime);
+                    _contractFailShown = false;
+                    Services.UI.Say(Lines.Pick(ContractRun.OfferLines[(int)k], _rng), _passengers.RiderHead(), true, 3f);
+                    Services.UI.Float("SPECIAL: " + ContractRun.Title(k), UIManager.FloatKind.Info);
+                }
+            }
+            Services.UI.SetContract(_contract.Hud(_score.Distance, _runTime));
+        }
+
+        private void UpdateContract(float dt)
+        {
+            if (!_contract.Active) return;
+            _contract.Tick(_runTime);
+            if (_contract.Failed && !_contractFailShown)
+            {
+                _contractFailShown = true;
+                Services.UI.Float("CONTRACT FAILED · " + _contract.FailReason, UIManager.FloatKind.Bad);
+                Services.Audio.Play(Logic.Audio.Sfx.Complain, 0.8f);
+            }
+            if ((_contractHudT -= dt) > 0) return;
+            _contractHudT = 0.25f;
+            Services.UI.SetContract(_contract.Hud(_score.Distance, _runTime));
         }
 
         private FestiveDecor _decor;
@@ -1551,6 +1612,7 @@ namespace JeepneyRush
                 if (calmed) Services.UI.Float("KUMALMA NA ANG MGA PASAHERO", UIManager.FloatKind.Good);
             }
             _score.AddPickup(r);
+            ServeContract(r);
             if (r.Alighted > 0)
             {
                 Services.UI.Say(Lines.Pick(Lines.Alight, _rng), () => _player.transform.position + new Vector3(0, 2.4f, -3.4f));

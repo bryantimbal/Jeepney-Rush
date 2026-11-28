@@ -535,6 +535,16 @@ namespace JeepneyRush
             if (count > 0 && !was) UiKit.PopIn(_boostBtn, 320);
         }
 
+        /// <summary>Special passenger (contract) line under the score: destination, time, condition.</summary>
+        public void SetContract(string text)
+        {
+            if (_contractLabel == null) return;
+            _contractLabel.text = text ?? "";
+            _contractLabel.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        private Label _contractLabel;
+
         public void SetJam(string text)
         {
             if (_jamLabel == null) return;

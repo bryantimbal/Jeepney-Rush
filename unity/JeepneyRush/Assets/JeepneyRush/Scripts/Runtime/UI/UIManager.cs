@@ -766,6 +766,12 @@ namespace JeepneyRush
             _jamLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
             _jamLabel.style.marginTop = 2;
             scoreCol.Add(_jamLabel);
+            _contractLabel = UiKit.Text("", 28, new Color(1f, 0.85f, 0.3f), true, 2f);
+            _contractLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _contractLabel.style.whiteSpace = WhiteSpace.Normal;
+            _contractLabel.style.maxWidth = 620;
+            _contractLabel.style.display = DisplayStyle.None;
+            scoreCol.Add(_contractLabel);
             BuildCareerHud(scoreCol);
             BuildRidersHud(scoreCol);
             top.Add(scoreCol);
