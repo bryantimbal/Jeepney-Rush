@@ -176,6 +176,15 @@ namespace JeepneyRush
             var why = UiKit.Text("Ranked only against " + JeepneyClasses.Name(cls).ToLowerInvariant() + " jeepneys", 24, UiKit.Grey, false);
             why.style.unityTextAlign = TextAnchor.MiddleLeft;
             _garageStats.Add(why);
+            string perk = JeepneyPerks.Text(j);
+            if (perk != null)
+            {
+                var p = UiKit.Text("PERK · " + perk, 26, UiKit.Hex("#1E7B45"), false);
+                p.style.unityTextAlign = TextAnchor.MiddleLeft;
+                p.style.whiteSpace = WhiteSpace.Normal;
+                p.style.marginTop = 6;
+                _garageStats.Add(p);
+            }
             bool owned = d.Owns(j.Id), selected = d.selectedJeepney == j.Id;
             _garageStatus.text = selected ? "DRIVING THIS ONE" : owned ? "OWNED" : $"PRICE: {j.Price:N0} COINS";
             _garageStatus.style.color = selected || owned ? UiKit.Green : UiKit.Ink;

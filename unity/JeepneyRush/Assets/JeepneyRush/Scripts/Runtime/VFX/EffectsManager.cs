@@ -11,6 +11,8 @@ namespace JeepneyRush
     {
         private ParticleSystem _sparks, _smoke, _sparkle, _confetti, _dust, _exhaust, _diesel, _speedLines, _splash;
         private float _exhaustTimer;
+        /// <summary>Exhaust amount for the current jeepney (1 = old diesel, 0.3 = modern, 0 = electric).</summary>
+        public float SmokeFactor = 1f;
 
         public void Build()
         {
@@ -148,7 +150,9 @@ namespace JeepneyRush
         public void Tick(float dt, Vector3 playerPos, float worldSpeed, float speed01, bool gas = false, float wetness = 0f)
         {
             _exhaustTimer -= dt;
-            if (_exhaustTimer <= 0)
+            if (_exhaustTimer <= 0 && SmokeFactor <= 0f) _exhaustTimer = 1f; // electric: no exhaust at all
+            else if (_exhaustTimer <= 0 && Random.value > SmokeFactor) _exhaustTimer = gas ? 0.035f : 0.12f; // modern engine: most puffs skipped
+            else if (_exhaustTimer <= 0)
             {
                 if (gas)
                 {

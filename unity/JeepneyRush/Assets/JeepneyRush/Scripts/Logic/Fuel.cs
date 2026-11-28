@@ -59,11 +59,11 @@ namespace JeepneyRush.Logic
         /// below <see cref="BalanceConfig.fuelCreditFraction"/>, the attendant tops it up to
         /// that level on credit so a broke driver is never stranded right after a station.
         /// </summary>
-        public static RefuelQuote Quote(float fuel, float capacity, int coins, BalanceConfig cfg)
+        public static RefuelQuote Quote(float fuel, float capacity, int coins, BalanceConfig cfg, float priceFactor = 1f)
         {
             var q = new RefuelQuote();
             float need = Math.Max(0, capacity - fuel);
-            float price = Math.Max(0.0001f, cfg.fuelPricePerLitre);
+            float price = Math.Max(0.0001f, cfg.fuelPricePerLitre * Math.Max(0.05f, priceFactor)); // electric jeepneys pay half
             q.Paid = Math.Min(need, Math.Max(0, coins) / price);
             q.Cost = Math.Min(Math.Max(0, coins), (int)Math.Ceiling(q.Paid * price - 1e-4));
             float floor = capacity * cfg.fuelCreditFraction;

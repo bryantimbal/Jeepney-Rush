@@ -378,6 +378,13 @@ const textures = await page.evaluate(() => {
       { id: 'cogeo', body: '#0E0E12', a1: '#FF2E4D', a2: '#FFC300', motif: 'patok', slogan: 'Sound Trip!', route: 'COGEO - CUBAO', rear: 'PATOK PA RIN, INGAT LANG!', plate: 'PTK 143', sign: 'COGEO', signBg: '#0A0A0A', signFg: '#FF2E4D', led: true },
       { id: 'antipolo', body: '#EEF1F6', a1: '#7B2FF7', a2: '#00E5FF', motif: 'patok', slogan: 'Byaheng Langit', route: 'ANTIPOLO - CUBAO', rear: 'SAKAY NA, SOUNDTRIP NA!', plate: 'ANT 1591', sign: 'ANTIPOLO', signBg: '#0A0A0A', signFg: '#00E5FF', led: true },
       { id: 'gold', body: '#1A1A1A', a1: '#FFD700', a2: '#FFF3B0', motif: 'gold', slogan: 'VIP', route: 'VIP EXPRESS', rear: 'VERY IMPORTANT PASAHERO', plate: 'VIP 1', sign: 'VIP', signBg: '#1A1A1A', signFg: '#FFD700' },
+      // new-generation modern PUVs (Aircon PUJ, E-Jeepney, Minibus, Retro-Modern Sarao, Airport Express, Night Owl)
+      { id: 'aircon', body: '#F8F9FA', a1: '#1F3FBF', a2: '#00A6E0', motif: 'stripes', slogan: 'Transport Coop', route: 'CUBAO - FAIRVIEW', rear: 'AIRCON - CLOSE THE DOOR', plate: 'MPUJ 22', sign: 'CUBAO - FAIRVIEW', signBg: '#0A0A0A', signFg: '#FFB000', led: true },
+      { id: 'ejeep', body: '#F1F8E9', a1: '#7CC142', a2: '#1B5E20', motif: 'eco', slogan: '100% Electric', route: 'MAKATI LOOP', rear: 'ZERO EMISSION', plate: 'EJP 100', sign: 'MAKATI LOOP', signBg: '#0A0A0A', signFg: '#9CFF57', led: true },
+      { id: 'minibus', body: '#FFFFFF', a1: '#E63946', a2: '#F4A261', motif: 'stripes', slogan: 'PITX Express', route: 'QUIAPO - PITX', rear: 'STANDING ROOM ONLY', plate: 'PUV 4040', sign: 'QUIAPO - PITX', signBg: '#0A0A0A', signFg: '#FFB000', led: true },
+      { id: 'sarao', body: '#C8102E', a1: '#1F3FBF', a2: '#FCD116', motif: 'heritage', slogan: 'Hari ng Kalsada', route: 'BACLARAN - DIVISORIA', rear: 'TRADISYON AT MODERNO', plate: 'SAR 1953', sign: 'BACLARAN', signBg: '#FFFFFF', signFg: '#C8102E' },
+      { id: 'airport', body: '#FFFFFF', a1: '#F77F00', a2: '#D62828', motif: 'speed', slogan: 'NAIA Express', route: 'NAIA LOOP', rear: 'WELCOME HOME, KABAYAN!', plate: 'NAIA 3', sign: 'NAIA LOOP', signBg: '#0A0A0A', signFg: '#FFB000', led: true },
+      { id: 'nightowl', body: '#22223B', a1: '#00F5D4', a2: '#F15BB5', motif: 'neon', slogan: 'Night Owl', route: '24/7 PASADA', rear: 'GISING PA KAMI', plate: 'OWL 247', sign: '24/7 PASADA', signBg: '#0A0A0A', signFg: '#00F5D4', led: true },
     ];
     const goldGrad = (x, y0, y1) => { const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#FFF3B0'); g.addColorStop(0.5, '#FFD700'); g.addColorStop(1, '#B8860B'); return g; };
     for (const j of L) {
@@ -431,6 +438,29 @@ const textures = await page.evaluate(() => {
           x.shadowColor = j.a2; x.shadowBlur = 16; x.strokeStyle = j.a2; x.lineWidth = 5; x.beginPath(); x.moveTo(0, 18); x.lineTo(1024, 18); x.stroke(); x.shadowBlur = 0;
           break;
         }
+        case 'stripes':
+          // modern cooperative livery: two clean bands with a swoosh
+          x.fillStyle = j.a1; x.beginPath(); x.moveTo(0, 196); x.bezierCurveTo(340, 176, 680, 214, 1024, 190); x.lineTo(1024, 222); x.bezierCurveTo(680, 246, 340, 208, 0, 228); x.fill();
+          x.fillStyle = j.a2; x.fillRect(0, 234, 1024, 10);
+          break;
+        case 'eco': {
+          x.fillStyle = j.a1; x.beginPath(); x.moveTo(0, 186); x.bezierCurveTo(300, 150, 700, 226, 1024, 180); x.lineTo(1024, 220); x.bezierCurveTo(700, 256, 300, 196, 0, 226); x.fill();
+          x.fillStyle = j.a2; x.fillRect(0, 236, 1024, 8);
+          const leaf = (lx, ly, sc) => { x.save(); x.translate(lx, ly); x.scale(sc, sc); x.fillStyle = j.a1; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(40, -50, 90, -30); x.quadraticCurveTo(60, 20, 0, 0); x.fill(); x.strokeStyle = j.a2; x.lineWidth = 3; x.beginPath(); x.moveTo(0, 0); x.lineTo(70, -26); x.stroke(); x.restore(); };
+          leaf(120, 120, 1.2); leaf(880, 120, 1.2);
+          break;
+        }
+        case 'heritage': {
+          // modern body, classic soul: hand-painted art panel with the sun and stars and silver horses
+          x.fillStyle = j.a1; x.beginPath(); x.roundRect(30, 120, 964, 92, 14); x.fill();
+          for (let k = 0; k < 9; k++) { const cx = 80 + k * 108; sun(x, cx, 166, 16, k % 2 ? '#FFFFFF' : j.a2); }
+          for (const cx of [60, 964]) star(x, cx, 52, 20, j.a2);
+          x.fillStyle = j.a2; x.fillRect(0, 226, 1024, 10);
+          break;
+        }
+        case 'speed':
+          for (const [col, y, h] of [[j.a1, 150, 26], ['#FCBF49', 184, 14], [j.a2, 204, 10]]) { x.fillStyle = col; x.beginPath(); x.moveTo(0, y + 60); x.lineTo(1024, y - 30); x.lineTo(1024, y - 30 + h); x.lineTo(0, y + 60 + h); x.fill(); }
+          break;
         case 'gold':
           x.strokeStyle = goldGrad(x, 0, 256); x.lineWidth = 4;
           for (let k = 0; k < 6; k++) { x.beginPath(); for (let px = 0; px <= 1024; px += 12) x.lineTo(px, 30 + k * 40 + Math.sin(px / 40 + k) * 8); x.stroke(); }

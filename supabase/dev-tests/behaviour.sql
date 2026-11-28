@@ -52,7 +52,7 @@ set role anon;
 do $$ begin
   begin perform public.jr_get_state(); assert false, 'anon must not call RPCs';
   exception when insufficient_privilege then null; end;
-  assert (select count(*) from jr_catalog_jeepneys) = 13, 'catalog is public';
+  assert (select count(*) from jr_catalog_jeepneys) = 19, 'catalog is public';
   raise notice 'ok  anon: catalog readable, RPCs denied';
 end $$;
 reset role;

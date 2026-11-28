@@ -214,6 +214,9 @@ namespace JeepneyRush
 
         // ------------------------------------------------------------------ engine
         /// <summary>Starts the live jeepney engine (diesel synth, or your recording if provided).</summary>
+        /// <summary>Engine loudness for the current jeepney (1 = old diesel; modern PUVs are quieter, electric nearly silent).</summary>
+        public void SetEngineLoudness(float factor) { if (_engineAudio != null) _engineAudio.Volume = 0.9f * Mathf.Clamp01(factor); }
+
         public void StartEngine() { if (_engineAudio != null && !_engineAudio.Running) _engineAudio.Run(true); }
 
         public void StopEngine() { if (_engineAudio != null) _engineAudio.Run(false); }

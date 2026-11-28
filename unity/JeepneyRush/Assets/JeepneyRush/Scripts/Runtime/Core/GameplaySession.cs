@@ -366,6 +366,13 @@ namespace JeepneyRush
             // own seeded streams (see the spawner below); personalities have their own so stop names stay the same per seed
             var route = new PassengerRoute(_cfg, new GameRandom(_seed ^ 0x51F0), StopNames.ForEnvironment(_env), new GameRandom(_seed ^ 0x2A11E5));
             route.Env = _env;
+            // jeepney perks (the new modern PUVs) and a cleaner, quieter modern engine
+            var livery = JeepneyCatalog.Get(RunJeepney);
+            route.TipMultiplier = JeepneyPerks.TipMultiplier(livery);
+            route.BalikbayanBoost = JeepneyPerks.BalikbayanBoost(livery);
+            _passengers.BarkerBonus = JeepneyPerks.BarkerBonus(livery);
+            _fx.SmokeFactor = JeepneyPerks.Smoke(livery);
+            Services.Audio.SetEngineLoudness(JeepneyPerks.EngineVolume(livery));
             _dodgerT = 0; _dodgerFare = _dodgerCount = 0; _riderTalkT = 8f; _ridersHudT = 0;
             route.AllowSabit(Sabit.ExtraFor(_env)); // provincial roads: riders may hang on the back
             _passengers.Env = _env;
@@ -792,7 +799,8 @@ namespace JeepneyRush
             }
 
             // ---- world + power-up effects
-            _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier * GameModes.FareFactor(Mode); // good drivers get better tips; night fares pay more
+            _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier * GameModes.FareFactor(Mode) // good drivers get better tips; night fares pay more
+                * JeepneyPerks.FareFactor(JeepneyCatalog.Get(RunJeepney), _passengers.Route.Night); // Night Owl: +10 % after dark
             if (!_dying) UpdateRiders(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
             else _police.Tick(dt, _player.Lanes.X);
@@ -1075,11 +1083,11 @@ namespace JeepneyRush
             _stuckT += dt;
             _complainT -= dt;
             if (_complainT > 0) return;
-            _complainT = JamRules.ComplaintInterval(_stuckT) * Random.Range(0.85f, 1.2f);
+            _complainT = JamRules.ComplaintInterval(_stuckT) * Random.Range(0.85f, 1.2f) * JeepneyPerks.Patience(JeepneyCatalog.Get(RunJeepney)); // aircon: cooler riders
             _jamComplaints++;
             ui.Say(Lines.Stuck(_hour, _env, _rng), _passengers.RiderHead(), _jamComplaints > 2);
             Services.Audio.Play(Logic.Audio.Sfx.Complain, 0.8f);
-            if (_jamComplaints > JamRules.PatienceComplaints && _rng.Chance(JamRules.WalkOffChance) && _passengers.Route.EjectAngry() > 0)
+            if (_jamComplaints > JamRules.PatienceComplaints + JeepneyPerks.ExtraComplaints(JeepneyCatalog.Get(RunJeepney)) && _rng.Chance(JamRules.WalkOffChance) && _passengers.Route.EjectAngry() > 0)
             {
                 _passengers.AngryHopOut(); Rate(RatingEvent.AngryWalkOff);
                 ui.Say(_rng.Chance(0.5) ? "MAGLALAKAD NA LANG AKO!" : "MAS MABILIS PA MAGLAKAD!", () => _player.transform.position + new Vector3(0, 2.4f, -3.4f), true, 2.2f);
@@ -1421,7 +1429,7 @@ namespace JeepneyRush
         private void StartRefuel(StationView s)
         {
             _stationDwell = 0;
-            _quote = FuelRules.Quote(_fuel.Fuel, _fuel.Capacity, _score.Coins, _cfg);
+            _quote = FuelRules.Quote(_fuel.Fuel, _fuel.Capacity, _score.Coins, _cfg, JeepneyPerks.FuelPrice(JeepneyCatalog.Get(RunJeepney))); // E-Jeepney: half price
             if (_quote.Total < 0.5f)
             {
                 s.Done = true;

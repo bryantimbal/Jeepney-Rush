@@ -91,6 +91,8 @@ namespace JeepneyRush.Logic
         }
         /// <summary>Set to 2 while the Passenger Bonus power-up is active.</summary>
         public float FareMultiplier = 1f;
+        /// <summary>Jeepney perks: tips multiplier (Retro-Modern Sarao) and balikbayan boarding boost (Airport Express).</summary>
+        public float TipMultiplier = 1f, BalikbayanBoost = 1f;
         public int PickedUp { get; private set; }
         public int Delivered { get; private set; }
         public int Missed { get; private set; }
@@ -174,7 +176,7 @@ namespace JeepneyRush.Logic
                 foreach (var p in off)
                 {
                     int tip = Tip(p);
-                    if (tip > 0) { r.Tips += (int)Math.Round(tip * FareMultiplier); r.Tippers++; }
+                    if (tip > 0) { r.Tips += (int)Math.Round(tip * FareMultiplier * TipMultiplier); r.Tippers++; }
                     if (p.Kind == RiderKind.Hurry) { if (Clock <= p.Deadline) { r.OnTime++; OnTimeCount++; } else r.Late++; }
                     if (p.Kind == RiderKind.Lola && !p.Upset) SmoothLolas++;
                     if (Notable(p.Kind) > Notable(r.Leaver)) r.Leaver = p.Kind;
@@ -195,7 +197,7 @@ namespace JeepneyRush.Logic
                 int pick = minAhead + (int)Math.Floor(_rng.Next() * _rng.Next() * (maxAhead - minAhead));
                 var dest = futures[Math.Min(pick, maxAhead - 1)];
                 var kind = NextKind.HasValue && Riders.Seats(NextKind.Value) <= Room ? NextKind.Value
-                    : _moodRng == null ? RiderKind.Regular : Riders.Pick(_moodRng, Env, Night, Room, HasAboard(RiderKind.Balikbayan));
+                    : _moodRng == null ? RiderKind.Regular : Riders.Pick(_moodRng, Env, Night, Room, HasAboard(RiderKind.Balikbayan), BalikbayanBoost);
                 var rider = new Rider { Dest = dest.Id, Kind = kind };
                 if (kind == RiderKind.Hurry) rider.Deadline = Clock + Math.Max(0f, dest.At - stop.At) / Riders.HurrySpeed + Riders.HurrySlack;
                 _aboard.Add(rider);

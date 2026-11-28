@@ -61,9 +61,9 @@ namespace JeepneyRush.Tests
     public class EconomyTests
     {
         [Test]
-        public void CatalogHasThirteenDistinctJeepneysWithTwoFree()
+        public void CatalogHasNineteenDistinctJeepneysWithTwoFree()
         {
-            Assert.AreEqual(13, JeepneyCatalog.All.Length);
+            Assert.AreEqual(19, JeepneyCatalog.All.Length);
             Assert.AreEqual(JeepneyCatalog.All.Length, JeepneyCatalog.All.Select(j => j.Id).Distinct().Count());
             Assert.AreEqual(2, JeepneyCatalog.All.Count(j => j.Price == 0));
         }

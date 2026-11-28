@@ -206,7 +206,8 @@ namespace JeepneyRush.Logic.Geometry
                 // window pillars and grab rail
                 for (int i = 0; i <= 6; i++)
                     b.Box("paint", trim, 0.08f, RoofY - BeltY, 0.08f, sx * 0.98f, (RoofY + BeltY) / 2, BodyFrontZ - 0.05f - i * (bodyLen - 0.15f) / 6);
-                b.CylinderZ("chrome", C, 0.022f, bodyLen - 0.2f, 6, sx * 1.0f, BeltY + 0.32f, bodyMidZ);
+                if (!L.ClosedBody) b.CylinderZ("chrome", C, 0.022f, bodyLen - 0.2f, 6, sx * 1.0f, BeltY + 0.32f, bodyMidZ);
+                else ClosedSide(b, L, sx, bodyLen, bodyMidZ);
                 // running board between the wheels
                 b.Box("chrome", C, 0.32f, 0.05f, FrontAxleZ - RearAxleZ - 1.15f, sx * 1.02f, 0.5f, (FrontAxleZ + RearAxleZ) / 2 - 0.05f);
                 // sweeping chrome rear fender skirt
@@ -264,11 +265,15 @@ namespace JeepneyRush.Logic.Geometry
                 b.Lathe("chrome", C, new[] { new V2(0.03f, 0), new V2(0.04f, 0.3f), new V2(0.11f, 0.5f) }, 10, sx, RoofY + 0.22f, 0.95f, new Rot((float)(Math.PI / 2), 0, 0));
             string[] markers = { "#FF3B3B", "#FFD23F", "#3BCEAC", "#4D9DE0", "#FF8C42", "#FFFFFF", "#E15FED" };
             for (int i = 0; i < markers.Length; i++) b.Sphere("glow", markers[i], 0.05f, -0.75f + i * 0.25f, RoofY + 0.15f, 1.66f, 6);
-            // luggage rack
-            string rack = L.ChromeLowerBody ? L.Accent1 : C;
-            foreach (float sx in new[] { -0.95f, 0.95f }) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 0.06f, 0.06f, 1.8f, sx, RoofY + 0.32f, -1.9f);
-            for (int i = 0; i < 4; i++) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 1.96f, 0.05f, 0.05f, 0, RoofY + 0.32f, -1.05f - i * 0.57f);
-            foreach (float sx in new[] { -0.95f, 0.95f }) foreach (float z in new[] { -1.05f, -2.75f }) b.Box("chrome", C, 0.04f, 0.22f, 0.04f, sx, RoofY + 0.2f, z);
+            // luggage rack (an electric jeep has solar panels up there instead)
+            if (!L.SolarRoof && !L.BusNose) // (the minibus has a tall roof instead)
+            {
+                string rack = L.ChromeLowerBody ? L.Accent1 : C;
+                foreach (float sx in new[] { -0.95f, 0.95f }) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 0.06f, 0.06f, 1.8f, sx, RoofY + 0.32f, -1.9f);
+                for (int i = 0; i < 4; i++) b.Box(L.ChromeLowerBody ? "paint" : "chrome", rack, 1.96f, 0.05f, 0.05f, 0, RoofY + 0.32f, -1.05f - i * 0.57f);
+                foreach (float sx in new[] { -0.95f, 0.95f }) foreach (float z in new[] { -1.05f, -2.75f }) b.Box("chrome", C, 0.04f, 0.22f, 0.04f, sx, RoofY + 0.2f, z);
+            }
+            ModernRoof(b, L);
 
             // ---------------------------------------------------------------- spare tyre on the side (classic)
             if (L.SpareTire && !modern)
@@ -414,6 +419,87 @@ namespace JeepneyRush.Logic.Geometry
             }
             b.Box("paint", "#2A2A2E", 1.2f, 0.2f, 0.05f, 0, 0.78f, front + 0.04f);
             b.Box("paint", "#1A1A1A", 2.14f, 0.24f, 0.3f, 0, 0.5f, front + 0.12f);
+            if (L.BusNose)
+            {
+                // minibus: tall flat front with a big windshield and a folding door by the driver (curb side)
+                b.Box("glass", "#22344A", 1.9f, 0.3f, 0.05f, 0, BeltY - 0.05f, front + 0.01f);
+                float dz = front - 0.55f;
+                b.Box("glass", "#1D2B3A", 0.05f, RoofY - SillY - 0.15f, 0.7f, 1.04f, (RoofY + SillY) / 2 - 0.03f, dz);
+                b.Box("paint", L.Trim, 0.06f, RoofY - SillY - 0.12f, 0.04f, 1.05f, (RoofY + SillY) / 2 - 0.03f, dz);
+                b.Box("chrome", L.Chrome, 0.3f, 0.05f, 0.7f, 1.1f, 0.45f, dz);
+            }
+        }
+
+        /// <summary>
+        /// Closed aircon body (modern PUVs): tinted glass between the pillars instead of open
+        /// windows, and on the curb side (+X) a passenger door near the front.
+        /// </summary>
+        private static void ClosedSide(MeshBuilder b, JeepneyLivery L, float sx, float bodyLen, float bodyMidZ)
+        {
+            float gy0 = BeltY + 0.03f, gy1 = RoofY - 0.05f, gx = sx * 0.985f;
+            b.Box("glass", "#22344A", 0.03f, gy1 - gy0, bodyLen - 0.15f, gx, (gy0 + gy1) / 2, bodyMidZ);
+            // thin body-colour band under the roof (closed bodies have a solid header)
+            b.Box("paint", L.Body, 0.06f, 0.1f, bodyLen, sx * 1.0f, RoofY - 0.03f, bodyMidZ);
+            if (sx > 0)
+            {
+                // sliding passenger door: dark glass panel from the sill to the roof, frame and handle
+                float dz = BodyFrontZ - 0.62f, half = 0.36f;
+                b.Box("glass", "#1D2B3A", 0.05f, RoofY - SillY - 0.12f, half * 2, 1.02f, (RoofY + SillY) / 2 - 0.02f, dz);
+                foreach (float e in new[] { -half, half }) b.Box("paint", L.Trim, 0.07f, RoofY - SillY - 0.1f, 0.05f, 1.03f, (RoofY + SillY) / 2 - 0.02f, dz + e);
+                b.Box("chrome", L.Chrome, 0.04f, 0.04f, 0.18f, 1.06f, 1.2f, dz - half + 0.15f);
+                // step under the door
+                b.Box("chrome", L.Chrome, 0.3f, 0.05f, half * 2, 1.08f, 0.45f, dz);
+            }
+        }
+
+        /// <summary>Modern PUV roof kit: AC pod, solar panels, luggage with bags.</summary>
+        private static void ModernRoof(MeshBuilder b, JeepneyLivery L)
+        {
+            float lift = 0f;
+            if (L.BusNose)
+            {
+                // minibus: tall roof the whole length, with a strip of upper windows and an accent band
+                const float h = 0.36f, front = 2.95f;
+                float len = front - BodyRearZ, mid = (front + BodyRearZ) / 2f;
+                b.Box("paint", L.Body, 2.08f, h, len, 0, RoofY + 0.12f + h / 2, mid);
+                foreach (float sx in new[] { -1f, 1f })
+                {
+                    b.Box("glass", "#22344A", 0.03f, h * 0.5f, len - 1.0f, sx * 1.045f, RoofY + 0.12f + h * 0.55f, mid - 0.3f);
+                    b.Box("paint", L.Accent1, 0.03f, 0.06f, len, sx * 1.045f, RoofY + 0.16f, mid);
+                }
+                b.Box("glass", "#22344A", 1.7f, h * 0.55f, 0.03f, 0, RoofY + 0.12f + h * 0.55f, front + 0.08f);
+                lift = h;
+            }
+            if (L.RoofAc)
+            {
+                // rounded aircon pod at the front of the roof, with vent grilles
+                float z = L.Style == JeepneyStyle.Modern ? 0.2f : -0.1f, y = RoofY + lift;
+                b.Box("paint", L.Roof, 1.3f, 0.2f, 1.5f, 0, y + 0.22f, z);
+                b.Box("paint", L.Roof, 1.15f, 0.08f, 1.35f, 0, y + 0.35f, z);
+                for (int i = 0; i < 4; i++) b.Box("paint", "#2A2E35", 0.9f, 0.025f, 0.08f, 0, y + 0.395f, z - 0.45f + i * 0.3f);
+                foreach (float sx in new[] { -1f, 1f }) b.Box("paint", "#2A2E35", 0.03f, 0.1f, 1.1f, sx * 0.66f, y + 0.22f, z);
+            }
+            if (L.SolarRoof)
+            {
+                // two rows of solar panels on low frames covering the roof
+                for (int r = 0; r < 4; r++)
+                    foreach (float sx in new[] { -0.5f, 0.5f })
+                    {
+                        float z = 0.3f - r * 0.82f;
+                        b.Box("chrome", L.Chrome, 0.95f, 0.03f, 0.78f, sx, RoofY + 0.17f, z);
+                        b.Box("glass", "#1D3557", 0.9f, 0.03f, 0.72f, sx, RoofY + 0.195f, z);
+                        for (int k = 1; k < 3; k++) b.Box("paint", "#8ECAE6", 0.9f, 0.031f, 0.012f, sx, RoofY + 0.2f, z - 0.36f + k * 0.24f);
+                    }
+            }
+            if (L.LuggageRack)
+            {
+                // balikbayan bags and boxes strapped to the rack
+                b.Box("paint", "#E76F51", 0.7f, 0.32f, 0.5f, -0.45f, RoofY + 0.51f, -1.4f);
+                b.Box("paint", "#2A9D8F", 0.55f, 0.26f, 0.42f, 0.45f, RoofY + 0.48f, -1.5f);
+                b.Box("paint", "#C8A165", 0.8f, 0.42f, 0.6f, 0f, RoofY + 0.56f, -2.25f);   // the balikbayan box
+                b.Box("paint", "#1D3557", 0.82f, 0.04f, 0.62f, 0f, RoofY + 0.6f, -2.25f);  // tape
+                b.Box("paint", "#6A4C93", 0.5f, 0.24f, 0.4f, 0.5f, RoofY + 0.47f, -2.6f);
+            }
         }
 
         /// <summary>Neon Street Racer: glowing underbody, belt-line and roof edge strips.</summary>

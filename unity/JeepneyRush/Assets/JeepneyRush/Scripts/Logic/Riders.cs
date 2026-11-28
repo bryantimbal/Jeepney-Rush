@@ -57,7 +57,7 @@ namespace JeepneyRush.Logic
         public static int Seats(RiderKind k) => k == RiderKind.Vendor ? 2 : 1;
 
         /// <summary>Relative chance of each kind boarding (by route and time of day).</summary>
-        public static float Weight(RiderKind k, EnvironmentKind env, bool night)
+        public static float Weight(RiderKind k, EnvironmentKind env, bool night, float balikbayanBoost = 1f)
         {
             bool city = env == EnvironmentKind.Manila || env == EnvironmentKind.Edsa || env == EnvironmentKind.Cebu;
             bool town = env == EnvironmentKind.Provincial || env == EnvironmentKind.Fiesta || env == EnvironmentKind.Mountain || env == EnvironmentKind.Baguio;
@@ -71,7 +71,7 @@ namespace JeepneyRush.Logic
                 case RiderKind.Drunk: return night ? 10f : 0f;
                 case RiderKind.Dodger: return 5f;
                 case RiderKind.Vendor: return town ? 9f : 5f;
-                case RiderKind.Balikbayan: return 2f;
+                case RiderKind.Balikbayan: return 2f * Math.Max(0f, balikbayanBoost); // Airport Express: x2
                 default: return 0f;
             }
         }
@@ -79,15 +79,15 @@ namespace JeepneyRush.Logic
         private static readonly RiderKind[] Kinds = (RiderKind[])Enum.GetValues(typeof(RiderKind));
 
         /// <summary>Picks a kind. <paramref name="room"/> = free seats (a tindera needs two); one balikbayan at a time.</summary>
-        public static RiderKind Pick(GameRandom rng, EnvironmentKind env, bool night, int room, bool balikbayanAboard)
+        public static RiderKind Pick(GameRandom rng, EnvironmentKind env, bool night, int room, bool balikbayanAboard, float balikbayanBoost = 1f)
         {
             float total = 0;
-            foreach (var k in Kinds) if (Allowed(k, room, balikbayanAboard)) total += Weight(k, env, night);
+            foreach (var k in Kinds) if (Allowed(k, room, balikbayanAboard)) total += Weight(k, env, night, balikbayanBoost);
             float x = (float)rng.Next() * total;
             foreach (var k in Kinds)
             {
                 if (!Allowed(k, room, balikbayanAboard)) continue;
-                x -= Weight(k, env, night);
+                x -= Weight(k, env, night, balikbayanBoost);
                 if (x < 0) return k;
             }
             return RiderKind.Regular;

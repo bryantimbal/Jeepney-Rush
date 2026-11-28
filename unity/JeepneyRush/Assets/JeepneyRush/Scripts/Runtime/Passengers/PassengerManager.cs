@@ -40,6 +40,8 @@ namespace JeepneyRush
         public PassengerRoute Route => _route;
         /// <summary>Current route's environment (barker lines name its stops).</summary>
         public EnvironmentKind Env;
+        /// <summary>Retro-Modern Sarao: barkers are likelier at each stop.</summary>
+        public float BarkerBonus;
         private readonly GameRandom _lineRng = new GameRandom(7);
         public IReadOnlyList<PassengerStopView> Stops => _stops;
 
@@ -244,7 +246,7 @@ namespace JeepneyRush
             v.Arrow.gameObject.SetActive(true);
             v.DropArrow.gameObject.SetActive(false);
             // a barker at the curb before the stop, turned toward the oncoming jeepney
-            v.HasBarker = Random.value < Barkers.Chance(Env);
+            v.HasBarker = Random.value < Barkers.Chance(Env) + BarkerBonus;
             v.Barker.gameObject.SetActive(v.HasBarker);
             v.Barker.localPosition = new Vector3(stop.Side * (SceneryBuilder.RoadHalfWidth + 0.45f), SceneryBuilder.SidewalkHeight, -5.5f);
             v.Barker.localRotation = Quaternion.Euler(0, 180 + (stop.Side < 0 ? 55 : -55), 0);

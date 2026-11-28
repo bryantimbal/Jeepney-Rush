@@ -42,6 +42,12 @@ namespace JeepneyRush.Logic
         /// </summary>
         public bool SoundSystem;
 
+        // ---- modern PUV body kit
+        /// <summary>Closed aircon body: tinted glass windows and a side door instead of open sides.</summary>
+        public bool ClosedBody;
+        public bool RoofAc, SolarRoof, LuggageRack, BusNose;
+        public JeepneyPerk Perk;
+
         // stats (added on top of the base balance & upgrades)
         public int CapacityBonus;
         public int HealthBonus;
@@ -172,6 +178,55 @@ namespace JeepneyRush.Logic
                 Body = "#1A1A1A", Hood = "#1A1A1A", Accent1 = "#FFD700", Accent2 = "#FFF3B0", Roof = "#1A1A1A", Trim = "#FFD700", Chrome = "#FFC93C",
                 RoofSign = "VIP", Route = "VIP EXPRESS", Slogan = "VIP", RearText = "VERY IMPORTANT PASAHERO", Plate = "VIP 1",
                 ChromeLowerBody = true, SpareTire = true, CapacityBonus = 2, HealthBonus = 1, SpeedBonus = 1f, HandlingBonus = 0.02f,
+            },
+            // ---- new-generation modern PUVs (PUV Modernization types)
+            new JeepneyLivery
+            {
+                Id = "aircon", DisplayName = "Aircon PUJ", Price = 2800, Style = JeepneyStyle.Modern, Motif = ArtMotif.Waves, Perk = JeepneyPerk.Aircon,
+                Description = "Class 2 modern jeep: closed aircon body, tinted windows and a side door.",
+                Body = "#F8F9FA", Hood = "#F8F9FA", Accent1 = "#1F3FBF", Accent2 = "#00A6E0", Roof = "#E9ECEF", Trim = "#1F3FBF",
+                RoofSign = "CUBAO - FAIRVIEW", Route = "CUBAO - FAIRVIEW", Slogan = "Transport Coop", RearText = "AIRCON - CLOSE THE DOOR", Plate = "MPUJ 22",
+                ClosedBody = true, RoofAc = true, CapacityBonus = 5, HandlingBonus = -0.02f,
+            },
+            new JeepneyLivery
+            {
+                Id = "ejeep", DisplayName = "E-Jeepney", Price = 3500, GemPrice = 200, Style = JeepneyStyle.Modern, Motif = ArtMotif.Waves, Perk = JeepneyPerk.Electric,
+                Description = "Electric and quiet, with solar panels on the roof. No smoke at all.",
+                Body = "#F1F8E9", Hood = "#F1F8E9", Accent1 = "#7CC142", Accent2 = "#1B5E20", Roof = "#DDE8D0", Trim = "#1B5E20",
+                RoofSign = "MAKATI LOOP", Route = "MAKATI LOOP", Slogan = "100% Electric", RearText = "ZERO EMISSION", Plate = "EJP 100",
+                ClosedBody = true, SolarRoof = true, CapacityBonus = 3,
+            },
+            new JeepneyLivery
+            {
+                Id = "minibus", DisplayName = "Modern Minibus", Price = 5000, Style = JeepneyStyle.Modern, Motif = ArtMotif.Waves, Perk = JeepneyPerk.BigCapacity,
+                Description = "Class 4 PUV: front folding door, big windows and room for standing riders.",
+                Body = "#FFFFFF", Hood = "#FFFFFF", Accent1 = "#E63946", Accent2 = "#F4A261", Roof = "#EDEDED", Trim = "#E63946",
+                RoofSign = "QUIAPO - PITX", Route = "QUIAPO - PITX", Slogan = "PITX Express", RearText = "STANDING ROOM ONLY", Plate = "PUV 4040",
+                ClosedBody = true, RoofAc = true, BusNose = true, CapacityBonus = 8, HandlingBonus = -0.05f,
+            },
+            new JeepneyLivery
+            {
+                Id = "sarao", DisplayName = "Retro-Modern Sarao", Price = 6000, GemPrice = 380, Motif = ArtMotif.SunStars, Perk = JeepneyPerk.Heritage,
+                Description = "A modern, safe body with a classic soul: chrome grille, silver horses and hand-painted art.",
+                Body = "#C8102E", Hood = "#C8102E", Accent1 = "#1F3FBF", Accent2 = "#FCD116", Roof = "#F1F1F1", Trim = "#FCD116",
+                RoofSign = "BACLARAN - DIVISORIA", Route = "BACLARAN - DIVISORIA", Slogan = "Hari ng Kalsada", RearText = "TRADISYON AT MODERNO", Plate = "SAR 1953",
+                ClosedBody = true, RoofAc = true, CapacityBonus = 3, HealthBonus = 1,
+            },
+            new JeepneyLivery
+            {
+                Id = "airport", DisplayName = "Airport Express", Price = 9000, GemPrice = 450, Style = JeepneyStyle.Modern, Motif = ArtMotif.Waves, Perk = JeepneyPerk.Airport,
+                Description = "Clean white with orange speed stripes and a luggage rack. Balikbayans love it.",
+                Body = "#FFFFFF", Hood = "#FFFFFF", Accent1 = "#F77F00", Accent2 = "#D62828", Roof = "#EEEEEE", Trim = "#F77F00",
+                RoofSign = "NAIA LOOP", Route = "NAIA LOOP", Slogan = "NAIA Express", RearText = "WELCOME HOME, KABAYAN!", Plate = "NAIA 3",
+                ClosedBody = true, RoofAc = true, LuggageRack = true, CapacityBonus = 4, HandlingBonus = 0.02f,
+            },
+            new JeepneyLivery
+            {
+                Id = "nightowl", DisplayName = "Night Owl Modern", Price = 9500, GemPrice = 500, Style = JeepneyStyle.Modern, Motif = ArtMotif.Neon, Perk = JeepneyPerk.NightOwl,
+                Description = "Dark body with LED underglow and a glowing sign, made for the night shift.",
+                Body = "#22223B", Hood = "#22223B", Accent1 = "#00F5D4", Accent2 = "#F15BB5", Roof = "#1A1A2E", Trim = "#00F5D4",
+                RoofSign = "24/7 PASADA", Route = "24/7 PASADA", Slogan = "Night Owl", RearText = "GISING PA KAMI", Plate = "OWL 247",
+                ClosedBody = true, RoofAc = true, Neon = true, CapacityBonus = 4,
             },
         };
 
