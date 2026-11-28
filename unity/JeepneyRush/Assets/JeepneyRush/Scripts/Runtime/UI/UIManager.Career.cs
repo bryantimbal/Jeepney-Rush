@@ -48,6 +48,7 @@ namespace JeepneyRush
             _careerList = UiKit.Stack();
             scroll.Add(_careerList);
             card.Add(scroll);
+            card.Add(UiKit.Button("MY FLEET (OPERATOR)", OpenFleet, UiKit.Hex("#1E7B45"), Color.white, 32, 96));
             card.Add(UiKit.Button("BACK", CloseModal, Color.white, UiKit.Ink, 44, 110));
 
             // pre-shift briefing from Mang Kanor

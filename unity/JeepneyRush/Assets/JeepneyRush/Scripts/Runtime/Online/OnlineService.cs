@@ -383,6 +383,11 @@ namespace JeepneyRush
                 case "not_enough_gems": return "Kulang ang gems.";
                 case "no_event": return "The Christmas event is over.";
                 case "no_reward": return "No league reward to claim.";
+                case "nothing": return "Wala pang boundary – come back later.";
+                case "busy": return "That jeepney is already driving another route.";
+                case "not_owned": return "You don't own that jeepney.";
+                case "slot": return "Buy another slot first.";
+                case "locked": return "Get the OPERATOR license in career first.";
                 case "tokens": return "Kulang pa ang parols.";
                 case "nights": return "Complete all 9 Simbang Gabi nights first.";
                 default: return reason;
@@ -435,6 +440,13 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== operator mode
+        public void FleetStatus(Action<FleetInfo, string> done) => StartCoroutine(Get("jr_fleet_status", "{}", done));
+        public void FleetAssign(int slot, string jeepney, Action<bool, string, int> done) => Op("jr_fleet_assign", "{\"p_slot\":" + slot + ",\"p_jeepney\":" + Json.Str(jeepney) + "}", done);
+        public void FleetUnassign(int slot, Action<bool, string, int> done) => Op("jr_fleet_unassign", "{\"p_slot\":" + slot + "}", done);
+        public void FleetCollect(Action<bool, string, int> done) => Op("jr_fleet_collect", "{}", done);
+        public void FleetBuySlot(Action<bool, string, int> done) => Op("jr_fleet_buy_slot", "{}", done);
 
         // ================================================================== weekly leagues
         public void LeagueStatus(Action<LeagueInfo, string> done) => StartCoroutine(Get("jr_league_status", "{}", done));

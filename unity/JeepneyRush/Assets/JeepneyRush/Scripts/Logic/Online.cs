@@ -416,6 +416,23 @@ namespace JeepneyRush.Logic
     }
 
     [Serializable]
+    public class FleetSlot
+    {
+        public int slot, rate, pending;
+        public string jeepney;
+        public float hours;
+    }
+
+    /// <summary>Operator mode fleet from the server (jr_fleet_status).</summary>
+    [Serializable]
+    public class FleetInfo
+    {
+        public bool unlocked;
+        public int slots, bought, next_slot_price;
+        public FleetSlot[] fleet = new FleetSlot[0];
+    }
+
+    [Serializable]
     public class LeagueRow
     {
         public int rank, level, score;

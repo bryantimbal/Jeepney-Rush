@@ -126,6 +126,10 @@ namespace JeepneyRush.Logic
         // ---- Christmas event (offline; online the server keeps it)
         public int eventSeason, eventTokens, eventDayKey, eventDayTokens, eventNights, eventClaimed;
         public bool eventGolden;
+        // ---- operator mode (offline; online the server keeps it): jeepney per slot ("" = empty) and when it started
+        public List<string> fleetJeepneys = new List<string>();
+        public List<long> fleetSince = new List<long>();
+        public int fleetBought;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
         public int[] careerMasks = new int[0];
@@ -194,6 +198,8 @@ namespace JeepneyRush.Logic
             for (int i = 0; i < d.careerMasks.Length; i++) d.careerMasks[i] &= 7;
             d.careerRank = Math.Max(0, Math.Min(Career.Licenses.Length - 1, d.careerRank));
             d.ownedCosmetics ??= new List<string>();
+            d.fleetJeepneys ??= new List<string>();
+            d.fleetSince ??= new List<long>();
             d.ownedCosmetics.RemoveAll(id => Customization.Get(id) == null);
             d.looks ??= new List<JeepneyLook>();
             d.looks.RemoveAll(l => l == null || string.IsNullOrEmpty(l.jeepney));
