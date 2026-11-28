@@ -100,6 +100,8 @@ namespace JeepneyRush.Logic
             sb.Append("\ndelete from public.jr_catalog_cosmetics;\n");
             foreach (var c in Customization.All)
                 sb.Append($"insert into public.jr_catalog_cosmetics (id, slot, price, rank_needed) values ({Q(c.Id)}, {Q(c.Slot.ToString())}, {c.Price}, {c.RankNeeded});\n");
+            foreach (var c in DriverStyle.All) // the driver's look and the konduktor are sold the same way
+                sb.Append($"insert into public.jr_catalog_cosmetics (id, slot, price, rank_needed) values ({Q(c.Id)}, {Q("Driver" + c.Part)}, {c.Price}, -1);\n");
             sb.Append("\n-- game constants used by the server rules\n");
             sb.Append("delete from public.jr_catalog_constants;\n");
             void C(string key, double v) => sb.Append($"insert into public.jr_catalog_constants (key, value) values ({Q(key)}, {v.ToString("0.######", CultureInfo.InvariantCulture)});\n");

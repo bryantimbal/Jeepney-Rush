@@ -24,7 +24,7 @@ namespace JeepneyRush
         private sealed class Fare { public Transform T; public readonly List<Vector3> Path = new List<Vector3>(); public readonly List<int> Passers = new List<int>(); public float Time; public float Delay; }
         private readonly List<Fare> _fares = new List<Fare>();
         private float[] _bob = new float[0];
-        private GameObject _driver;
+        private GameObject _driver, _konduktor;
         private float _driverBob;
         private const float HopTime = 0.3f;
         /// <summary>Driver sits on the left, behind the steering wheel.</summary>
@@ -96,9 +96,20 @@ namespace JeepneyRush
                 _hangers.Add(go);
             }
             if (_driver != null) Destroy(_driver);
-            _driver = ModelLibrary.Instantiate(ModelLibrary.SeatedPerson(3 % PropBuilder.PersonVariants), "Driver", _player, castShadows: false);
+            // the driver wears the player's look; the konduktor (if hired) rides on the rear step
+            var sd = Services.Save.Data;
+            var shirt = DriverStyle.Worn(sd, DriverPart.Shirt); var hat = DriverStyle.Worn(sd, DriverPart.Hat); var extra = DriverStyle.Worn(sd, DriverPart.Extra);
+            _driver = ModelLibrary.Instantiate(ModelLibrary.Get(DriverStyle.LookKey(sd), () => PropBuilder.Driver(shirt.Id, hat.Id, hat.Color, extra.Id)), "Driver", _player, castShadows: false);
             _driver.transform.localPosition = DriverSeat;
             _driver.transform.localRotation = Quaternion.identity; // facing the road
+            if (_konduktor != null) Destroy(_konduktor);
+            _konduktor = null;
+            if (DriverStyle.HasKonduktor(sd))
+            {
+                _konduktor = ModelLibrary.Instantiate(ModelLibrary.Get("konduktor", PropBuilder.Konduktor), "Konduktor", _player, castShadows: false);
+                _konduktor.transform.localPosition = new Vector3(-0.62f, 0.5f, JeepneyBuilder.BodyRearZ - 0.28f);
+                _konduktor.transform.localRotation = Quaternion.Euler(0, 160f, 0); // half turned to the street, holding the rail
+            }
             if (!Services.Pools.Has("fare")) Services.Pools.Register("fare", () => ModelLibrary.Instantiate(ModelLibrary.Get("fare", () =>
             {
                 var b = new MeshBuilder();

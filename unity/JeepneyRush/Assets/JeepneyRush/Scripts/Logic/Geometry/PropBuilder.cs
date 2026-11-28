@@ -45,6 +45,52 @@ namespace JeepneyRush.Logic.Geometry
             if (i % 4 == 1 && rightArm) b.Cylinder("paint", "#F1C40F", 0.24f, 0.24f, 0.05f, 10, 0, hip + 0.93f, 0); // sun hat
         }
 
+        /// <summary>
+        /// The driver, seated, wearing the player's look: shirt colour (barong: sheer cream with
+        /// embroidery), headwear (cap, backwards cap, salakot) and a towel over the shoulder / shades.
+        /// </summary>
+        public static MeshData Driver(string shirt, string hat, string hatColor, string extra)
+        {
+            var b = new MeshBuilder();
+            const string skin = "#C68642", pants = "#2F3E46";
+            string shirtCol = shirt == "drv_polo" ? "#1D4E89" : shirt == "drv_jacket" ? "#2B2D42" : shirt == "drv_jersey" ? "#C8102E" : shirt == "drv_barong" ? "#F3E9D2" : "#F2F2F2";
+            foreach (float s in new[] { -1f, 1f }) b.Box("paint", pants, 0.15f, 0.15f, 0.42f, s * 0.11f, 0.02f, 0.2f);
+            b.Box("paint", shirtCol, 0.44f, 0.58f, 0.26f, 0, 0.28f, 0);
+            bool sleeves = shirt != "drv_sando";
+            foreach (float s in new[] { -1f, 1f }) b.Box("paint", sleeves ? shirtCol : skin, 0.11f, 0.5f, 0.12f, s * 0.29f, 0.27f, 0);
+            if (shirt == "drv_barong") for (int i = 0; i < 3; i++) b.Box("paint", "#D9C7A0", 0.04f, 0.5f, 0.01f, -0.12f + i * 0.12f, 0.3f, 0.131f); // embroidery
+            if (shirt == "drv_jersey") b.Box("paint", "#FFFFFF", 0.14f, 0.16f, 0.01f, 0, 0.34f, 0.131f);                                         // number patch
+            if (shirt == "drv_polo") b.Box("paint", "#FFFFFF", 0.2f, 0.05f, 0.27f, 0, 0.56f, 0);                                                    // collar
+            b.Sphere("paint", skin, 0.16f, 0, 0.72f, 0, 8);
+            b.Sphere("paint", "#1B1B1B", 0.165f, 0, 0.78f, -0.03f, 8, 1, 0.7f, 1);
+            if (extra == "drv_shades" || extra == "drv_towelshades") b.Box("paint", "#111111", 0.26f, 0.06f, 0.04f, 0, 0.74f, 0.15f);
+            if (extra == "drv_towel" || extra == "drv_towelshades")
+            {
+                b.Box("paint", "#FFFFFF", 0.16f, 0.04f, 0.3f, 0.16f, 0.58f, 0);          // over the shoulder
+                b.Box("paint", "#FFFFFF", 0.16f, 0.3f, 0.04f, 0.16f, 0.44f, 0.14f);      // hanging in front
+            }
+            string hc = hatColor ?? "#E63946";
+            if (hat == "drv_cap" || hat == "drv_capback")
+            {
+                b.Sphere("paint", hc, 0.17f, 0, 0.82f, -0.01f, 8, 1, 0.55f, 1);
+                b.Box("paint", hc, 0.2f, 0.02f, 0.16f, 0, 0.82f, hat == "drv_cap" ? 0.17f : -0.19f);  // visor (backwards = behind)
+            }
+            else if (hat == "drv_salakot")
+                b.Cylinder("paint", hc, 0f, 0.36f, 0.16f, 12, 0, 0.9f, 0);
+            return b.Data;
+        }
+
+        /// <summary>The konduktor: standing on the rear step holding the rail, towel and a bag for the fares.</summary>
+        public static MeshData Konduktor()
+        {
+            var b = new MeshBuilder();
+            AddPerson(b, 2, false, false);
+            b.Box("paint", "#FFFFFF", 0.14f, 0.04f, 0.28f, 0.15f, 1.33f, 0);                 // towel
+            b.Box("paint", "#FCD116", 0.2f, 0.18f, 0.06f, -0.2f, 0.95f, 0.12f);               // fare pouch
+            b.Box("paint", "#C68642", 0.11f, 0.46f, 0.12f, 0.29f, 1.25f, 0, new Rot(0, 0, -2.9f)); // arm up to the rail
+            return b.Data;
+        }
+
         /// <summary>Shoulder of the barker's calling arm (pivot of <see cref="BarkerArm"/>).</summary>
         public static readonly V3 BarkerShoulder = new V3(0.29f, 1.27f, 0);
 

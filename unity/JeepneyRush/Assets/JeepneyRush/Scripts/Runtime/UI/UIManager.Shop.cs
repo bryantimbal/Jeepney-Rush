@@ -48,6 +48,7 @@ namespace JeepneyRush
             tabs.Add(_tabUpgrades);
             tabs.Add(_tabTalyer);
             card.Add(tabs);
+            card.Add(UiKit.Button("MY DRIVER & KONDUKTOR", OpenDriver, UiKit.Hex("#1E7B45"), Color.white, 28, 84));
 
             // ---- jeepney page
             _garageJeepPage = UiKit.Box();

@@ -812,7 +812,8 @@ namespace JeepneyRush
 
             // ---- world + power-up effects
             _passengers.Route.FareMultiplier = pu.FareMultiplier * _rating.FareMultiplier * GameModes.FareFactor(Mode) // good drivers get better tips; night fares pay more
-                * JeepneyPerks.FareFactor(JeepneyCatalog.Get(RunJeepney), _passengers.Route.Night); // Night Owl: +10 % after dark
+                * JeepneyPerks.FareFactor(JeepneyCatalog.Get(RunJeepney), _passengers.Route.Night) // Night Owl: +10 % after dark
+                * (DriverStyle.HasKonduktor(Services.Save.Data) ? 1f + DriverStyle.KonduktorFare : 1f); // the konduktor collects every fare
             if (!_dying) UpdateRiders(dt);
             if (!_dying) UpdateContract(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
@@ -1659,7 +1660,16 @@ namespace JeepneyRush
         private void RiderReactions(PickupResult r)
         {
             var back = (System.Func<Vector3>)(() => _player.transform.position + new Vector3(0, 2.4f, -3.4f));
-            if (r.Dodgers > 0)
+            if (r.Dodgers > 0 && DriverStyle.HasKonduktor(Services.Save.Data))
+            {
+                // the konduktor catches them at the door
+                _dodgerFare += r.DodgerFare;
+                _dodgerCount += r.Dodgers;
+                Services.UI.Say("O, SAAN KA PUPUNTA? BAYAD MUNA!", back, true, 1.8f);
+                CatchDodger();
+                Services.UI.Float("HULI NI KONDUKTOR!", UIManager.FloatKind.Good);
+            }
+            else if (r.Dodgers > 0)
             {
                 _dodgerT = Riders.DodgerWindow;
                 _dodgerFare += r.DodgerFare;

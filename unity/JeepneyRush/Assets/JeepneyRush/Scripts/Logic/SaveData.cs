@@ -133,6 +133,9 @@ namespace JeepneyRush.Logic
         // ---- Pasada Pass (offline; online the server computes it)
         public int passSeason, passXp;
         public bool passPremium;
+        // ---- driver look (worn items; owned ones are in ownedCosmetics) and the konduktor
+        public string driverShirt = "", driverHat = "", driverExtra = "";
+        public bool konduktorOff;
         public long passClaimedFree, passClaimedPremium;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
