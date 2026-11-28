@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JeepneyRush.Logic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -543,7 +544,28 @@ namespace JeepneyRush
             _contractLabel.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
-        private Label _contractLabel;
+        private Label _contractLabel, _radioLabel;
+        private float _radioShownAt;
+
+        /// <summary>The radio DJ's line on the HUD (shown for a few seconds).</summary>
+        public void SetRadioLine(string text)
+        {
+            if (_radioLabel == null) return;
+            _radioLabel.text = string.IsNullOrEmpty(text) ? "" : text;
+            _radioLabel.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
+            _radioShownAt = Time.unscaledTime;
+            _radioLabel.schedule.Execute(() => { if (Time.unscaledTime - _radioShownAt >= 7.9f) _radioLabel.style.display = DisplayStyle.None; }).StartingIn(8000);
+        }
+
+        private void CycleRadio()
+        {
+            var d = Services.Save.Data;
+            d.radioStation = Radio.Next(d.radioStation);
+            Services.Save.Save();
+            Services.Audio.SetRadio(d.radioStation, true);
+            Float(Radio.Names[d.radioStation], FloatKind.Info);
+            Services.Game.Session?.RadioChanged();
+        }
 
         public void SetJam(string text)
         {

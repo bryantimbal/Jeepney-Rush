@@ -138,6 +138,8 @@ namespace JeepneyRush.Logic
         public bool konduktorOff;
         /// <summary>Local reminders switched off (Settings) / permission already asked.</summary>
         public bool notificationsOff, notificationsAsked;
+        /// <summary>Jeepney radio station (Logic/Radio; 0 = the route's music).</summary>
+        public int radioStation;
         // ---- sticker album (offline; online the server keeps it)
         public List<int> albumCards = new List<int>();
         public List<int> albumSets = new List<int>();

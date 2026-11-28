@@ -22,7 +22,18 @@ namespace JeepneyRush
         private float _speed, _musicLevel = 0.55f;
         private bool _fading;
         private readonly AudioClip[] _runMusicByRoute = new AudioClip[JeepneyRush.Logic.Environments.All.Length];
-        private AudioClip _runMusic => _soundTripOn && _soundTrip != null ? _soundTrip : _runMusicByRoute[Mathf.Clamp(_route, 0, _runMusicByRoute.Length - 1)];
+        private AudioClip _runMusic => _radio > 0 && _radioClips[_radio] != null ? _radioClips[_radio]
+            : _soundTripOn && _soundTrip != null ? _soundTrip : _runMusicByRoute[Mathf.Clamp(_route, 0, _runMusicByRoute.Length - 1)];
+        private readonly AudioClip[] _radioClips = new AudioClip[JeepneyRush.Logic.Radio.Stations];
+        private int _radio;
+
+        /// <summary>Jeepney radio: switch station (0 = the route's music); crossfades during a run.</summary>
+        public void SetRadio(int station, bool playNow)
+        {
+            _radio = Mathf.Clamp(station, 0, JeepneyRush.Logic.Radio.Stations - 1);
+            if (playNow) PlayMusic(true);
+        }
+        public int RadioStation => _radio;
         private int _route;
         private AudioSource _musicA, _musicB, _engineSrc, _rainSrc;
         private EngineAudio _engineAudio;
@@ -88,7 +99,7 @@ namespace JeepneyRush
         {
             if (Loaded) { progress?.Invoke(1); yield break; }
             var all = new List<Sfx>(SoundBank.AllSfx);
-            int total = all.Count + 6, done = 0;
+            int total = all.Count + 9, done = 0;
             foreach (var s in all)
             {
                 _clips[s] = Clip(s.ToString(), SoundBank.Make(s));
@@ -103,6 +114,16 @@ namespace JeepneyRush
             progress?.Invoke(++done / (float)total);
             yield return null;
             _soundTrip = Clip("PatokSoundTrip", MusicComposer.RenderSoundTrip(), true);
+            progress?.Invoke(++done / (float)total);
+            yield return null;
+            // radio stations (original music)
+            _radioClips[1] = Clip("RadioOpm", MusicComposer.RenderOpm(), true);
+            progress?.Invoke(++done / (float)total);
+            yield return null;
+            _radioClips[2] = Clip("RadioJams", MusicComposer.RenderJams(), true);
+            progress?.Invoke(++done / (float)total);
+            yield return null;
+            _radioClips[3] = Clip("RadioNews", MusicComposer.RenderNewsBed(), true);
             progress?.Invoke(++done / (float)total);
             yield return null;
             for (int e = 0; e < _runMusicByRoute.Length; e++)

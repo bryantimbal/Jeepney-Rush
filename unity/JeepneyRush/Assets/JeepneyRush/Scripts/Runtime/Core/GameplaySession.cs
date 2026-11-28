@@ -410,6 +410,9 @@ namespace JeepneyRush
             _director.PostcardBudget = new GameRandom(_seed ^ 0x5C0A2D).Next() < Album.Chance ? 1 : 0;
             if (_director.PostcardBudget > 0 && Services.Online != null && Services.Online.SignedIn) AlbumProgress.Status((_, __) => { }); // know which cards are missing
             _contract.Reset(); _stopsServed = 0; _contractHudT = 0; _contractFailShown = false;
+            Services.Audio.SetRadio(Services.Save.Data.radioStation, false); // the station plays when the run starts
+            _radioT = 6f;
+            Services.UI.SetRadioLine("");
             Services.UI.SetContract("");
             _decor.Begin(_eventOn);
             if (_eventOn && Mode == GameMode.NightShift && EventProgress.Night > 0)
@@ -820,6 +823,7 @@ namespace JeepneyRush
                 * (DriverStyle.HasKonduktor(Services.Save.Data) ? 1f + DriverStyle.KonduktorFare : 1f); // the konduktor collects every fare
             if (!_dying) UpdateRiders(dt);
             if (!_dying) UpdateContract(dt);
+            UpdateRadio(dt);
             if (!_dying) { UpdatePanic(dt); UpdateChase(dt); }
             else _police.Tick(dt, _player.Lanes.X);
             _coins.MagnetRadius = pu.IsActive(PowerUpKind.Magnet) ? _cfg.magnetRadius : 0f;
@@ -1343,6 +1347,22 @@ namespace JeepneyRush
             if ((_contractHudT -= dt) > 0) return;
             _contractHudT = 0.25f;
             Services.UI.SetContract(_contract.Hud(_score.Distance, _runTime));
+        }
+
+        // ---- jeepney radio: the DJ talks now and then
+        private float _radioT;
+        private readonly GameRandom _radioRng = new GameRandom(0x0DA10);
+
+        /// <summary>The player switched station: the new DJ says hello soon.</summary>
+        public void RadioChanged() => _radioT = 2.5f;
+
+        private void UpdateRadio(float dt)
+        {
+            int st = Services.Audio.RadioStation;
+            if (st <= 0 || (_radioT -= dt) > 0) return;
+            _radioT = Radio.TalkEvery * Random.Range(0.8f, 1.25f);
+            string line = Radio.Line(st, _env, _hour, _weather.Wetness > 0.3f, _jam, _radioRng);
+            if (line != null) Services.UI.SetRadioLine(Radio.Names[st] + ": " + line);
         }
 
         private FestiveDecor _decor;

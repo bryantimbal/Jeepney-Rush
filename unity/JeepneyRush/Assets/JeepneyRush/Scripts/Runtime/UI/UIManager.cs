@@ -774,6 +774,12 @@ namespace JeepneyRush
             _contractLabel.style.maxWidth = 620;
             _contractLabel.style.display = DisplayStyle.None;
             scoreCol.Add(_contractLabel);
+            _radioLabel = UiKit.Text("", 24, new Color(0.75f, 0.9f, 1f), false, 2f);
+            _radioLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _radioLabel.style.whiteSpace = WhiteSpace.Normal;
+            _radioLabel.style.maxWidth = 620;
+            _radioLabel.style.display = DisplayStyle.None;
+            scoreCol.Add(_radioLabel);
             BuildCareerHud(scoreCol);
             BuildRidersHud(scoreCol);
             top.Add(scoreCol);
@@ -784,6 +790,13 @@ namespace JeepneyRush
             rowR.style.alignItems = Align.Center;
             _coins = UiKit.Text("0", 46, Color.white);
             rowR.Add(UiKit.Pill(UiKit.Icon("ui_coin", 58), _coins));
+            // jeepney radio: tap to change station
+            var radio = UiKit.Button("RADYO", CycleRadio, Color.white, UiKit.Ink, 26, 112);
+            radio.name = "radio";
+            radio.style.width = 140;
+            radio.style.marginTop = radio.style.marginBottom = 0;
+            radio.style.marginLeft = 18;
+            rowR.Add(radio);
             _shotBtn = UiKit.IconButton("ui_camera", () => Screenshots.Instance?.Take(false), 112, Color.white);
             _shotBtn.name = "screenshot";
             _shotBtn.style.marginLeft = 18;

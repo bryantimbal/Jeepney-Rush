@@ -107,6 +107,74 @@ namespace JeepneyRush.Logic.Audio
         }
         public static float[] RenderMenu() => Render(MenuTrack());
 
+        /// <summary>Radio DZJR 99.1 OPM: an original slow, heartfelt pop ballad (I–V–vi–IV) at 84 BPM.</summary>
+        public static float[] RenderOpm()
+        {
+            var t = new Track { Bpm = 84, Steps = 128, Drums = false };
+            int[,] mel =
+            {
+                {0,E5,4},{4,D5,2},{6,C5,2},{8,D5,6},{14,G4,2},{16,A4,4},{20,B4,2},{22,C5,2},{24,B4,8},
+                {32,C5,4},{36,D5,2},{38,E5,2},{40,G5,6},{46,E5,2},{48,D5,4},{52,C5,4},{56,D5,8},
+                {64,E5,4},{68,G5,2},{70,A5,2},{72,G5,6},{78,E5,2},{80,D5,4},{84,E5,2},{86,D5,2},{88,C5,8},
+                {96,A4,4},{100,C5,2},{102,D5,2},{104,E5,4},{108,D5,4},{112,C5,12},
+            };
+            for (int i = 0; i < mel.GetLength(0); i++) t.Melody.Add(new Note(mel[i, 0], mel[i, 1], mel[i, 2]));
+            const int F2 = 41;
+            var prog = new (int root, int[] notes)[]
+            {
+                (C3, new[]{G4,C5,E5}), (G2, new[]{G4,B4,D5}), (A2, new[]{A4,C5,E5}), (F2, new[]{A4,C5,72 + 5}),
+                (C3, new[]{G4,C5,E5}), (G2, new[]{G4,B4,D5}), (F2, new[]{A4,C5,72 + 5}), (G2, new[]{G4,B4,D5}),
+            };
+            for (int bar = 0; bar < prog.Length; bar++)
+            {
+                int s = bar * 16, r = prog[bar].root;
+                t.Bass.Add(new Note(s, r, 8)); t.Bass.Add(new Note(s + 8, r + 7, 8));
+                foreach (int off in new[] { 0, 4, 8, 12 }) t.Chords.Add((s + off, prog[bar].notes));
+            }
+            return Render(t);
+        }
+
+        /// <summary>Radio JEEP FM 101.5: an original bright, offbeat (Pinoy reggae / ska feel) groove at 112 BPM.</summary>
+        public static float[] RenderJams()
+        {
+            var t = new Track { Bpm = 112, Steps = 128, Drums = true };
+            int[,] mel =
+            {
+                {2,G4,2},{6,B4,2},{8,D5,4},{14,B4,2},{18,C5,2},{22,E5,2},{24,D5,6},{30,B4,2},
+                {34,A4,2},{38,C5,2},{40,B4,4},{46,G4,2},{48,A4,8},{58,D5,2},{60,G5,4},
+                {66,G5,2},{70,Fs5,2},{72,E5,4},{78,D5,2},{82,C5,2},{86,B4,2},{88,A4,6},{94,B4,2},
+                {98,D5,2},{102,E5,2},{104,D5,4},{110,B4,2},{112,G4,12},
+            };
+            for (int i = 0; i < mel.GetLength(0); i++) t.Melody.Add(new Note(mel[i, 0], mel[i, 1], mel[i, 2]));
+            var prog = new (int root, int[] notes)[]
+            {
+                (G2, new[]{G4,B4,D5}), (C3, new[]{G4,C5,E5}), (D3, new[]{Fs4,A4,D5}), (C3, new[]{G4,C5,E5}),
+                (G2, new[]{G4,B4,D5}), (E3, new[]{E4,G4,B4}), (C3, new[]{G4,C5,E5}), (D3, new[]{Fs4,A4,D5}),
+            };
+            for (int bar = 0; bar < prog.Length; bar++)
+            {
+                int s = bar * 16, r = prog[bar].root;
+                t.Bass.Add(new Note(s, r, 3)); t.Bass.Add(new Note(s + 6, r + 7, 2)); t.Bass.Add(new Note(s + 8, r + 12, 3)); t.Bass.Add(new Note(s + 14, r + 7, 2));
+                foreach (int off in new[] { 2, 6, 10, 14 }) t.Chords.Add((s + off, prog[bar].notes)); // offbeat "skank" chords
+            }
+            return Render(t);
+        }
+
+        /// <summary>Radio Pasada 1020 AM: a calm news bed under the DJ's traffic reports.</summary>
+        public static float[] RenderNewsBed()
+        {
+            var t = new Track { Bpm = 100, Steps = 64, Drums = false };
+            var prog = new (int root, int[] notes)[] { (D3, new[]{Fs4,A4,D5}), (G2, new[]{G4,B4,D5}), (A2, new[]{E4,A4,C5 + 1}), (D3, new[]{Fs4,A4,D5}) };
+            for (int bar = 0; bar < prog.Length; bar++)
+            {
+                int s = bar * 16, r = prog[bar].root;
+                t.Bass.Add(new Note(s, r, 16));
+                foreach (int off in new[] { 0, 8 }) t.Chords.Add((s + off, prog[bar].notes));
+            }
+            t.Melody.Add(new Note(0, A5, 2)); t.Melody.Add(new Note(2, Fs5, 2)); t.Melody.Add(new Note(4, D5, 4)); // station jingle
+            return Render(t);
+        }
+
         private static float[] Render(Track tr)
         {
             double stepDur = 60.0 / tr.Bpm / 4.0;
