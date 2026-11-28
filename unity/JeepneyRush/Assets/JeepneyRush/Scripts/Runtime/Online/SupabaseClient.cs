@@ -193,7 +193,9 @@ namespace JeepneyRush
                 if (err == null) user = JsonUtility.FromJson<AuthUser>(json);
             });
             if (error != null) { done(error); yield break; }
-            bool linked = user != null && !user.is_anonymous && string.Equals(user.email, email, StringComparison.OrdinalIgnoreCase);
+            // the email is on the account (Confirm email OFF); FinishLink then proves it by signing in with it.
+            // (Don't wait for is_anonymous here: the first reply can still say anonymous.)
+            bool linked = user != null && string.Equals(user.email, email, StringComparison.OrdinalIgnoreCase);
             if (!linked)
             {
                 PendingEmail = email;
