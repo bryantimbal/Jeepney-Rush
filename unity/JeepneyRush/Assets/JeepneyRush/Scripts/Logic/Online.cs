@@ -77,6 +77,8 @@ namespace JeepneyRush.Logic
         public int dodgers_caught;
         public int smooth_lolas;
         public int on_time;
+        /// <summary>Christmas event: parol tokens picked up and caroler groups carried (the server caps them).</summary>
+        public int parols, carolers;
         public int client_version = 3;
 
         public static RunReport From(RunSummary r, float duration, int seed, bool daily, int dayKey, string jeepney) => new RunReport
@@ -411,6 +413,16 @@ namespace JeepneyRush.Logic
         public int reward;
         public string friend;
         public ServerSnapshot snapshot;
+    }
+
+    /// <summary>Christmas event progress from the server (jr_event_status).</summary>
+    [Serializable]
+    public class EventInfo
+    {
+        public bool active, golden;
+        public int season, tokens, nights, claimed, today_tokens, days_left;
+        /// <summary>Today's Simbang Gabi night by the server's date (0 = none).</summary>
+        public int night;
     }
 
     /// <summary>Login streak status from the server (jr_streak_status).</summary>

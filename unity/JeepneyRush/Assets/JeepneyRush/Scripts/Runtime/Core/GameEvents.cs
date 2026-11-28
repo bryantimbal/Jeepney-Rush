@@ -79,5 +79,7 @@ namespace JeepneyRush
         public string Jeepney;
         public int GhostScore;
         public bool BeatGhost;
+        /// <summary>Christmas event: tokens this run earns (before the daily cap) and the Simbang Gabi night it lit (0 = none).</summary>
+        public int EventTokens, SimbangGabiNight;
     }
 }

@@ -6,8 +6,8 @@ namespace JeepneyRush.Logic
     /// <summary>What a cosmetic item changes.</summary>
     public enum CustomSlot { Paint, Windshield, RearSticker, Sign, Horn, Mudflap, Ornament, Lights }
 
-    public enum HornKind { Classic, TootToot, Musical, AirHorn, Cucaracha }
-    public enum OrnamentKind { Horses, FiveHorses, GoldHorses, Eagle, Carabao, None }
+    public enum HornKind { Classic, TootToot, Musical, AirHorn, Cucaracha, Jingle }
+    public enum OrnamentKind { Horses, FiveHorses, GoldHorses, Eagle, Carabao, None, Parol }
     public enum LightsKind { None, FogBar, SideMarkers, Underglow }
 
     /// <summary>
@@ -39,6 +39,9 @@ namespace JeepneyRush.Logic
 
         public bool IsStock => Price == 0 && RankNeeded < 0;
         public bool Earned => RankNeeded >= 0;
+        /// <summary>Event reward (Paskong Pasada): never sold, owned once the event granted it.</summary>
+        public const int EventRank = 99;
+        public bool IsEvent => RankNeeded == EventRank;
     }
 
     /// <summary>The setup of one jeepney (item ids per slot; empty = stock).</summary>
@@ -133,6 +136,7 @@ namespace JeepneyRush.Logic
             Tex("rear_santonino", CustomSlot.RearSticker, "Santo Niño", 200, "cos_rear_santonino"),
             Tex("rear_araw", CustomSlot.RearSticker, "Araw at Tatlong Bituin", 200, "cos_rear_araw"),
             Tex("rear_lisensyado", CustomSlot.RearSticker, "LISENSYADO!", 0, "cos_rear_lisensyado", 1),
+            Tex("rear_belen", CustomSlot.RearSticker, "Belen (Pasko)", 0, "cos_rear_belen", CosmeticItem.EventRank),
             // ---- roof sign board (your own route)
             Tex("sign_stock", CustomSlot.Sign, "Orihinal (stock)", 0, null),
             Tex("sign_quiapo", CustomSlot.Sign, "QUIAPO – CUBAO", 200, "cos_sign_quiapo"),
@@ -141,12 +145,14 @@ namespace JeepneyRush.Logic
             Tex("sign_cebu", CustomSlot.Sign, "COLON – IT PARK", 200, "cos_sign_cebu"),
             Tex("sign_baguio", CustomSlot.Sign, "BAGUIO – LA TRINIDAD", 200, "cos_sign_baguio"),
             Tex("sign_especial", CustomSlot.Sign, "SPECIAL TRIP", 250, "cos_sign_especial"),
+            Tex("sign_goldenparol", CustomSlot.Sign, "GOLDEN PAROL (Simbang Gabi)", 0, "cos_sign_goldenparol", CosmeticItem.EventRank),
             // ---- horn
             new CosmeticItem { Id = "horn_classic", Slot = CustomSlot.Horn, Name = "Klasik (stock)", Horn = HornKind.Classic },
             new CosmeticItem { Id = "horn_toot", Slot = CustomSlot.Horn, Name = "Toot-Toot-Toot", Price = 400, Horn = HornKind.TootToot },
             new CosmeticItem { Id = "horn_musical", Slot = CustomSlot.Horn, Name = "Tunog-Pista (musical)", Price = 600, Horn = HornKind.Musical },
             new CosmeticItem { Id = "horn_air", Slot = CustomSlot.Horn, Name = "Air Horn (patok)", Price = 600, Horn = HornKind.AirHorn },
             new CosmeticItem { Id = "horn_cucaracha", Slot = CustomSlot.Horn, Name = "La Cucaracha", Price = 800, Horn = HornKind.Cucaracha },
+            new CosmeticItem { Id = "horn_jingle", Slot = CustomSlot.Horn, Name = "Jingle Busina (Pasko)", RankNeeded = CosmeticItem.EventRank, Horn = HornKind.Jingle },
             // ---- mudflaps
             new CosmeticItem { Id = "mud_stock", Slot = CustomSlot.Mudflap, Name = "Orihinal (stock)" },
             new CosmeticItem { Id = "mud_red", Slot = CustomSlot.Mudflap, Name = "Pula", Price = 150, MudflapColor = "#B3001B" },
@@ -159,6 +165,7 @@ namespace JeepneyRush.Logic
             new CosmeticItem { Id = "orn_carabao", Slot = CustomSlot.Ornament, Name = "Kalabaw", Price = 800, Ornament = OrnamentKind.Carabao },
             new CosmeticItem { Id = "orn_none", Slot = CustomSlot.Ornament, Name = "Malinis (walang palamuti)", Price = 100, Ornament = OrnamentKind.None },
             new CosmeticItem { Id = "orn_gold", Slot = CustomSlot.Ornament, Name = "Gintong Kabayo", RankNeeded = 3, Ornament = OrnamentKind.GoldHorses },
+            new CosmeticItem { Id = "orn_parol", Slot = CustomSlot.Ornament, Name = "Parol (Pasko)", RankNeeded = CosmeticItem.EventRank, Ornament = OrnamentKind.Parol },
             // ---- lights
             new CosmeticItem { Id = "lights_stock", Slot = CustomSlot.Lights, Name = "Orihinal (stock)", Lights = LightsKind.None },
             new CosmeticItem { Id = "lights_fog", Slot = CustomSlot.Lights, Name = "Fog Lights", Price = 700, Lights = LightsKind.FogBar, LightColor = "#FFF4C2" },
@@ -184,7 +191,8 @@ namespace JeepneyRush.Logic
         {
             if (c == null) return false;
             if (c.IsStock) return true;
-            if (c.Earned) return d != null && d.careerRank >= c.RankNeeded;
+            if (c.Earned && !c.IsEvent && d != null && d.careerRank >= c.RankNeeded) return true;
+            if (c.Earned) return d != null && d.ownedCosmetics != null && d.ownedCosmetics.Contains(c.Id); // event rewards (granted)
             return d != null && d.ownedCosmetics != null && d.ownedCosmetics.Contains(c.Id);
         }
 
@@ -262,7 +270,7 @@ namespace JeepneyRush.Logic
         }
 
         public static Audio.Sfx HornSound(HornKind k) =>
-            k == HornKind.TootToot ? Audio.Sfx.HornToot : k == HornKind.Musical ? Audio.Sfx.HornMusical : k == HornKind.AirHorn ? Audio.Sfx.HornAir : k == HornKind.Cucaracha ? Audio.Sfx.HornCucaracha : Audio.Sfx.Horn;
+            k == HornKind.TootToot ? Audio.Sfx.HornToot : k == HornKind.Musical ? Audio.Sfx.HornMusical : k == HornKind.AirHorn ? Audio.Sfx.HornAir : k == HornKind.Cucaracha ? Audio.Sfx.HornCucaracha : k == HornKind.Jingle ? Audio.Sfx.HornJingle : Audio.Sfx.Horn;
 
         public static HornKind HornOf(SaveData d, string jeepney)
         {

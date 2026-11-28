@@ -69,6 +69,7 @@ namespace JeepneyRush.Tests
             public void SpawnStop(PassengerStop stop, float z) { }
             public void SpawnPowerUp(PowerUpKind kind, int lane, float z) { }
             public void SpawnGem(int lane, float z) { }
+            public void SpawnParol(int lane, float z) { }
             public void SpawnStation(GasStation station, float z) { }
             public void SpawnIntersection(Intersection intersection, float z) { }
         }

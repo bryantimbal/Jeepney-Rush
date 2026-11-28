@@ -322,6 +322,20 @@ namespace JeepneyRush.Logic.Geometry
                         b.Box("chrome", chrome, 0.34f, 0.025f, 0.13f, sx * 0.2f, 0.24f, -0.02f, new Rot(0, 0, sx * 0.45f)); // spread wings
                     b.Pop();
                     return;
+                case OrnamentKind.Parol:
+                    // Christmas parol: a five-point lantern star with tassels, standing on the hood
+                    b.Push(new V3(0, 1.3f, 2.5f), Rot.None, 1.15f);
+                    b.Box("chrome", chrome, 0.16f, 0.03f, 0.2f, 0, 0.015f, 0);
+                    b.Cylinder("chrome", chrome, 0.012f, 0.012f, 0.22f, 5, 0, 0.12f, 0);
+                    for (int i = 0; i < 5; i++)
+                    {
+                        float a = (float)(i * 2 * Math.PI / 5);
+                        b.Box("glow", i % 2 == 0 ? "#FF4D6D" : "#FFD23F", 0.07f, 0.22f, 0.04f, (float)Math.Sin(a) * 0.1f, 0.42f + (float)Math.Cos(a) * 0.1f, 0, new Rot(0, 0, -a));
+                    }
+                    b.Sphere("glow", "#FFF6D0", 0.06f, 0, 0.42f, 0, 8);
+                    foreach (float tx in new[] { -0.05f, 0f, 0.05f }) b.Box("glow", "#FFD23F", 0.012f, 0.14f, 0.012f, tx, 0.24f, 0);
+                    b.Pop();
+                    return;
                 case OrnamentKind.Carabao:
                     b.Push(new V3(0, 1.27f, 2.5f), Rot.None, 1.2f);
                     b.Box("chrome", chrome, 0.18f, 0.03f, 0.32f, 0, 0.015f, 0);

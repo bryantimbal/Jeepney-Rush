@@ -16,7 +16,7 @@ namespace JeepneyRush.Tests
                 Assert.IsTrue(ids.Add(c.Id), "unique " + c.Id);
                 Assert.That(c.Id.Length, Is.LessThanOrEqualTo(32));
                 Assert.GreaterOrEqual(c.Price, 0);
-                if (c.Earned) Assert.That(c.RankNeeded, Is.InRange(1, Career.Licenses.Length - 1), c.Id);
+                if (c.Earned && !c.IsEvent) Assert.That(c.RankNeeded, Is.InRange(1, Career.Licenses.Length - 1), c.Id);
             }
             foreach (var s in Customization.Slots)
             {

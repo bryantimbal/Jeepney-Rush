@@ -186,10 +186,11 @@ namespace JeepneyRush
                 _garageStats.Add(p);
             }
             bool owned = d.Owns(j.Id), selected = d.selectedJeepney == j.Id;
-            _garageStatus.text = selected ? "DRIVING THIS ONE" : owned ? "OWNED" : $"PRICE: {j.Price:N0} COINS";
+            _garageStatus.text = selected ? "DRIVING THIS ONE" : owned ? "OWNED" : j.EventOnly ? "PASKONG PASADA REWARD" : $"PRICE: {j.Price:N0} COINS";
             _garageStatus.style.color = selected || owned ? UiKit.Green : UiKit.Ink;
             if (selected) { _garageAction.text = "SELECTED"; _garageAction.SetEnabled(false); }
             else if (owned) { _garageAction.text = "SELECT"; _garageAction.SetEnabled(true); }
+            else if (j.EventOnly) { _garageAction.text = "CHRISTMAS EVENT ONLY"; _garageAction.SetEnabled(false); }
             else { _garageAction.text = $"BUY · {j.Price:N0}"; _garageAction.SetEnabled(d.coins >= j.Price); }
             _garageAction.style.opacity = _garageAction.enabledSelf ? 1f : 0.55f;
             RefreshGarageMonetization(j);

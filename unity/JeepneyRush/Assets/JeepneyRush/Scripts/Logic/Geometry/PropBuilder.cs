@@ -78,6 +78,64 @@ namespace JeepneyRush.Logic.Geometry
         }
 
         /// <summary>Road gem: a faceted violet diamond with a bright core, spinning over the lane (~0.9 m tall).</summary>
+        /// <summary>Parol token (Christmas event): a glowing five-point lantern star with tassels.</summary>
+        public static MeshData ParolToken()
+        {
+            var b = new MeshBuilder();
+            ParolStar(b, 0, 0, 0, 0.55f, "#FFD23F", "#FF4D6D");
+            b.Sphere("bubble", "#FFE08A", 0.7f, 0, 0, 0, 10); // halo so it reads from far away
+            return b.Data;
+        }
+
+        /// <summary>A parol (star lantern) centred at (x, y, z) facing ±Z, radius r.</summary>
+        internal static void ParolStar(MeshBuilder b, float x, float y, float z, float r, string c1, string c2)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                float a = (float)(i * 2 * Math.PI / 5);
+                b.Box("glow", c1, r * 0.42f, r, r * 0.16f, x + (float)Math.Sin(a) * r * 0.5f, y + (float)Math.Cos(a) * r * 0.5f, z, new Rot(0, 0, -a));
+            }
+            b.Cylinder("glow", c2, r * 0.42f, r * 0.42f, r * 0.2f, 10, x, y, z, new Rot((float)(Math.PI / 2), 0, 0));
+            b.Sphere("glow", "#FFFFFF", r * 0.16f, x, y, z, 6);
+            foreach (float tx in new[] { -0.25f, 0f, 0.25f }) b.Box("glow", c2, r * 0.06f, r * 0.75f, r * 0.06f, x + tx * r, y - r * 1.05f, z);
+        }
+
+        /// <summary>
+        /// Christmas decoration across the road: a wire between two poles with hanging parols and a
+        /// string of coloured lights (variant 0..2 changes the colours).
+        /// </summary>
+        public static MeshData ParolArch(float halfWidth, int variant)
+        {
+            var b = new MeshBuilder();
+            string[][] sets = { new[] { "#FF4D6D", "#FFD23F" }, new[] { "#4CC9F0", "#FFFFFF" }, new[] { "#80ED99", "#FF4D6D" }, new[] { "#FFD23F", "#E63946" } };
+            float y = 6.6f;
+            foreach (float sx in new[] { -1f, 1f }) b.Cylinder("paint", "#3A3A40", 0.07f, 0.09f, y + 0.2f, 6, sx * halfWidth, (y + 0.2f) / 2, 0);
+            // sagging wire: short straight pieces along a curve
+            const int segs = 12;
+            float Sag(float t) => y - 0.7f * 4f * t * (1 - t);
+            for (int i = 0; i < segs; i++)
+            {
+                float t0 = i / (float)segs, t1 = (i + 1) / (float)segs;
+                float x0 = -halfWidth + 2 * halfWidth * t0, x1 = -halfWidth + 2 * halfWidth * t1, y0 = Sag(t0), y1 = Sag(t1);
+                float len = (float)Math.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+                b.Box("paint", "#1A1A1E", len, 0.03f, 0.03f, (x0 + x1) / 2, (y0 + y1) / 2, 0, new Rot(0, 0, (float)Math.Atan2(y1 - y0, x1 - x0)));
+            }
+            string[] bulbs = { "#FF4D6D", "#FFD23F", "#4CC9F0", "#80ED99", "#FF9F1C" };
+            for (int i = 1; i < 20; i++)
+            {
+                float t = i / 20f;
+                b.Sphere("glow", bulbs[(i + variant) % bulbs.Length], 0.07f, -halfWidth + 2 * halfWidth * t, Sag(t) - 0.12f, 0, 5);
+            }
+            var set = sets[variant % sets.Length];
+            foreach (float t in new[] { 0.2f, 0.5f, 0.8f })
+            {
+                float px = -halfWidth + 2 * halfWidth * t, py = Sag(t) - 0.85f;
+                b.Box("paint", "#1A1A1E", 0.02f, 0.5f, 0.02f, px, py + 0.55f, 0);
+                ParolStar(b, px, py, 0, t == 0.5f ? 0.62f : 0.5f, t == 0.5f ? set[0] : set[1], t == 0.5f ? set[1] : set[0]);
+            }
+            return b.Data;
+        }
+
         public static MeshData Gem()
         {
             var b = new MeshBuilder();

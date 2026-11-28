@@ -5,7 +5,7 @@ namespace JeepneyRush.Logic.Audio
 {
     public enum Sfx { Coin, Pickup, Full, Crash, Jump, Land, Lane, Brake, Horn, Click, GameOver, NewBest, Start, PowerUp, Deliver, Miss, Shield, Purchase, LevelUp, Turbo, Whistle, CoinRush, Complain, Rev, Bump, Splash, Thunder, ReverseBeep, Blinker, Fare, Refuel, Sputter, Bell, BrakeSqueal, AirBrake, Siren, RoofBang, Wiper, Tapik, NearMiss, ComboUp,
         // talyer horns (customization)
-        HornToot, HornMusical, HornAir, HornCucaracha }
+        HornToot, HornMusical, HornAir, HornCucaracha, HornJingle }
 
     /// <summary>Recipes for every sound effect plus the looping diesel engine.</summary>
     public static class SoundBank
@@ -306,6 +306,37 @@ namespace JeepneyRush.Logic.Audio
                             var one = TwinHorn(dur + 0.05f, f, f * 2.003f, new[] { (0f, dur, 1f) }, raw: true, duty2: 0.18);
                             int at = (int)(st * Synth.Rate);
                             for (int k = 0; k < one.Length && at + k < buf.Length; k++) buf[at + k] += one[k];
+                        }
+                        return Bell(buf);
+                    }
+                case Sfx.HornJingle:
+                    {
+                        // "Jingle Bells" chorus (J. L. Pierpont, 1857, public domain) on the musical horn:
+                        // jin-gle bells, jin-gle bells, jin-gle all the way
+                        var song = new (float f, float st, float dur)[]
+                        {
+                            (659.3f, 0f, 0.12f), (659.3f, 0.16f, 0.12f), (659.3f, 0.32f, 0.26f),
+                            (659.3f, 0.64f, 0.12f), (659.3f, 0.8f, 0.12f), (659.3f, 0.96f, 0.26f),
+                            (659.3f, 1.28f, 0.12f), (784f, 1.44f, 0.12f), (523.3f, 1.6f, 0.18f), (587.3f, 1.8f, 0.08f), (659.3f, 1.92f, 0.42f),
+                        };
+                        var buf = Synth.Buffer(2.5f);
+                        foreach (var (f, st, dur) in song)
+                        {
+                            var one = TwinHorn(dur + 0.05f, f, f * 2.003f, new[] { (0f, dur, 1f) }, raw: true, duty2: 0.2);
+                            int at = (int)(st * Synth.Rate);
+                            for (int k = 0; k < one.Length && at + k < buf.Length; k++) buf[at + k] += one[k];
+                        }
+                        // sleigh-bell sparkle on the beats
+                        for (int beat = 0; beat < 8; beat++)
+                        {
+                            float st = beat * 0.32f;
+                            for (int k = 0; k < (int)(0.05f * Synth.Rate); k++)
+                            {
+                                int at = (int)(st * Synth.Rate) + k;
+                                if (at >= buf.Length) break;
+                                float env = 1f - k / (0.05f * Synth.Rate);
+                                buf[at] += (float)System.Math.Sin(at * 2 * System.Math.PI * 5274f / Synth.Rate) * 0.12f * env * env;
+                            }
                         }
                         return Bell(buf);
                     }

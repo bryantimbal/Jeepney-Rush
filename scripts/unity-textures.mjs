@@ -110,6 +110,34 @@ const textures = await page.evaluate(() => {
     routeSign('cos_sign_cebu', 'COLON', 'IT PARK', '#0077B6', '#FFFFFF', '#FCD116');
     routeSign('cos_sign_baguio', 'BAGUIO', 'LA TRINIDAD', '#1F5C45', '#FFFFFF', '#E0B23A');
     routeSign('cos_sign_especial', 'SPECIAL TRIP', null, '#C8102E', '#FCD116', '#1B1033');
+    // ---- Paskong Pasada (Christmas event) rewards
+    const parol = (x, cx, cy, r, c1, c2) => {
+      star(x, cx, cy, r, c1); star(x, cx, cy, r * 0.55, c2);
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(cx, cy, r * 0.14, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = c2; x.lineWidth = Math.max(2, r * 0.08); x.lineCap = 'round';
+      for (const dx of [-0.3, 0, 0.3]) { x.beginPath(); x.moveTo(cx + dx * r, cy + r * 0.6); x.quadraticCurveTo(cx + dx * r + r * 0.1, cy + r * 1.1, cx + dx * r, cy + r * 1.5); x.stroke(); }
+    };
+    {
+      const [c, x] = cv(512, 128);
+      const g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, '#FFF3B0'); g.addColorStop(0.5, '#FFD23F'); g.addColorStop(1, '#B8860B');
+      x.fillStyle = '#1B1033'; x.fillRect(0, 0, 512, 128); x.fillStyle = g; x.fillRect(6, 6, 500, 116);
+      parol(x, 64, 52, 40, '#C8102E', '#FFFFFF'); parol(x, 448, 52, 40, '#1E7B45', '#FFFFFF');
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      outlined(x, 'GOLDEN PAROL', 256, 50, 300, 46, '#C8102E', '#1B1033', 6); outlined(x, 'SIMBANG GABI', 256, 96, 300, 30, '#1B1033', '#FFF3B0', 2);
+      save('cos_sign_goldenparol', c);
+    }
+    sticker('cos_rear_belen', (x) => {
+      // the Belen: Star of Bethlehem over the stable, Mary, Joseph and the Child (simple silhouettes)
+      x.fillStyle = '#0B2545'; x.beginPath(); x.roundRect(8, 8, 240, 240, 26); x.fill(); x.lineWidth = 9; x.strokeStyle = '#FFD23F'; x.stroke();
+      star(x, 128, 46, 22, '#FFD23F'); x.fillStyle = 'rgba(255,210,63,0.35)'; x.beginPath(); x.moveTo(128, 60); x.lineTo(90, 150); x.lineTo(166, 150); x.fill();
+      x.fillStyle = '#6B4226'; x.beginPath(); x.moveTo(52, 132); x.lineTo(128, 86); x.lineTo(204, 132); x.lineTo(196, 140); x.lineTo(128, 98); x.lineTo(60, 140); x.fill();
+      x.fillRect(62, 134, 10, 80); x.fillRect(184, 134, 10, 80);
+      x.fillStyle = '#F4F1DE'; x.beginPath(); x.arc(98, 170, 12, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(158, 166, 13, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#4D9DE0'; x.beginPath(); x.moveTo(84, 214); x.quadraticCurveTo(98, 176, 112, 214); x.fill();   // Mary
+      x.fillStyle = '#8B5A2B'; x.beginPath(); x.moveTo(142, 214); x.quadraticCurveTo(158, 172, 174, 214); x.fill(); // Joseph
+      x.fillStyle = '#C8A165'; x.fillRect(114, 198, 28, 14); x.fillStyle = '#F4F1DE'; x.beginPath(); x.arc(128, 196, 7, 0, Math.PI * 2); x.fill(); // manger + Child
+      x.fillStyle = '#FFD23F'; x.font = `900 22px ${B}`; x.textAlign = 'center'; x.fillText('MALIGAYANG PASKO', 128, 238);
+    });
     {
       const [c, x] = cv(128, 128);
       x.fillStyle = '#141414'; x.fillRect(0, 0, 128, 128);
@@ -384,6 +412,7 @@ const textures = await page.evaluate(() => {
       { id: 'minibus', body: '#FFFFFF', a1: '#E63946', a2: '#F4A261', motif: 'stripes', slogan: 'PITX Express', route: 'QUIAPO - PITX', rear: 'STANDING ROOM ONLY', plate: 'PUV 4040', sign: 'QUIAPO - PITX', signBg: '#0A0A0A', signFg: '#FFB000', led: true },
       { id: 'sarao', body: '#C8102E', a1: '#1F3FBF', a2: '#FCD116', motif: 'heritage', slogan: 'Hari ng Kalsada', route: 'BACLARAN - DIVISORIA', rear: 'TRADISYON AT MODERNO', plate: 'SAR 1953', sign: 'BACLARAN', signBg: '#FFFFFF', signFg: '#C8102E' },
       { id: 'airport', body: '#FFFFFF', a1: '#F77F00', a2: '#D62828', motif: 'speed', slogan: 'NAIA Express', route: 'NAIA LOOP', rear: 'WELCOME HOME, KABAYAN!', plate: 'NAIA 3', sign: 'NAIA LOOP', signBg: '#0A0A0A', signFg: '#FFB000', led: true },
+      { id: 'pasko', body: '#B3001B', a1: '#FCD116', a2: '#1E7B45', motif: 'pasko', slogan: 'Maligayang Pasko!', route: 'SIMBANG GABI', rear: 'MANIGONG BAGONG TAON', plate: 'XMAS 25', sign: 'MALIGAYANG PASKO', signBg: '#1E7B45', signFg: '#FCD116' },
       { id: 'nightowl', body: '#22223B', a1: '#00F5D4', a2: '#F15BB5', motif: 'neon', slogan: 'Night Owl', route: '24/7 PASADA', rear: 'GISING PA KAMI', plate: 'OWL 247', sign: '24/7 PASADA', signBg: '#0A0A0A', signFg: '#00F5D4', led: true },
     ];
     const goldGrad = (x, y0, y1) => { const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#FFF3B0'); g.addColorStop(0.5, '#FFD700'); g.addColorStop(1, '#B8860B'); return g; };
@@ -456,6 +485,14 @@ const textures = await page.evaluate(() => {
           for (let k = 0; k < 9; k++) { const cx = 80 + k * 108; sun(x, cx, 166, 16, k % 2 ? '#FFFFFF' : j.a2); }
           for (const cx of [60, 964]) star(x, cx, 52, 20, j.a2);
           x.fillStyle = j.a2; x.fillRect(0, 226, 1024, 10);
+          break;
+        }
+        case 'pasko': {
+          // Christmas: green band, a row of parols and a string of lights
+          x.fillStyle = j.a2; x.fillRect(0, 196, 1024, 40); x.fillStyle = j.a1; x.fillRect(0, 192, 1024, 6); x.fillRect(0, 236, 1024, 6);
+          const cols = ['#FCD116', '#FFFFFF', '#80ED99', '#4CC9F0'];
+          for (let k = 0; k < 6; k++) { const cx = 60 + k * 180; star(x, cx, 60, 30, cols[k % 4]); star(x, cx, 60, 15, '#C8102E'); x.strokeStyle = cols[k % 4]; x.lineWidth = 4; for (const dx of [-9, 0, 9]) { x.beginPath(); x.moveTo(cx + dx, 80); x.lineTo(cx + dx, 108); x.stroke(); } }
+          for (let k = 0; k < 40; k++) { x.fillStyle = ['#FF4D6D', '#FFD23F', '#4CC9F0', '#80ED99'][k % 4]; x.beginPath(); x.arc(k * 26 + 13, 216 + Math.sin(k) * 6, 6, 0, Math.PI * 2); x.fill(); }
           break;
         }
         case 'speed':

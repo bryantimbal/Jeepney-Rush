@@ -252,6 +252,9 @@ namespace JeepneyRush
             _life.Init(_env);
             _life.Crossings = _crossings;
             _bender.AddRoot(_life.GroundRoot);
+            // Christmas decorations over the road (Paskong Pasada)
+            _decor = GetOrAdd<FestiveDecor>(Child("FestiveDecor"));
+            _bender.AddRoot(_decor.transform);
             foreach (var root in new[] { _traffic.transform, _obstacles.transform, _coins.transform, _passengers.transform, _powerUps.transform, _enforcer.transform, _stations.transform, _crossings.transform, _road.SegmentRoot })
                 _bender.AddRoot(root);
             _weather = GetOrAdd<WeatherManager>(Child("Weather"));
@@ -398,6 +401,13 @@ namespace JeepneyRush
             int gemsToday = sd.roadGemsDay == PhilippineTime.DayKey ? sd.roadGemsToday : 0;
             _director.GemBudget = Mathf.Min(RoadGems.MaxPerRun, RoadGems.LeftToday(gemsToday));
             _runGems = 0;
+            // Christmas event: parol tokens on the road, decorations, carolers, Simbang Gabi
+            _eventOn = EventProgress.Active;
+            _director.ParolBudget = _eventOn ? ChristmasEvent.MaxParolsPerRun : 0;
+            _runParols = _runCarolers = 0;
+            _decor.Begin(_eventOn);
+            if (_eventOn && Mode == GameMode.NightShift && EventProgress.Night > 0)
+                Services.UI.Float($"SIMBANG GABI · GABI {EventProgress.Night} · {ChristmasEvent.SimbangGabiDistance / 1000f:0.#} KM", UIManager.FloatKind.Big);
             Boosts.Reset();
             Services.UI.SetBoosts(0);
             _jamCap = 1f; _jam = _stuckT = _complainT = 0; _jamComplaints = 0; _inJam = false; _dayPhase = -1;
@@ -811,6 +821,7 @@ namespace JeepneyRush
             _traffic.Tick(dt, _speed);
             _obstacles.Tick(dt, _speed);
             _coins.Tick(dt, _speed);
+            _decor.Tick(dt, _speed);
             _passengers.Tick(dt, _speed);
             _powerUps.Tick(dt, _speed);
             _enforcer.Tick(dt, _speed);
@@ -1268,9 +1279,21 @@ namespace JeepneyRush
             return best;
         }
 
+        private FestiveDecor _decor;
+        private bool _eventOn;
+        private int _runParols, _runCarolers;
+
         private void OnGemTouched(Gem g)
         {
             if (_dying || !_coins.Collect(g)) return;
+            if (g.IsParol)
+            {
+                _runParols++;
+                _fx.Confetti(g.transform.position + Vector3.up * 0.5f, 16);
+                Services.Audio.Play(Logic.Audio.Sfx.CoinRush, 0.8f, 1.5f);
+                Services.UI.Float("+1 PAROL!", UIManager.FloatKind.Good);
+                return;
+            }
             _runGems++;
             _fx.Confetti(g.transform.position + Vector3.up * 0.5f, 22);
             Services.Audio.Play(Logic.Audio.Sfx.CoinRush, 0.9f, 1.25f);
@@ -1547,6 +1570,13 @@ namespace JeepneyRush
                         : Riders.Tag(r.Boarder) + " SUMAKAY", UIManager.FloatKind.Info);
                 }
                 else Services.UI.Say(Lines.BoardFor(_env, _rng), _passengers.RiderHead());
+                if (_eventOn && _runCarolers < ChristmasEvent.MaxCarolers && _rng.Chance(ChristmasEvent.CarolerChance))
+                {
+                    // Christmas carolers: they sing on the way and bring parols
+                    _runCarolers++;
+                    Services.UI.Say(Lines.Pick(ChristmasEvent.CarolerLines, _rng), _passengers.RiderHead(), false, 3f);
+                    Services.UI.Float($"CAROLERS! +{ChristmasEvent.CarolerTokens} PAROL", UIManager.FloatKind.Good);
+                }
                 _fx.Confetti(_player.transform.position + new Vector3(0, 2.5f, -2f), 10 + r.Boarded * 4);
                 // the driver welcomes them, asks for the fare, then announces the departure
                 DriverSay(DriverMoment.Boarding, 0.5f);
@@ -1930,6 +1960,11 @@ namespace JeepneyRush
             var rewards = Services.Save.RecordRun(summary);
             var report = RunReport.From(summary, _runTime, _seed, IsDaily, Challenge.HasValue ? Challenge.Value.DayKey : 0, RunJeepney);
             report.mode = GameModes.Key(Mode);
+            report.parols = _runParols;
+            report.carolers = _runCarolers;
+            int eventTokens = _eventOn ? ChristmasEvent.RunTokens(_runParols, _runCarolers, summary.Distance) : 0;
+            int sgNight = _eventOn && EventProgress.Night > 0 && report.mode == "night" && summary.Distance >= ChristmasEvent.SimbangGabiDistance ? EventProgress.Night : 0;
+            if (_eventOn && (Services.Online == null || !Services.Online.Configured)) EventProgress.CreditLocal(eventTokens, sgNight); // online: the server credits it
             if (RecordsGhost && Services.Online != null && Services.Online.SignedIn)
                 Services.Online.QueueGhost(report.run_id, _ghostRec.Finish(summary.Distance, _player.Lanes.X));
             LastRunId = report.run_id;
@@ -1954,6 +1989,7 @@ namespace JeepneyRush
                 Mode = Mode, Finished = _arrived,
                 Environment = _env, Jeepney = RunJeepney,
                 GhostName = Racing ? Ghost.name : null, GhostScore = Racing ? Ghost.score : 0, BeatGhost = Racing && Ghosts.Beat(Ghost, _score.Score),
+                EventTokens = eventTokens, SimbangGabiNight = sgNight,
             };
             Services.Game.SetState(GameState.GameOver);
             GameEvents.RaiseRunEnded(result);

@@ -47,6 +47,8 @@ namespace JeepneyRush.Logic
         public bool ClosedBody;
         public bool RoofAc, SolarRoof, LuggageRack, BusNose;
         public JeepneyPerk Perk;
+        /// <summary>Event reward (the Pasko Jeepney): not sold, granted by the event.</summary>
+        public bool EventOnly;
 
         // stats (added on top of the base balance & upgrades)
         public int CapacityBonus;
@@ -227,6 +229,16 @@ namespace JeepneyRush.Logic
                 Body = "#22223B", Hood = "#22223B", Accent1 = "#00F5D4", Accent2 = "#F15BB5", Roof = "#1A1A2E", Trim = "#00F5D4",
                 RoofSign = "24/7 PASADA", Route = "24/7 PASADA", Slogan = "Night Owl", RearText = "GISING PA KAMI", Plate = "OWL 247",
                 ClosedBody = true, RoofAc = true, Neon = true, CapacityBonus = 4,
+            },
+            // ---- Paskong Pasada (Christmas event reward, never sold: the price only keeps the server from selling it)
+            new JeepneyLivery
+            {
+                Id = "pasko", DisplayName = "Pasko Jeepney", Price = 999999, EventOnly = true, Motif = ArtMotif.Fiesta,
+                Description = "The Christmas jeepney: parols, lights and Noche Buena colours. Paskong Pasada event reward.",
+                Body = "#B3001B", Hood = "#1E7B45", Accent1 = "#FCD116", Accent2 = "#FFFFFF", Roof = "#1E7B45", Trim = "#FCD116",
+                RoofSign = "MALIGAYANG PASKO", Route = "SIMBANG GABI", Slogan = "Maligayang Pasko!", RearText = "MANIGONG BAGONG TAON", Plate = "XMAS 25",
+                Fiesta = true, SpareTire = true, ExtraLights = LightsKind.SideMarkers, ExtraLightColor = "#FFD23F", Ornament = OrnamentKind.Parol,
+                CapacityBonus = 3, HealthBonus = 1, SpeedBonus = 0.5f, HandlingBonus = 0.01f,
             },
         };
 

@@ -123,6 +123,9 @@ namespace JeepneyRush.Logic
         public AdState ads = new AdState();
         // ---- login streak (offline; online the server keeps it): day numbers since 1 Jan 2024 PH
         public int streakLast = -1, streakCount, streakSaveWeek, streakDoubled = -1;
+        // ---- Christmas event (offline; online the server keeps it)
+        public int eventSeason, eventTokens, eventDayKey, eventDayTokens, eventNights, eventClaimed;
+        public bool eventGolden;
         // ---- Phase B (career)
         /// <summary>Stars per career shift (Career.Shifts order; bits 1 finish, 2 boundary, 4 goal).</summary>
         public int[] careerMasks = new int[0];
@@ -354,7 +357,7 @@ namespace JeepneyRush.Logic
         public static bool BuyJeepney(SaveData d, string id)
         {
             var j = JeepneyCatalog.Get(id);
-            if (j.Id != id || d.Owns(id) || d.coins < j.Price) return false;
+            if (j.Id != id || j.EventOnly || d.Owns(id) || d.coins < j.Price) return false; // event jeepneys are never sold
             d.coins -= j.Price;
             d.ownedJeepneys.Add(id);
             return true;

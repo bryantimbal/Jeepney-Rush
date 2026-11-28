@@ -328,6 +328,9 @@ namespace JeepneyRush
                     RunSubmitted?.Invoke(res);
                     // the run is on the server now: its ghost can follow
                     if (res.accepted && _ghosts.TryGetValue(r.run_id, out var ghost)) { _ghosts.Remove(r.run_id); yield return SaveGhostRoutine(r.run_id, ghost); }
+                    // Christmas event: the server counts the run's parols / Simbang Gabi night (once per run)
+                    if ((res.accepted || res.duplicate) && (r.parols > 0 || r.carolers > 0 || r.mode == "night"))
+                        yield return _client.Rpc("jr_event_claim_run", "{\"p_run_id\":" + Json.Str(r.run_id) + "}", (j, e) => { if (e != null) Debug.LogWarning("[Online] event credit: " + e); else EventChanged?.Invoke(); });
                 }
             }
             _flushing = false;
@@ -378,6 +381,9 @@ namespace JeepneyRush
                 case "streak_not_claimed": return "Claim today's reward first (or it was already doubled).";
                 case "streak_cant_save": return "This streak can't be saved any more.";
                 case "not_enough_gems": return "Kulang ang gems.";
+                case "no_event": return "The Christmas event is over.";
+                case "tokens": return "Kulang pa ang parols.";
+                case "nights": return "Complete all 9 Simbang Gabi nights first.";
                 default: return reason;
             }
         }
@@ -428,6 +434,11 @@ namespace JeepneyRush
             if (err == null && !string.IsNullOrEmpty(json)) { try { v = JsonUtility.FromJson<AppVersionInfo>(json); } catch (Exception) { v = null; } }
             done?.Invoke(v);
         }
+
+        // ================================================================== Christmas event
+        public event Action EventChanged;
+        public void EventStatus(Action<EventInfo, string> done) => StartCoroutine(Get("jr_event_status", "{}", done));
+        public void EventClaimReward(int index, Action<bool, string> done) => Op("jr_event_claim_reward", "{\"p_index\":" + index + "}", (ok, m, _) => done?.Invoke(ok, m));
 
         // ================================================================== login streak
         public void StreakStatus(Action<StreakInfo, string> done) => StartCoroutine(Get("jr_streak_status", "{}", done));

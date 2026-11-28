@@ -50,6 +50,7 @@ namespace JeepneyRush.Tests
             public int Gems;
             public int Brakes;
             public void SpawnGem(int lane, float z) { Gems++; }
+            public void SpawnParol(int lane, float z) { }
             public readonly List<(GasStation station, float z)> Stations = new List<(GasStation, float)>();
             public void SpawnStation(GasStation station, float z) => Stations.Add((station, z));
             public readonly List<(Intersection x, float z)> Crossings = new List<(Intersection, float)>();

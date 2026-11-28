@@ -58,7 +58,7 @@ namespace JeepneyRush
             // each screen is built in isolation: a bug in one must never leave the others
             // stacked on top of each other (HideAll below always runs)
             foreach (var build in new System.Action[] { BuildHud, BuildJuice, BuildMenu, BuildPause, BuildGameOver, BuildSettings, BuildControls,
-                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildStreak, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
+                         BuildGarage, BuildMissions, BuildRoutes, BuildCareer, BuildModes, BuildShareCard, BuildStreak, BuildEvent, BuildOnline, BuildShop, BuildRevive, BuildConfirm, BuildLoading, BuildSplash, BuildDevSplash, BuildTestScreens })
             {
                 try { build(); }
                 catch (System.Exception e) { Debug.LogException(e); }
@@ -133,7 +133,7 @@ namespace JeepneyRush
 
         private void HideAll()
         {
-            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy, _streak })
+            foreach (var e in new[] { _splash, _dev, _menu, _hud, _pause, _gameOver, _settings, _controls, _garage, _confirm, _loading, _missions, _routes, _account, _ranks, _daily, _shop, _revive, _career, _brief, _modes, _ghost, _brgy, _streak, _event })
                 if (e != null) e.style.display = DisplayStyle.None;
             _modals.Clear();
         }
@@ -394,6 +394,7 @@ namespace JeepneyRush
             var logo = _menuLogo = UiKit.Icon("logo", 780);
             logo.style.height = 400;
             _menu.Add(logo);
+            _menu.Add(BuildEventBanner()); // Christmas event (December – 6 January)
             var spacer = _menuSpacer = UiKit.Box();
             spacer.style.flexGrow = 1;
             _menu.Add(spacer);
@@ -481,6 +482,7 @@ namespace JeepneyRush
 
         private void RefreshMenuTop()
         {
+            RefreshEventBanner();
             var d = Services.Save.Data;
             _menuCoins.text = d.coins.ToString("N0");
             _menuBest.text = $"{Mathf.FloorToInt(d.bestDistance):N0} m";
@@ -1237,6 +1239,8 @@ namespace JeepneyRush
             }
             if (rw == null || rw.Career == null) { string money = MoneySummary(r); if (money != null) Line(money, UiKit.Hex("#1E7B45")); }
             if (r.GhostName != null) Line($"vs {r.GhostName}: {r.Score:N0} – {r.GhostScore:N0}" + (r.BeatGhost ? " · TINALO MO!" : ""), r.BeatGhost ? UiKit.Green : UiKit.Red);
+            if (r.SimbangGabiNight > 0) Line($"SIMBANG GABI · GABI {r.SimbangGabiNight} COMPLETE!", UiKit.Hex("#1F3FBF"));
+            if (r.EventTokens > 0) Line($"+{r.EventTokens} PAROLS · PASKONG PASADA", UiKit.Hex("#C8102E"));
             string riders = RidersSummary(r);
             if (riders != null) Line(riders, UiKit.Hex("#B8860B"));
             if (rw != null)

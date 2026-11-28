@@ -19,6 +19,8 @@ namespace JeepneyRush.Logic
         void SpawnPowerUp(PowerUpKind kind, int lane, float z);
         /// <summary>A gem pickup (premium currency) floating over a lane.</summary>
         void SpawnGem(int lane, float z);
+        /// <summary>A parol token (Christmas event).</summary>
+        void SpawnParol(int lane, float z);
         void SpawnStation(GasStation station, float z);
         void SpawnIntersection(Intersection intersection, float z);
     }
@@ -90,6 +92,11 @@ namespace JeepneyRush.Logic
         /// <summary>Gems this run may still place (per-run and daily caps; set by the session).</summary>
         public int GemBudget = RoadGems.MaxPerRun;
         public int GemsPlaced { get; private set; }
+        /// <summary>Christmas event: parol tokens this run may place (0 = no event).</summary>
+        public int ParolBudget;
+        public int ParolsPlaced { get; private set; }
+        private float _nextParolAt = ChristmasEvent.FirstParolAt;
+        private GameRandom _parolRng;
         private readonly float[] _traffic;
         private readonly Func<float, float> _wetness;
         private readonly Func<float, float> _jam;
@@ -117,6 +124,7 @@ namespace JeepneyRush.Logic
         {
             _cfg = cfg; _rng = rng; _sink = sink; _route = route;
             _gemRng = rng.Fork(0x6E3D5A11u);
+            _parolRng = rng.Fork(0x9A801C25u); // own stream: parols never change the normal layout
             _nextGemAt = RoadGems.FirstAt + _gemRng.Range(0, 250);
             _nextBoostAt = 300f + _gemRng.Range(0, 200);
             _eventRng = rng.Fork(0x3E7A1C55u);
@@ -608,18 +616,19 @@ namespace JeepneyRush.Logic
         }
 
         /// <summary>A gem or a TURBO booster in a clear lane (like power-ups: never behind a blocker or in a stop's lane).</summary>
-        private bool TryPlaceExtra(float z, float distance, float speed, bool gem)
+        private bool TryPlaceExtra(float z, float distance, float speed, bool gem, bool parol = false)
         {
             _blockers.Clear();
             _sink.CollectBlockers(_blockers);
             LaneOccupancy.BlockedIntervals(_blockers, speed, MaxHorizon, _cfg.playerHalfLength, _intervals);
             float t = -z / Math.Max(1f, speed);
-            int start = _gemRng.Int(0, _cfg.laneCount - 1);
+            int start = (parol ? _parolRng : _gemRng).Int(0, _cfg.laneCount - 1);
             for (int i = 0; i < _cfg.laneCount; i++)
             {
                 int l = (start + i) % _cfg.laneCount;
                 if (!LaneOccupancy.LaneClear(_intervals, l, t - 0.5f, t + 0.5f) || Reserved(l, distance - z, 3)) continue;
-                if (gem) { _sink.SpawnGem(l, z); GemsPlaced++; }
+                if (parol) { _sink.SpawnParol(l, z); ParolsPlaced++; }
+                else if (gem) { _sink.SpawnGem(l, z); GemsPlaced++; }
                 else { _sink.SpawnPowerUp(PowerUpKind.Turbo, l, z); BoostsPlaced++; }
                 return true;
             }
@@ -669,6 +678,9 @@ namespace JeepneyRush.Logic
 
         private void PlaceCoins(float rowZ, float distance, float speed, float gap, bool hump)
         {
+            // Christmas event: parol tokens a third of a gap ahead (their own random stream)
+            if (ParolsPlaced < ParolBudget && Cursor - gap >= _nextParolAt && TryPlaceExtra(rowZ - gap * 0.35f, distance, speed, false, true))
+                _nextParolAt = Cursor + _parolRng.Range(ChristmasEvent.ParolSpacingMin, ChristmasEvent.ParolSpacingMax);
             // gems and extra boosters sit a quarter-gap ahead of the row; they never change what the row itself gets
             if (GemsPlaced < GemBudget && Cursor - gap >= _nextGemAt)
             {
