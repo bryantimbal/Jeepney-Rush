@@ -75,6 +75,32 @@ namespace JeepneyRush
         private void OnApplicationPause(bool paused)
         {
             if (!paused && Configured && State == OnlineState.Offline) Connect();
+            // back from the mail app after tapping the confirmation link: pick up the email account
+            if (!paused && Configured && SignedIn && IsGuest && !string.IsNullOrEmpty(SupabaseClient.PendingEmail)) CheckPendingEmail(null);
+        }
+
+        /// <summary>Email waiting for confirmation ("" = none).</summary>
+        public string PendingEmail => SupabaseClient.PendingEmail;
+
+        /// <summary>Checks whether the guest's email was confirmed (true = now an email account).</summary>
+        public void CheckPendingEmail(Action<bool, string> done) => StartCoroutine(CheckPendingRoutine(done));
+
+        private IEnumerator CheckPendingRoutine(Action<bool, string> done)
+        {
+            string err = null;
+            yield return _client.CheckPendingEmail(e => err = e);
+            if (err == null) yield return Pull(false);
+            done?.Invoke(err == null, Friendly(err));
+            Changed?.Invoke();
+        }
+
+        public void ResendConfirmation(Action<bool, string> done) => StartCoroutine(ResendRoutine(done));
+
+        private IEnumerator ResendRoutine(Action<bool, string> done)
+        {
+            string err = null;
+            yield return _client.ResendPendingEmail(e => err = e);
+            done?.Invoke(err == null, Friendly(err));
         }
 
         // ================================================================== connect / accounts
@@ -257,6 +283,8 @@ namespace JeepneyRush
             if (err == "offline") return "Walang internet. Try again later.";
             if (err == "session_expired") return "Your login expired. Please sign in again.";
             if (err == "confirm_email") return "Check your email to confirm the account, then sign in.";
+            if (err == "confirm_email_change") return "Check your email and tap \"Confirm new email address\". Then come back – you'll be signed in automatically.";
+            if (err.Contains("rate limit") || err.Contains("security purposes")) return "Too many emails sent. Wait a minute, then try again.";
             if (err.Contains("Invalid login")) return "Wrong email or password.";
             if (err.Contains("already") && err.Contains("registered")) return "That email already has an account – sign in instead.";
             if (err.Contains("Password")) return err;

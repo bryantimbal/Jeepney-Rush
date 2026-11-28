@@ -15,9 +15,14 @@ About 10 minutes, free tier is enough.
 **Authentication ▸ Sign In / Providers**:
 * **Allow anonymous sign-ins: ON.** Every new player gets a guest account automatically.
 * **Email: enabled.** Players can attach an email to keep their progress across phones.
-* *Confirm email*: keep it ON for release. For quick testing you can turn it off. With it on, a player who
-  creates an email account must click the link in the email before signing in on another phone.
-  Linking a guest to an email keeps working on the current phone right away.
+* **Confirm email: OFF** (recommended for this game). Then "Create account" / "Save progress with email"
+  signs the player in with the email at once: the game checks it by signing in with the new email and
+  password, and the player stays signed in (not a guest) until they sign out.
+  With it ON, Supabase keeps the account a **guest** until the player taps *Confirm new email address* in
+  the mail. The Account screen then shows "Almost done!" with *I TAPPED THE LINK* / *SEND THE EMAIL AGAIN*,
+  and the game switches to the email account when the player comes back. Signing in with the email fails
+  until the link was tapped. Also set **Authentication ▸ URL Configuration ▸ Site URL** to a real page
+  (e.g. your privacy-policy site): the link opens it after confirming.
 
 ## 3. Create the database objects
 **Option 0 – GitHub integration (recommended, what this repo is set up for).** The repository is a standard

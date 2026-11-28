@@ -13,11 +13,13 @@ namespace JeepneyRush
     /// </summary>
     public sealed class SupabaseClient
     {
-        [Serializable] private class AuthUser { public string id; public string email; public bool is_anonymous; }
+        [Serializable] private class AuthUser { public string id; public string email; public string new_email; public bool is_anonymous; }
         [Serializable] private class AuthResponse { public string access_token; public string refresh_token; public long expires_at; public int expires_in; public AuthUser user; }
         [Serializable] private class ErrorBody { public string error; public string error_description; public string msg; public string message; public string error_code; public string code; }
         [Serializable] private class EmailPassword { public string email; public string password; }
         [Serializable] private class RefreshBody { public string refresh_token; }
+        [Serializable] private class EmailOnly { public string email; }
+        [Serializable] private class PasswordOnly { public string password; }
 
         private const string PrefKey = "jr_session_v1";
         [Serializable] private class Session { public string access_token; public string refresh_token; public long expires_at; public string user_id; public string email; public bool is_anonymous; }
@@ -163,25 +165,93 @@ namespace JeepneyRush
         }
         private const string EmailKey = "jr_last_email";
 
-        /// <summary>Turns the current guest into an email account (keeps all progress).</summary>
+        /// <summary>Email a guest asked to link; Supabase waits for the link in the confirmation mail ("" = none).</summary>
+        public static string PendingEmail
+        {
+            get => PlayerPrefs.GetString(PendingKey, "");
+            private set { PlayerPrefs.SetString(PendingKey, value ?? ""); PlayerPrefs.Save(); }
+        }
+        private const string PendingKey = "jr_pending_email";
+        // kept in memory only (never saved): set once the email is confirmed while the game is still open
+        private string _pendingPassword;
+
+        /// <summary>
+        /// Turns the current guest into an email account (same user id, so all progress stays).
+        /// Trusts only Supabase's answer: when the project confirms emails the account stays a guest
+        /// until the link in the mail is tapped ("confirm_email_change"). When the email is linked
+        /// right away, the password is checked by really signing in with it.
+        /// </summary>
         public IEnumerator LinkEmail(string email, string password, Action<string> done)
         {
+            email = (email ?? "").Trim();
             yield return EnsureFresh();
+            AuthUser user = null;
             string error = null;
             yield return Send(Request("PUT", "/auth/v1/user", JsonUtility.ToJson(new EmailPassword { email = email, password = password }), true), (json, err) =>
             {
                 error = err;
-                if (err == null)
-                {
-                    var u = JsonUtility.FromJson<AuthUser>(json);
-                    if (u != null && _session != null) { _session.email = u.email ?? email; _session.is_anonymous = false; PlayerPrefs.SetString(PrefKey, JsonUtility.ToJson(_session)); PlayerPrefs.Save(); }
-                }
+                if (err == null) user = JsonUtility.FromJson<AuthUser>(json);
             });
+            if (error != null) { done(error); yield break; }
+            bool linked = user != null && !user.is_anonymous && string.Equals(user.email, email, StringComparison.OrdinalIgnoreCase);
+            if (!linked)
+            {
+                PendingEmail = email;
+                _pendingPassword = password;
+                done("confirm_email_change");
+                yield break;
+            }
+            yield return FinishLink(email, password, done);
+        }
+
+        /// <summary>The email is on the account: make sure email + password really sign in (sets the password again if needed).</summary>
+        private IEnumerator FinishLink(string email, string password, Action<string> done)
+        {
+            string err = null;
+            yield return SignIn(email, password, e => err = e);
+            if (err != null && !string.IsNullOrEmpty(password))
+            {
+                yield return Send(Request("PUT", "/auth/v1/user", JsonUtility.ToJson(new PasswordOnly { password = password }), true), (_, e) => err = e);
+                if (err == null) yield return SignIn(email, password, e => err = e);
+            }
+            if (err == null) { PendingEmail = ""; _pendingPassword = null; }
+            done(err);
+        }
+
+        /// <summary>
+        /// After the player tapped the confirmation link: asks Supabase again. Returns null once this
+        /// login is an email account, "confirm_email_change" while it still waits for the link.
+        /// </summary>
+        public IEnumerator CheckPendingEmail(Action<string> done)
+        {
+            string pending = PendingEmail;
+            if (string.IsNullOrEmpty(pending) || !HasSession) { done(null); yield break; }
+            string err = null;
+            yield return Refresh(e => err = e);
+            if (err != null) { done(err); yield break; }
+            if (IsAnonymous || !string.Equals(Email, pending, StringComparison.OrdinalIgnoreCase)) { done("confirm_email_change"); yield break; }
+            if (_pendingPassword != null) { yield return FinishLink(pending, _pendingPassword, done); yield break; }
+            PendingEmail = "";
+            done(null);
+        }
+
+        /// <summary>Sends the confirmation mail again.</summary>
+        public IEnumerator ResendPendingEmail(Action<string> done)
+        {
+            string pending = PendingEmail;
+            if (string.IsNullOrEmpty(pending)) { done(null); yield break; }
+            yield return EnsureFresh();
+            string error = null;
+            yield return Send(Request("PUT", "/auth/v1/user", JsonUtility.ToJson(new EmailOnly { email = pending }), true), (_, err) => error = err);
             done(error);
         }
 
+        public static void ForgetPendingEmail() => PendingEmail = "";
+
         public IEnumerator SignOut(Action done)
         {
+            PendingEmail = "";
+            _pendingPassword = null;
             if (HasSession) yield return Send(Request("POST", "/auth/v1/logout", "{}", true), (_, __) => { });
             ClearSession();
             done?.Invoke();

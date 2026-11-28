@@ -331,6 +331,19 @@ namespace JeepneyRush.Logic
     /// <summary>Player-facing validation of names and friend codes (the server re-checks).</summary>
     public static class OnlineText
     {
+        public const int MinPassword = 6;
+
+        /// <summary>Create-account form: null if fine, else what to fix.</summary>
+        public static string AccountProblem(string email, string password, string confirm)
+        {
+            email = (email ?? "").Trim();
+            int at = email.IndexOf('@');
+            if (at < 1 || email.LastIndexOf('.') < at + 2 || email.EndsWith(".") || email.Contains(" ")) return "Enter a valid email address.";
+            if ((password ?? "").Length < MinPassword) return $"Password: at least {MinPassword} characters.";
+            if (password != confirm) return "Passwords don't match – type the same password twice.";
+            return null;
+        }
+
         public static string CleanName(string n)
         {
             if (n == null) return null;

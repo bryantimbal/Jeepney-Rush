@@ -225,8 +225,14 @@ namespace JeepneyRush
                 var email = AddField(body, "Email");
                 if (string.IsNullOrEmpty(email.value)) email.value = SupabaseClient.RememberedEmail; // re-signing in after a lost login
                 var pass = AddField(body, "Password", true);
-                body.Add(SmallButton("SIGN IN", () => o.SignIn(email.value, pass.value, (ok, msg) => { Toast(ok ? "Welcome back!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
-                body.Add(SmallButton("CREATE ACCOUNT", () => o.CreateEmailAccount(email.value, pass.value, (ok, msg) => { Toast(ok ? "Account created!" : msg); RefreshAccount(); }), Color.white, UiKit.Ink));
+                body.Add(SmallButton("SIGN IN", () => o.SignIn(email.value.Trim(), pass.value, (ok, msg) => { Toast(ok ? "Welcome back!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
+                var pass2 = AddField(body, "Confirm password (new account only)", true);
+                body.Add(SmallButton("CREATE ACCOUNT", () =>
+                {
+                    string bad = AccountFormProblem(email.value, pass.value, pass2.value);
+                    if (bad != null) { Toast(bad); return; }
+                    o.CreateEmailAccount(email.value.Trim(), pass.value, (ok, msg) => { Toast(ok ? "Account created – you're signed in!" : msg); RefreshAccount(); });
+                }, Color.white, UiKit.Ink));
                 body.Add(SmallButton("PLAY AS GUEST", () => { o.PlayAsGuest(); Toast("Creating guest account…"); }, Color.white, UiKit.Ink));
                 return;
             }
@@ -265,12 +271,27 @@ namespace JeepneyRush
             body.Add(Heading(o.IsGuest ? "GUEST ACCOUNT" : "EMAIL ACCOUNT"));
             if (o.IsGuest)
             {
+                string pending = o.PendingEmail;
+                if (!string.IsNullOrEmpty(pending))
+                {
+                    // Supabase waits for the link in the confirmation mail before the email is on the account
+                    body.Add(Note($"Almost done! We sent a link to {pending}. Open the email \"Confirm your new email address\", tap the link, then come back here.", 32, UiKit.Ink));
+                    body.Add(SmallButton("I TAPPED THE LINK", () => o.CheckPendingEmail((ok, msg) => { Toast(ok ? "Account saved – you're signed in with your email!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
+                    body.Add(SmallButton("SEND THE EMAIL AGAIN", () => o.ResendConfirmation((ok, msg) => Toast(ok ? $"Sent again to {pending}." : msg)), Color.white, UiKit.Ink));
+                    body.Add(SmallButton("USE ANOTHER EMAIL", () => { SupabaseClient.ForgetPendingEmail(); RefreshAccount(); }, Color.white, UiKit.Ink));
+                }
                 body.Add(Note("Guest progress lives only on this phone's account. Add an email to keep it if you change or reset your phone."));
                 var email = AddField(body, "Email");
                 var pass = AddField(body, "Password (6+ characters)", true);
-                body.Add(SmallButton("SAVE PROGRESS WITH EMAIL", () => o.CreateEmailAccount(email.value, pass.value, (ok, msg) => { Toast(ok ? "Progress saved to your email!" : msg); RefreshAccount(); }), UiKit.Yellow, UiKit.Ink));
+                var pass2 = AddField(body, "Confirm password", true);
+                body.Add(SmallButton("SAVE PROGRESS WITH EMAIL", () =>
+                {
+                    string bad = AccountFormProblem(email.value, pass.value, pass2.value);
+                    if (bad != null) { Toast(bad); return; }
+                    o.CreateEmailAccount(email.value.Trim(), pass.value, (ok, msg) => { Toast(ok ? "Account saved – you're signed in with your email!" : msg); RefreshAccount(); });
+                }, UiKit.Yellow, UiKit.Ink));
                 body.Add(SmallButton("SIGN IN TO ANOTHER ACCOUNT", () => Confirm("Switch account?", "This phone will show the other account's progress. Your guest progress stays on the guest account and can't be recovered without an email.",
-                    () => o.SignIn(email.value, pass.value, (ok, msg) => { Toast(ok ? "Signed in!" : msg); RefreshAccount(); })), Color.white, UiKit.Ink));
+                    () => o.SignIn(email.value.Trim(), pass.value, (ok, msg) => { Toast(ok ? "Signed in!" : msg); RefreshAccount(); })), Color.white, UiKit.Ink));
             }
             else
             {
@@ -333,6 +354,9 @@ namespace JeepneyRush
                 }
             });
         }
+
+        /// <summary>Checks the create-account form before anything is sent (null = fine).</summary>
+        private static string AccountFormProblem(string email, string pass, string confirm) => OnlineText.AccountProblem(email, pass, confirm);
 
         // ============================================================== rankings
         private void BuildRanks()
